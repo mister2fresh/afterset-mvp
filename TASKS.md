@@ -46,7 +46,7 @@ These are not a single `git push`. A template bug requires a Railway deploy + R2
 
 ## Business Setup (Parallel Track)
 
-Runs alongside dev work. These tasks have processing time (bank approvals, 10DLC vetting, trademark examination). Full rationale in ADR-006. Items marked ⛔ are **launch blockers** — the sprint they gate cannot ship without them.
+These tasks have processing time (bank approvals, trademark examination, toll-free verification). Start immediately so they don't gate later sprints. Full rationale in ADR-006.
 
 ### Phase A — Do Now (Parallel with Pre-Build)
 
@@ -55,7 +55,8 @@ Start immediately so processing windows don't gate later sprints.
 **Estimated cost: ~$800–$830 one-time**
 
 - [ ] **Form Colorado LLC** ($50)
-  - File Articles of Organization online at sos.colorado.gov (instant processing)
+  - File Articles of Organization online at sos.colorado.gov
+  - Processing is instant — save state-assigned ID number
   - Draft and sign operating agreement (free template, 30 min)
   - Store operating agreement digitally and physically
 - [ ] **Obtain EIN** ($0)
@@ -66,9 +67,9 @@ Start immediately so processing windows don't gate later sprints.
   - Requires: Articles of Organization + EIN + government-issued photo ID
   - Apply online — 1–2 day approval
   - Order Mercury business debit card
-  - Set as sole payment method for all business expenses
+  - Set up as sole payment method for all business expenses
 - [ ] **Set up Stripe as business account**
-  - Register immediately as Individual/Sole Proprietor using SSN
+  - Can register immediately as Individual/Sole Proprietor using SSN
   - Upgrade to LLC + EIN after Mercury is open
   - Connect Stripe payouts to Mercury checking
   - Test a $1 charge and verify payout arrives
@@ -78,7 +79,7 @@ Start immediately so processing windows don't gate later sprints.
   - Use pre-approved ID Manual descriptions to avoid surcharges
   - Class 42: SaaS platform services. Class 41: entertainment/fan engagement services
   - Calendar: expect first Office Action in 3–6 months
-  - Calendar: Statement of Use deadline after Notice of Allowance (6-month window)
+  - Calendar: Statement of Use deadline after Notice of Allowance (6-month window, extendable)
 - [ ] **File Colorado state trademark** ($30)
   - File electronically via Colorado SOS
   - Supplementary layer — not a substitute for federal
@@ -96,111 +97,140 @@ Start immediately so processing windows don't gate later sprints.
 
 ### Phase B — Before First Paying Customer ⛔ Gates: Sprint 3 billing + beta invites
 
-Must be complete before accepting payment or collecting fan data.
+Must be complete before accepting payment or collecting fan data. These are launch blockers per ADR-006.
 
-**Estimated cost: ~$850–$1,450 one-time + ~$60–$130/month recurring**
+**Estimated cost: ~$540–$770 one-time + ~$47.50/month recurring**
 
-- [ ] **Publish Terms of Service** ⛔
-  - Generate baseline with Termly Pro+ or TermsFeed ($100–$250)
-  - Must include: clickwrap acceptance (checkbox + "I agree"), acceptable use policy (no spam, no purchased lists, TCPA compliance required), indemnification, limitation of liability (12 months fees paid), account termination + 30-day data export window, payment terms, dispute resolution (Colorado law, arbitration)
+- [ ] **Set up Termly Pro+ and publish Terms of Service** ($20/month) ⛔
+  - Generate ToS with SaaS-specific clauses via Termly
+  - Must include: clickwrap acceptance (checkbox + "I agree"), acceptable use policy (no spam, no purchased lists, consent required), indemnification clause, limitation of liability (12 months fees paid), account termination + 30-day data export window, payment terms (auto-renewal, cancellation, refunds), dispute resolution (Colorado law)
   - Implement clickwrap on artist signup flow — browsewrap is NOT sufficient
-- [ ] **Publish Privacy Policy** ⛔
+- [ ] **Publish Privacy Policy** (included in Termly Pro+) ⛔
   - Categories of PI collected (emails, names, phone numbers, device info)
   - Collection methods (QR, SMS, NFC, web forms)
   - Third-party processors listed (Supabase, Resend, Telnyx, Stripe)
-  - Data retention periods, user rights (access, deletion, correction, opt-out)
-  - SMS-specific disclosures, COPPA statement (not directed to children under 13)
+  - Data retention periods
+  - User rights (access, deletion, correction, opt-out)
+  - SMS-specific disclosures
+  - COPPA statement (not directed to children under 13)
   - Link from: all capture pages, SMS confirmations, email footers, website footer
-- [ ] **Get PO Box or virtual mailbox** ($5–$40/month) ⛔
+- [ ] **Get PO Box** (~$5/month) ⛔
   - Required for CAN-SPAM physical address in every email
-  - USPS PO Box or UPS Store private mailbox — avoids exposing home address
-- [ ] **Build CAN-SPAM compliant email infrastructure** ⛔ (overlaps Sprint 2 email tasks)
-  - Mandatory non-removable email footer: unsubscribe link + physical address + "Sent by [Artist] via Afterset"
-  - One-click unsubscribe, no login required, functional 30 days post-send
-  - Process opt-outs immediately (legal: 10 business days; target: instant)
-  - Central suppression list — never email opted-out addresses
+  - Cheapest USPS option is sufficient
+  - Avoids exposing home address in email footers
+- [ ] **Build CAN-SPAM compliant email infrastructure** (ADR-002, ADR-006) ⛔
+  - Mandatory non-removable email footer in every template: unsubscribe link + physical address + "Sent by [Artist] via Afterset"
+  - Unsubscribe mechanism: one-click, no login required, functional for 30 days post-send
+  - Process opt-outs immediately (legal requirement: 10 business days; target: instant)
+  - Resend handles List-Unsubscribe headers and suppression (ADR-002)
   - Accurate From/Reply-To headers, non-deceptive subject lines
-  - Treat ALL emails as commercial (full CAN-SPAM elements in every email)
+  - Treat ALL emails as commercial (include full CAN-SPAM elements in every email)
 - [ ] **Set up Wave bookkeeping** ($0)
   - Create Wave Starter account
-  - Manually enter all pre-launch expenses (LLC, domain, hosting, legal)
-  - Begin tracking every dollar in and out
-- [ ] **Register for Colorado sales tax license** ($16, biennial)
-  - File via Colorado Revenue Online
-  - SaaS is exempt at state level but taxable in home-rule cities (Denver, etc.)
-- [ ] **Bind Tech E&O + Cyber Liability insurance** (~$730–$1,100/year) ⛔
-  - Get quotes from: Hiscox, Vouch/Hiscox, Embroker
-  - Specifically ask about TCPA coverage/exclusions during quoting
-  - Request affirmative TCPA endorsement or get exclusion in writing
-  - Bind BEFORE first fan data is collected — claims-made policies have no retroactive coverage
+  - Manually enter all pre-launch expenses (LLC filing, domain, hosting, legal)
+  - Categorize: hosting, domains, SaaS tools, legal, filing fees
+  - Begin tracking every dollar in and out from this moment
+- [ ] **Bind Hiscox E&O insurance** (~$270/year, ~$22.50/month) ⛔
+  - Apply at hiscox.com — professional liability / E&O for technology companies
+  - Covers service failure claims, software bugs, missed SLAs
+  - Bind BEFORE first paying customer — claims-made policies have no retroactive coverage
+  - Ask about TCPA coverage/exclusions during application
+  - Save Certificate of Insurance for future B2B contract requests
 - [ ] **Register for free DUNS number** ($0)
-  - Register at dnb.com — 10 minutes, useful for future business credit
+  - Register at dnb.com to establish business credit file
+  - Takes 10 minutes, useful when applying for business credit card later
 - [ ] **Accept vendor DPAs** ($0)
   - Sign/accept existing DPAs from Supabase, Stripe, Telnyx, and Resend
-  - Same-day task — click through each vendor's legal page
+  - Same-day task — just click through each vendor's legal page
+- [ ] **Schedule targeted attorney consultation** ($300–$500)
+  - Book 1–2 hours with a SaaS attorney via ContractsCounsel or UpCounsel
+  - Bring Termly-generated ToS and Privacy Policy
+  - Ask specifically: (1) "Does my ToS properly allocate TCPA vicarious liability given the RILA exemption applies to my single-reply SMS flow?" (2) "Is my data processor language sufficient for the Colorado Privacy Act?"
+  - Can be scheduled for within 30 days of launch — not a day-one blocker
 
 ### Phase C — Before SMS Launch ⛔ Gates: Sprint 3 text-to-join
 
-SMS is the highest legal risk area — TCPA exposure is $500–$1,500 per unsolicited message with no cap.
+These tasks gate the text-to-join feature (ADR-005, ADR-006). Telnyx handles much of the TCPA compliance burden at the carrier level, but platform-level verification is still required.
 
-**Estimated cost: ~$19.50 one-time + ~$2.65–$11.15/month (10DLC fees)**
+**Estimated cost: $0 (toll-free verification and Telnyx auto opt-out are included in ADR-005's Telnyx costs)**
 
-- [ ] **Complete 10DLC registration** (~$19.50 one-time + $2.65–$11.15/month) ⛔
-  - **Start during Sprint 1 — 10–15 business day approval window**
-  - Step 1: Brand registration via Telnyx Trust Hub ($4.50, Low-Volume Standard)
-  - Step 2: Campaign registration — Marketing use case ($15 vetting + $10/month)
-  - Requires: legal business name (must match IRS records), EIN, business address, website URL, authorized representative
-  - Provide at least 2 sample messages and opt-in method description
-  - Without 10DLC approval, all A2P SMS traffic is blocked by US carriers
+- [ ] **Verify Telnyx toll-free verification is approved** ($0 — already submitted in Sprint 2 per ADR-005) ⛔
+  - Toll-free verification replaces 10DLC — no separate registration needed
+  - 3–15 business day approval window runs in parallel with Sprint 2 dev work
+  - Without verification, carrier traffic may be filtered or blocked
+- [ ] **Verify RILA exemption compliance in SMS auto-reply** ⛔
+  - Auto-reply must contain ONLY: capture page URL + compliance language
+  - Zero promotional content — no merch links, no "follow us on Instagram," no upsells
+  - This is the critical constraint that maintains the RILA exemption (FCC 15-72)
+  - Confirm reply fits single 160-char GSM-7 segment (per ADR-005)
 - [ ] **Build TCPA-compliant call-to-action templates for artists** ⛔
-  - Template must include ALL of: artist name, consent to automated marketing texts, "Consent not required for purchase", estimated message frequency, "Msg & data rates may apply", STOP instructions, Terms and Privacy links
+  - Template must include ALL of: artist name, consent to receive automated text, "Consent not required for purchase", message frequency, "Msg & data rates may apply", STOP instructions, Terms and Privacy links
   - Provide as downloadable/copyable assets for posters, slides, social posts
-  - Artists cannot modify required disclosure language — platform-enforced
-- [ ] **Build TCPA-compliant SMS confirmation reply** ⛔
-  - Auto-reply must include ALL of: program/brand name, product description, message frequency, "Msg & data rates may apply", STOP instructions, HELP instructions, privacy policy link, terms link
-  - ⚠️ **OPEN DECISION:** Must fit in single 160-char GSM-7 segment (ADR-005), but may need short URLs for terms/privacy links. ADR-003 bans shorteners on entry method URLs. See Open Decisions #9.
-- [ ] **Test full TCPA-compliant flow end-to-end** ⛔
-  - Verify: call-to-action → keyword text → confirmation SMS with all disclosures → STOP opts out immediately → HELP returns support info → consent logged with timestamp
-  - Test with real phone numbers on the registered number
-  - Document test results — this is compliance evidence
+  - Required disclosures are non-negotiable — artists cannot modify them
+- [ ] **Verify Telnyx auto opt-out handling** (built-in per ADR-005) ⛔
+  - Confirm Telnyx handles STOP/HELP/END/CANCEL/QUIT/UNSUBSCRIBE at carrier level
+  - Confirm opt-out triggers immediate suppression (no further messages sent)
+  - Confirm HELP response includes brand name and support contact
+  - This is provider-delegated — Telnyx does the heavy lifting, platform verifies it works
+- [ ] **Build consent logging system** ⛔
+  - Log every inbound text: exact timestamp, phone number, keyword, artist ID
+  - Log every opt-out: timestamp, method (SMS keyword, email, web form)
+  - Retain records for minimum 5 years (TCPA statute of limitations is 4 years)
+  - Consent is artist-specific — opt-in for Artist A cannot be used for Artist B
+- [ ] **Implement 8 AM–9 PM sending restriction** ⛔
+  - Based on recipient's local time zone (not sender's)
+  - Queue messages outside window for delivery at 8 AM recipient time
+  - Applies to the initial auto-reply if fan texts outside hours
+  - This is a TCPA legal requirement, not a best practice
+- [ ] **Test full SMS compliance flow end-to-end** ⛔
+  - Call-to-action displays all required disclosures → fan texts keyword → auto-reply with URL + compliance language only → STOP immediately opts out → HELP returns support info → consent logged with timestamp
+  - Test with real phone numbers on the verified toll-free number
+  - Document test results — this is your compliance evidence
 
 ### Phase D — Within 90 Days of Launch
 
-Important but not launch-blocking.
+Important but not launch-blocking. Per ADR-006, complete before month 3.
 
-**Estimated cost: ~$3,000–$6,300 one-time + ~$55–$175/year recurring**
+**Estimated cost: ~$220–$610 one-time + $55–$175/year monitoring**
 
-- [ ] **Engage SaaS attorney for custom legal package** ($2,500–$5,000)
-  - Customize ToS with TCPA/CAN-SPAM-specific provisions
-  - Custom indemnification clauses for artist misuse of fan data
-  - Custom DPA covering: data types, processing purposes, sub-processor chain, breach notification (48–72 hrs), deletion on termination
-  - **What to tell the attorney:** "I operate a SaaS platform that sends SMS and email on behalf of customers. I need ToS that protect me from vicarious TCPA liability if an artist misuses the platform, a DPA that satisfies the Colorado Privacy Act processor requirements, and CAN-SPAM provisions addressing my role as both sender and initiator."
-- [ ] **Publish Data Processing Agreement**
+- [ ] **Register for Colorado sales tax license** ($16, biennial)
+  - File via Colorado Revenue Online
+  - SaaS is exempt at state level but taxable in home-rule cities (Denver, etc.)
+  - Required if any Colorado customers in home-rule jurisdictions
+- [ ] **Publish Data Processing Agreement** ($0 — template)
+  - Download free DPA template (Iubenda, GDPR.eu) and customize
   - Separate page on website, incorporated by reference in ToS
   - List all sub-processors publicly (Supabase, Resend, Telnyx, Stripe)
-  - Document data breach notification process (48–72 hours)
-  - Use free template (Iubenda, GDPR.eu) as baseline for attorney to customize
-- [ ] **Bind General Liability insurance** ($300–$600/year)
-  - Required before most B2B contracts (venues, promoters, enterprise artists)
-  - Hiscox from ~$30/month, Hartford from ~$17/month
+  - Document data breach notification process (48–72 hours to affected artists)
+  - Full custom DPA included when engaging attorney at $5K MRR
 - [ ] **Set up trademark monitoring** ($55–$175/year)
-  - TMReady ($55/year) or Hawthorn Law ($99/year)
+  - TMReady ($55/year) for basic USPTO database monitoring
   - Set Google Alerts for "Afterset" brand mentions
-- [ ] **Initiate afterset.com domain acquisition**
+- [ ] **Initiate afterset.com domain acquisition** ($0–$120 broker fee to start)
   - WHOIS lookup to identify current owner
   - Start with polite direct outreach at $1,500–$2,000 offer
-  - Consider broker at $5K MRR. Budget: $2,000–$10,000 when revenue justifies it.
-- [ ] **Document data retention and deletion policy**
+  - Budget $2,000–$10,000 when revenue justifies it (target: $5K MRR)
+- [ ] **Document data retention and deletion policy** ($0)
   - Retention periods by data type (fan data, consent records, billing records)
   - Deletion process on artist account termination (30-day export window, then purge)
-- [ ] **Build DSAR (Data Subject Access Request) process**
-  - Documented procedure for fan data access, correction, or deletion requests
-  - 45-day response window under CPA when thresholds are met
+  - Backup purge timeline (90 days post-deletion)
 - [ ] **First CPA consultation for tax planning** ($150–$300)
   - Schedule when first revenue arrives
-  - Topics: quarterly estimated taxes, QBI deduction, Section 174 R&D amortization, startup costs, home office deduction
-- [ ] **Annual legal/compliance review cadence**
-  - Calendar first review for 12 months post-launch
+  - Topics: quarterly estimated taxes, QBI deduction, Section 174 R&D amortization, startup cost classification, home office deduction method
+
+**Revenue-triggered items (not calendar-triggered):**
+
+- [ ] **Add cyber liability insurance** (at 50+ artists, ~$30/month)
+  - Hiscox cyber add-on covers breach notification, forensics, legal defense
+  - Total insurance at this point: ~$630/year (E&O + Cyber)
+- [ ] **Bind General Liability insurance** (at first B2B contract requiring COI, $300–$600/year)
+  - Required before most venue, promoter, or enterprise artist contracts
+  - Hiscox from ~$30/month, Hartford from ~$17/month
+- [ ] **Engage SaaS attorney for full legal package** (at $5K MRR, $2,500–$5,000)
+  - Custom ToS with TCPA/CAN-SPAM-specific provisions
+  - Custom DPA covering full sub-processor chain and breach notification
+  - Strengthened AUP and indemnification clauses
+  - At this revenue, the cost is justified and actual usage patterns inform better scoping
 
 ---
 
@@ -693,5 +723,5 @@ These are not scheduled. Pull from here once Sprints 1–3 ship.
 - ADR docs live in the project knowledge. Copy to `docs/adrs/` in the app repo on Day 4.
 - The landing page (afterset.net) remains a separate Next.js deployment on Vercel — unaffected by the dashboard stack choice.
 - Capture pages use system font stack for performance. Dashboard uses brand fonts (Bricolage Grotesque, DM Sans, Space Mono). They will look different — this is intentional.
-- **Business Setup runs as a parallel track.** Items marked ⛔ are hard gates — the sprint they reference cannot ship without them. Business Phase A should start immediately (Day 1). Business Phase C (10DLC) should start during Sprint 1 for the approval window. Full rationale in ADR-006.
-- **Cost summary:** ~$50/mo infrastructure + ~$60–130/mo recurring business costs + ~$1,650–$2,280 one-time business setup (Phases A+B) + ~$3,000–$6,300 within 90 days (Phase D).
+- **Business Setup runs as a parallel track.** Items marked ⛔ are hard gates — the sprint they reference cannot ship without them. Business Phase A should start immediately (Day 1). Business Phase C (toll-free verification) should start during Sprint 2 for the approval window. Full rationale in ADR-006.
+- **Cost summary:** ~$50/mo infrastructure + ~$47.50/mo recurring business costs + ~$1,340–$1,600 one-time business setup (Phases A+B) + ~$220–$610 within 90 days (Phase D).
