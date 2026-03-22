@@ -1,29 +1,35 @@
 # ADR-006: Business Setup — Colorado LLC, Mercury Banking, and Compliance Infrastructure
 
 **Status:** Accepted
-**Date:** 2026-03-21
+**Date:** 2026-03-22
 **Deciders:** [Author]
-**Related:** ADR-002 (Resend — CAN-SPAM compliance), ADR-005 (SMS — TCPA compliance)
+**Related:** ADR-002 (Resend — CAN-SPAM compliance), ADR-005 (SMS — TCPA compliance, RILA exemption)
 
 ---
 
 ## Decision
 
-**Colorado single-member LLC ($50)** as the business entity. **Mercury** (free) for business banking. **Stripe** for payment processing, set up as a business account with EIN. **Wave Free** for bookkeeping. **Bundled Tech E&O + Cyber Liability insurance** (~$730–$1,100/year) before first fan data is collected. **Federal trademark filing** ($700, Classes 42 + 41) via Intent-to-Use application. Legal documents (ToS, Privacy Policy, DPA) start with templates, with a SaaS attorney engaged within 90 days ($2,500–$5,000).
+**Colorado single-member LLC ($50)** as the business entity. **Mercury** (free) for business banking. **Stripe** for payment processing, set up as a business account with EIN. **Wave Free** for bookkeeping. **Hiscox E&O insurance** (~$270/year) before first paying customer, with cyber liability added at 50+ artists. **Federal trademark filing** ($700, Classes 42 + 41) via Intent-to-Use application. Legal documents (ToS, Privacy Policy) generated via **Termly Pro+** ($20/month), with a **targeted attorney review** ($300–$500) scoped to TCPA vicarious liability and CPA processor language.
 
-**Critical pre-launch requirements:** TCPA-compliant SMS opt-in flow with all required disclosures baked into the platform (not configurable by artists). CAN-SPAM compliant email footers (mandatory, non-removable). 10DLC registration via the SMS provider (~$19.50 + $2.65–$11.15/month). Published Privacy Policy and Terms of Service with clickwrap acceptance. PO Box or virtual mailbox for CAN-SPAM physical address ($5–$40/month).
+**Critical pre-launch requirements:** CAN-SPAM compliant email footers (mandatory, non-removable). Published Privacy Policy and Terms of Service with clickwrap acceptance. PO Box for CAN-SPAM physical address ($5/month). Telnyx toll-free verification (free, per ADR-005). TCPA compliance is largely handled by the architecture: the single-reply-to-consumer-initiated-text flow falls under the FCC's RILA exemption (FCC 15-72), and Telnyx's built-in auto opt-out handles STOP/HELP/CANCEL/END/QUIT/UNSUBSCRIBE at the carrier level.
 
-**Total cost to go from nothing to legally operational: ~$2,200–$4,400 one-time + ~$90–$156/month recurring.**
+**Total cost to go from nothing to legally operational: ~$1,620–$1,820 one-time + ~$47.50/month recurring.**
 
 ---
 
 ## Context
 
-Afterset collects and stores fan PII (emails, names, phone numbers) on behalf of artists and sends marketing emails and SMS messages on their behalf. This creates regulatory exposure under TCPA, CAN-SPAM, the Colorado Privacy Act, and CCPA/CPRA that does not exist for a typical SaaS product. The SMS text-to-join flow (ADR-005) is the highest-risk feature — TCPA penalties of $500–$1,500 per unsolicited text message have no statutory cap, and class action filings surged 67% in 2024 to 2,788 cases with an average settlement of $6.6 million.
+Afterset collects fan PII (emails, names, phone numbers) on behalf of artists and sends marketing emails and a single SMS reply on their behalf. The compliance research initially scoped Afterset's risk profile against general SMS marketing platforms — companies sending ongoing unsolicited texts at scale. This was overly conservative. ADR-005's architecture deliberately avoids that profile:
+
+- **SMS flow:** Fan initiates by texting a keyword → receives ONE immediate reply with a capture page URL → no further SMS is ever sent. The FCC's 2015 RILA ruling (FCC 15-72) explicitly held that a one-time text sent immediately after a consumer's request is fulfillment, not telemarketing, provided the reply contains only the requested information with no additional marketing. ADR-005 enforces this (GSM-7 only, no promotional copy, compliance language only).
+- **Email flow:** Fan enters email on capture page (web form = express consent) → receives automated follow-up emails. This is standard CAN-SPAM territory with well-understood compliance requirements handled largely by Resend (List-Unsubscribe headers, bounce processing, suppression).
+- **Data sensitivity:** Emails, phone numbers, and names. No SSNs, no financial data, no health records. Supabase Pro provides encryption at rest, RLS tenant isolation, and SOC 2 Type II compliance.
+
+This reframe doesn't eliminate legal obligations — it right-sizes them for a bootstrapped launch.
 
 ### Why these decisions are coupled
 
-Entity formation, banking, insurance, and compliance are interdependent. The LLC must exist before the EIN. The EIN must exist before the bank account. The bank account must exist before Stripe payouts work. The ToS must exist before the first paying customer. TCPA compliance must be engineered into the platform before a single SMS is sent — it cannot be bolted on later. Insurance must be bound before PII is collected because policies are claims-made (no retroactive coverage). Treating these as sequential blockers rather than independent tasks is the key insight.
+Entity formation, banking, insurance, and compliance are interdependent. The LLC must exist before the EIN. The EIN must exist before the bank account. The bank account must exist before Stripe payouts work. The ToS must exist before the first paying customer. Insurance must be bound before PII is collected because policies are claims-made. Treating these as sequential blockers rather than independent tasks is the key insight.
 
 ### Constraints
 
@@ -45,63 +51,62 @@ Entity formation, banking, insurance, and compliance are interdependent. The LLC
 
 **C-Corp (Delaware):** Required for institutional VC funding. Formation costs $475–$785 in year one (Delaware fees + Colorado foreign qualification + registered agent). Imposes double taxation and rigid compliance requirements. Premature for a bootstrapped product with no investor conversations.
 
-**Why Colorado over Delaware/Wyoming:** Afterset operates in Colorado, has no investors, and is a single-member LLC. Forming in another state means paying that state's fees *plus* Colorado foreign qualification fees. Delaware's Court of Chancery advantage is irrelevant without equity disputes. Wyoming offers nothing Colorado doesn't for this profile.
+**Why Colorado over Delaware/Wyoming:** Afterset operates in Colorado, has no investors, and is a single-member LLC. Forming in another state means paying that state's fees plus Colorado foreign qualification fees. Delaware's Court of Chancery advantage is irrelevant without equity disputes.
 
 ### 2. Banking: Mercury + Stripe — SELECTED
 
 **Mercury (free, no minimum):** $0 monthly fee, free domestic and international wires, native Stripe integration, API access for future automation, FDIC coverage up to $5M via sweep network. No cash deposits — irrelevant for a SaaS business where all revenue arrives digitally.
 
-**Relay ($0 Starter):** Strong envelope budgeting with 20 free sub-accounts. Better for Profit First methodology but premature segmentation for a pre-revenue founder. Cash deposit support via Allpoint+ is unnecessary.
+**Relay ($0 Starter):** Strong envelope budgeting with 20 free sub-accounts. Better for Profit First methodology but premature segmentation for a pre-revenue founder.
 
 **Traditional bank (Chase Business Complete, $15/month):** Branch access and established credit relationships, but monthly fees, wire fees ($25+), and no SaaS-specific features. Only makes sense if the founder needs in-branch services.
 
-**Stripe setup:** Register immediately — Stripe allows individual accounts using an SSN, then upgrade to a business account with EIN after LLC formation. No penalty, no account reset. Processing fees: 2.9% + $0.30 per card transaction. At $12/month pricing, effective rate is ~5.4% ($0.65/transaction). Consider annual billing to reduce per-transaction overhead.
+**Stripe setup:** Register immediately — Stripe allows individual accounts using an SSN, then upgrade to a business account with EIN after LLC formation. No penalty, no account reset. Processing fees: 2.9% + $0.30 per card transaction.
 
-### 3. Legal Compliance: Templates Now, Attorney Within 90 Days — SELECTED
+### 3. Legal Compliance: Templates + Targeted Review — SELECTED
 
-**Full attorney engagement from day one ($4,500–$7,500):** Ideal but cost-prohibitive for a pre-revenue founder. A comprehensive SaaS legal package (ToS, Privacy Policy, DPA, AUP) from a specialized attorney runs $2,500–$5,000.
+**Full attorney engagement from day one ($2,500–$5,000):** Comprehensive but cost-prohibitive at pre-revenue. Deferred to $5K MRR when it's justified and the product's actual usage patterns inform better scoping.
 
-**Template-only approach ($100–$500):** Termly Pro+ ($20/month) or TermsFeed (one-time $47–$297) generates baseline ToS and Privacy Policy. Sufficient for a standard SaaS but insufficient for Afterset's SMS/PII complexity — TCPA provisions, CAN-SPAM "initiator" liability, data processor obligations, and indemnification clauses require custom drafting.
+**Template-only approach ($240/year):** Termly Pro+ ($20/month) generates ToS, Privacy Policy, and cookie policy with SaaS-specific clauses, auto-updates for regulatory changes, and TCPA/CCPA provisions. Covers 80–90% of requirements for Afterset's actual risk profile.
 
-**Hybrid approach (selected):** Generate templates for launch ($100–$250), then engage a SaaS attorney within 90 days to customize ($2,500–$5,000). Templates provide legal cover for early customers while the attorney package is prepared. The critical compliance elements that cannot wait for the attorney — TCPA opt-in flows, CAN-SPAM email footers, STOP keyword handling — are engineering tasks built into the platform, not legal document tasks.
+**Template + targeted attorney review (selected, $540–$740 total first year):** Termly Pro+ for document generation, plus a scoped 1–2 hour consultation ($300–$500) with a SaaS attorney via ContractsCounsel or UpCounsel. Bring the template docs and ask two specific questions: (1) "Does my ToS properly allocate TCPA vicarious liability given the RILA exemption applies to my single-reply SMS flow?" (2) "Is my data processor language sufficient for the Colorado Privacy Act?" Maximum value from minimum legal spend.
 
-**Key compliance architecture decisions:**
-- TCPA disclosures and opt-out handling are **platform-enforced, not artist-configurable**. Artists cannot remove or modify required consent language, STOP/HELP handling, or sending time restrictions (8 AM–9 PM recipient local time). This is the primary defense against vicarious liability.
-- CAN-SPAM email footers (unsubscribe link + physical address) are **mandatory and non-removable** in every email template.
-- Consent logging (timestamp, phone number, keyword, consent language displayed) is automated at the platform level and retained for 5 years.
-- 10DLC registration must be complete before the first SMS sends. Allow 2–3 weeks for campaign approval.
+**Why this works for Afterset's actual risk profile:**
+- The TCPA class action threat ($6.6M average settlement) applies to ongoing SMS marketing — mass texts, purchased lists, ignoring opt-outs. Afterset sends one auto-reply to a consumer-initiated text, covered by the RILA exemption. The TCPA risk is real but narrow: it exists only if the auto-reply contains promotional content beyond the URL, or if a future feature adds ongoing SMS messaging.
+- CAN-SPAM has no private right of action. Only FTC and state AGs enforce it. They target large-scale violators, not a SaaS sending 5,000 emails/month.
+- The critical compliance elements — TCPA disclosures, STOP handling, CAN-SPAM footers, consent logging — are **engineering tasks baked into the platform**, not legal document tasks. Telnyx handles STOP/HELP at the carrier level (ADR-005). Resend handles List-Unsubscribe headers (ADR-002). These are already decided and built.
 
 ### 4. Tax and Accounting: Wave Free + CPA at First Filing — SELECTED
 
-**Wave Starter (free):** Double-entry bookkeeping, unlimited invoicing, P&L/balance sheet/cash flow reports at $0. Manual bank transaction import is manageable at <20 transactions/month. No auto bank sync on the free tier.
+**Wave Starter (free):** Double-entry bookkeeping, unlimited invoicing, P&L/balance sheet/cash flow reports at $0. Manual bank transaction import is manageable at <20 transactions/month.
 
-**QuickBooks Solopreneur ($20/month):** Auto bank sync, real-time tax estimates, receipt scanning. Overkill at pre-revenue and lacks a customizable chart of accounts for proper SaaS revenue recognition.
+**QuickBooks Solopreneur ($20/month):** Auto bank sync, real-time tax estimates, receipt scanning. Overkill at pre-revenue and lacks a customizable chart of accounts.
 
-**Hurdlr Premium ($10/month):** Real-time tax estimates and mileage tracking — optimized for gig workers, not SaaS founders.
-
-**CPA timing:** Hire for the first annual tax filing ($300–$500 for a straightforward Schedule C). The QBI deduction (up to 20% of qualified business income), Section 174 R&D amortization rules, and startup cost classification (Section 195 vs. Section 162) are areas where a CPA pays for itself in avoided mistakes.
-
-**Colorado-specific:** Flat 4.40% state income tax. Self-employment tax is 15.3% federal. Quarterly estimated payments not required until expected annual tax liability exceeds $1,000. At 10 customers, annual net profit is likely well below that threshold.
+**CPA timing:** Hire for the first annual tax filing ($300–$500 for a straightforward Schedule C). The QBI deduction, Section 174 R&D amortization, and startup cost classification are areas where a CPA pays for itself. Colorado state income tax is a flat 4.40%. Self-employment tax is 15.3% federal. Quarterly estimated payments not required until expected annual tax liability exceeds $1,000.
 
 ### 5. IP Protection: File Trademark Now, Acquire .com Later — SELECTED
 
-**File now ($700 for Classes 42 + 41):** "Afterset" is a coined/fanciful mark — highest distinctiveness, ~85–90% approval likelihood. Intent-to-Use filing locks in a priority date nationwide. An unrelated bar already uses the Afterset name — delay increases risk of class conflict or domain complications. USPTO fees increased January 2025 to $350/class (unified filing, TEAS Plus/Standard distinction eliminated).
+**File now ($700 for Classes 42 + 41):** "Afterset" is a coined/fanciful mark — highest distinctiveness, ~85–90% approval likelihood. Intent-to-Use filing locks in a priority date nationwide. An unrelated bar already uses the Afterset name — delay increases risk. USPTO fee is $350/class (unified filing effective January 2025).
 
-**Wait until revenue:** Saves $700 but cedes priority date. A SaaS product operating nationally without federal trademark protection relies solely on common-law rights, which are geographically limited and difficult to enforce for internet businesses. The risk/reward is wrong — $700 is less than three months of a Pro subscription from one customer.
+**Wait until revenue:** Saves $700 but cedes priority date. A SaaS product operating nationally without federal trademark protection relies solely on common-law rights, which are geographically limited and difficult to enforce for internet businesses. $700 is less than three months of a Pro subscription from one customer.
 
-**Colorado state trademark ($30):** Cheap supplementary layer. Only protects within Colorado. Not a substitute for federal. File it anyway.
+**Colorado state trademark ($30):** Cheap supplementary layer. File it.
 
-**Domain strategy:** Operating on `afterset.net` is workable — 95% of top SaaS companies use `.com`, but Signal.org and Speedtest.net demonstrate .net is viable in tech audiences. Register `afterset.io` and `afterset.co` defensively ($20–$50). Initiate `.com` acquisition at $5K MRR when a $2,000–$10,000 purchase is justifiable. Claim @afterset on all social platforms immediately ($0).
+**Domain strategy:** Operating on `afterset.net` is workable. Register `afterset.io` and `afterset.co` defensively ($20–$50). Initiate `.com` acquisition at $5K MRR when a $2,000–$10,000 purchase is justifiable. Claim @afterset on all social platforms immediately ($0).
 
-### 6. Insurance: Bundled Tech E&O + Cyber Before Launch — SELECTED
+### 6. Insurance: E&O at Launch, Cyber at Growth — SELECTED
 
-**Bundled Tech E&O + Cyber Liability ($730–$1,100/year):** Covers data breach notification/forensics, legal defense for service failure claims, software bug liability, business interruption. Claims-made policy — must be active before PII collection begins or that period is a permanent coverage gap. Hiscox offers the lowest entry point (~$22.50/month professional liability, ~$30/month cyber).
+**Hiscox E&O / Professional Liability ($270/year, ~$22.50/month):** Covers service failure claims, software bugs causing client harm, missed SLAs. Claims-made policy — must be active before first paying customer. This is the baseline protection for a SaaS product.
 
-**Defer insurance until revenue:** Tempting but dangerous. The moment the first fan texts a keyword, Afterset is collecting phone numbers — PII covered under breach notification laws in all 50 states. An uninsured data breach at pre-revenue can bankrupt the LLC and pierce the veil to personal assets if the LLC is undercapitalized.
+**Bundled Tech E&O + Cyber ($730–$1,100/year):** The full bundle adds data breach notification/forensics, legal defense for privacy violations, business interruption. Worth it — but at pre-revenue with low-sensitivity PII (emails and phone numbers, not financial or health data), E&O alone is a defensible starting point.
 
-**General Liability ($300–$600/year):** Add within 30–60 days of first paying customer. Required by most B2B contracts (venues, promoters, enterprise artists will demand a Certificate of Insurance).
+**Defer all insurance until first customer:** The LLC protects personal assets. The risk during beta with 5 artists and a few hundred fan emails is genuinely low. Acceptable if cash is extremely tight, but not recommended — claims-made gaps are permanent.
 
-**TCPA-specific coverage:** Standard policies generally exclude TCPA claims. Request an affirmative TCPA endorsement when purchasing. If excluded, the primary defense is platform-level compliance engineering — proper consent, auto-STOP handling, consent logging, time-of-day restrictions.
+**Cyber liability added at 50+ artists:** When the platform holds meaningful fan data volumes, add Hiscox cyber (~$30/month, $360/year) to cover breach notification and forensics. Total at that point: ~$630/year.
+
+**TCPA-specific coverage:** Standard policies generally exclude TCPA claims. Given the RILA exemption covers Afterset's SMS flow, the primary TCPA defense is architectural compliance (ADR-005), not insurance. Revisit if Afterset ever adds ongoing SMS marketing as a feature.
+
+**General Liability ($300–$600/year):** Add when a B2B contract requires a Certificate of Insurance — typically at the first venue, promoter, or enterprise artist deal.
 
 ---
 
@@ -109,34 +114,36 @@ Entity formation, banking, insurance, and compliance are interdependent. The LLC
 
 ### Positive
 
-- Entity formation to bank account to Stripe in a single afternoon for $50. LLC is live instantly via Colorado SOS online filing.
-- Total recurring compliance cost is ~$90–$156/month — less than one Band tier subscription. Scales with revenue, not ahead of it.
-- TCPA compliance is platform-enforced rather than artist-dependent, reducing vicarious liability exposure. This is the single most important architectural decision in the entire business setup.
-- Trademark filing locks in nationwide priority date for a strong coined mark. No risk of losing the name to a later filer.
-- Insurance bound before PII collection means no claims-made gap. Coverage is in place from day one.
-- Every optimization (S-Corp election, Delaware C-Corp, enterprise accounting, multi-state sales tax) has a specific revenue trigger. No premature complexity.
+- Entity formation to bank account to Stripe in a single afternoon for $50.
+- Total first-year cost under $2,000 all-in. Ongoing ~$47.50/month — less than two Pro subscriptions.
+- TCPA compliance is architecture-enforced (ADR-005), not artist-dependent. RILA exemption covers the core SMS flow. Telnyx handles opt-out at the carrier level. This eliminates the need for $5,000 in TCPA-specific legal work at launch.
+- Provider-delegated compliance: Telnyx handles STOP/HELP, Resend handles List-Unsubscribe and suppression, Stripe handles PCI, Supabase handles encryption at rest and SOC 2. The platform inherits their compliance infrastructure.
+- Trademark filing locks in nationwide priority for a strong coined mark at $700.
+- Every optimization (S-Corp election, Delaware C-Corp, full legal package, bundled insurance) has a specific revenue trigger. No premature complexity.
 
 ### Negative
 
-- Template legal documents are not custom-fit for the SMS/PII use case. There is a 90-day window where the ToS may not fully protect against an artist misuse scenario. Mitigated by platform-enforced compliance controls.
-- Standard insurance policies likely exclude TCPA damages. Afterset's primary TCPA defense is compliance, not insurance — a posture that requires zero engineering mistakes in the consent flow.
-- Operating on `afterset.net` without the `.com` creates minor brand leakage. Users may type `afterset.com` instinctively and land on the unrelated bar's site.
-- Self-filing the trademark without an attorney increases risk of a procedural error or insufficient goods/services description. The $350/class filing fee is non-refundable if the application is abandoned.
-- Wave Free requires manual transaction entry. Time cost is ~15 minutes/month at pre-revenue but scales poorly past ~50 transactions/month.
+- Template legal documents are not custom-fit. The targeted attorney review mitigates this for the two highest-risk areas (TCPA vicarious liability, CPA processor language), but edge cases may exist in the ToS.
+- E&O-only insurance does not cover data breach notification costs. A breach before cyber is added means paying notification and forensics out of pocket. At <50 artists with low-sensitivity PII, this risk is accepted.
+- The RILA exemption is narrow. If Afterset ever adds ongoing SMS messaging to fans (beyond the single auto-reply), the exemption no longer applies and the full TCPA compliance stack becomes necessary. This must be treated as a hard product constraint until the legal posture is upgraded.
+- Operating on `afterset.net` without the `.com` creates minor brand leakage.
+- Self-filing the trademark without an attorney increases risk of procedural error. The $350/class filing fee is non-refundable if abandoned.
 
 ---
 
 ## Revisit When
 
-- **Net self-employment income exceeds $50K/year.** Evaluate S-Corp election with CPA. At this threshold, the SE tax savings (~$3,000+/year) outweigh the cost of payroll administration.
-- **Pursuing institutional investment.** Convert to Delaware C-Corp before a Series A. Colorado supports statutory conversion. Do this before significant revenue makes the taxable event material.
-- **Monthly revenue exceeds $1K.** Formalize multi-state sales tax compliance. Enable Stripe Tax. File quarterly estimated taxes if annualized liability exceeds $1,000.
-- **Revenue exceeds $100K in any single state.** Register for that state's sales tax. Most states use $100K or 200 transactions as the economic nexus threshold.
-- **First enterprise/venue contract requiring COI.** Bind General Liability if not already active.
-- **Text message volume exceeds 10K/month.** Reassess TCPA insurance options. Explore specialty policies through DOXA or CRC Group.
-- **Transaction volume exceeds 50/month in Wave.** Upgrade to Wave Pro ($16–$19/month) or QuickBooks Simple Start ($38/month) for auto bank sync.
-- **Notice of Allowance received from USPTO.** File Statement of Use within 6 months (or request extension at $125/class). Calendar this immediately — 84% of failed ITU applications fail because the SOU is never filed.
-- **Team grows beyond solo founder.** Add D&O insurance, Workers' Compensation (Colorado requires it), and upgrade from Wave to multi-user bookkeeping.
+- **Net self-employment income exceeds $50K/year.** Evaluate S-Corp election with CPA.
+- **Pursuing institutional investment.** Convert to Delaware C-Corp before a Series A.
+- **Monthly revenue exceeds $1K.** Formalize multi-state sales tax compliance. Enable Stripe Tax. Begin quarterly estimated taxes if annualized liability exceeds $1,000.
+- **Revenue exceeds $5K MRR.** Engage SaaS attorney for full legal package ($2,500–$5,000): custom ToS, DPA, strengthened AUP. At this revenue the cost is justified and the product's actual usage patterns inform better scoping.
+- **50+ artists with real fan lists.** Add cyber liability to insurance (~$30/month). Transition from E&O-only to bundled Tech E&O + Cyber.
+- **First enterprise/venue contract requiring COI.** Bind General Liability.
+- **Revenue exceeds $100K in any single state.** Register for that state's sales tax.
+- **Any product decision to add ongoing SMS messaging to fans.** Full TCPA compliance stack required — RILA exemption no longer applies. Budget $2,500–$5,000 for attorney review of SMS-specific ToS provisions and consent architecture.
+- **Transaction volume exceeds 50/month in Wave.** Upgrade to Wave Pro ($16–$19/month).
+- **Notice of Allowance received from USPTO.** File Statement of Use within 6 months (or extension at $125/class). Calendar immediately — 84% of failed ITU applications fail because the SOU is never filed.
+- **Team grows beyond solo founder.** Add D&O insurance, Workers' Compensation (Colorado requires it).
 
 ---
 
@@ -148,14 +155,15 @@ These should be completed during the Pre-Build Phase, before the first paying cu
 2. **[ ] Obtain EIN.** Apply at irs.gov immediately after LLC formation ($0). Complete in one session (15-minute inactivity timeout). Save CP-575 letter.
 3. **[ ] Open Mercury business account.** Requires Articles of Organization + EIN + photo ID. Verify 1–2 day approval timeline.
 4. **[ ] Connect Stripe to Mercury.** Set up Stripe as business account with EIN. Route all payouts to Mercury. Test a $1 charge and payout.
-5. **[ ] Publish Privacy Policy.** Must be live before any fan data collection. Link from all capture pages, SMS confirmations, and email footers.
-6. **[ ] Publish Terms of Service with clickwrap.** Must be live before first paying customer. Checkbox + "I agree" on artist signup flow.
-7. **[ ] Complete 10DLC registration.** Brand registration ($4.50) + Campaign registration ($15 vetting). Allow 10–15 business days for campaign approval. **This gates Sprint 3 SMS launch.**
-8. **[ ] Verify TCPA compliance in SMS flow.** Test full text-to-join cycle: call-to-action displays all required disclosures → fan texts keyword → confirmation SMS includes program name, frequency, rates, STOP, HELP, privacy/terms links → STOP triggers immediate opt-out and single confirmation → consent logged with timestamp.
-9. **[ ] Verify CAN-SPAM compliance in email templates.** Every email includes: functional unsubscribe link, physical postal address (PO Box), accurate From/Reply-To headers, non-deceptive subject line. Unsubscribe removes within 10 business days (target: immediate).
-10. **[ ] Bind Tech E&O + Cyber insurance.** Get quotes from Hiscox, Vouch/Embroker. Confirm TCPA coverage or document exclusion. Bind before first fan data collection.
+5. **[ ] Set up Termly Pro+ and generate ToS + Privacy Policy.** Publish both before any fan data collection. Link from all capture pages, SMS confirmations, and email footers.
+6. **[ ] Implement clickwrap ToS acceptance.** Checkbox + "I agree" on artist signup flow. Browsewrap is not sufficient.
+7. **[ ] Get PO Box.** Cheapest USPS option (~$5/month). Address goes in every email footer for CAN-SPAM.
+8. **[ ] Verify CAN-SPAM compliance in email templates.** Every email includes: functional unsubscribe link, physical postal address, accurate From/Reply-To headers, non-deceptive subject line. Unsubscribe removes immediately.
+9. **[ ] Verify TCPA compliance in SMS flow.** Confirm auto-reply contains only URL + compliance language (no promotional copy). Confirm Telnyx auto opt-out handles STOP/HELP/CANCEL/END/QUIT/UNSUBSCRIBE. Confirm consent logging records timestamp + phone + keyword. This validates the RILA exemption posture.
+10. **[ ] Bind Hiscox E&O insurance.** ~$22.50/month. Bind before first paying customer.
 11. **[ ] File federal trademark.** USPTO Intent-to-Use application for "Afterset" in Classes 42 and 41 ($700). Calendar all deadlines.
-12. **[ ] Set up Wave bookkeeping.** Create account, connect to Mercury manually, categorize all pre-launch expenses (hosting, domain, legal, filing fees). Track from day one.
+12. **[ ] Set up Wave bookkeeping.** Create account, connect to Mercury manually, categorize all pre-launch expenses. Track from day one.
+13. **[ ] Schedule targeted attorney consultation.** 1–2 hours ($300–$500) via ContractsCounsel or UpCounsel. Bring Termly-generated docs. Scope: TCPA vicarious liability + CPA processor language.
 
 ---
 
@@ -166,10 +174,14 @@ Detailed research across three sessions covering entity formation, banking, tax 
 - Colorado LLC filing fee $50: **VERIFIED** (Colorado SOS)
 - Colorado periodic report $25/year: **VERIFIED** (SB 23-276, effective July 2024)
 - TCPA penalties $500–$1,500 per message, no cap: **VERIFIED** (47 U.S.C. § 227)
+- FCC RILA exemption for single reply to consumer-initiated text: **VERIFIED** (FCC 15-72, July 10, 2015)
 - CAN-SPAM penalties up to $53,088 per email: **VERIFIED** (FTC inflation-adjusted 2024)
+- CAN-SPAM has no private right of action: **VERIFIED** (15 U.S.C. § 7706)
 - Colorado Privacy Act enforcement live, 60-day cure expired Jan 1, 2025: **VERIFIED** (Colorado AG)
 - SaaS not taxable at Colorado state level: **VERIFIED** (June 2020 PLR)
 - SaaS taxable in Colorado home-rule cities (e.g., Denver): **VERIFIED** (Anrok, Stripe)
 - USPTO trademark fee $350/class (unified filing, Jan 2025): **VERIFIED** (USPTO fee schedule)
 - Standard E&O/cyber policies generally exclude TCPA: **VERIFIED** (multiple legal analyses)
-- 10DLC registration mandatory, unregistered traffic blocked Feb 2025: **VERIFIED** (carrier policies, Twilio docs)
+- Hiscox E&O starting at $22.50/month: **VERIFIED** (Hiscox website)
+- Telnyx toll-free verification is free: **VERIFIED** (ADR-005 research, Telnyx docs)
+- Telnyx built-in STOP/HELP handling: **VERIFIED** (ADR-005 research, Telnyx docs)
