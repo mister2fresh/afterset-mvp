@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 22, 2026 (v4 — project scaffolded)
-**Current phase:** Day 4 Project Setup (partially complete)
-**Sprint:** Pre-Build → Sprint 1 ready when Supabase credentials provided
-**Next blocker:** Supabase project URL + anon key + service role key
+**Last updated:** March 22, 2026 (v5 — Sprint 1 schema deployed)
+**Current phase:** Sprint 1 — Core Capture Flow
+**Sprint:** Sprint 1 in progress
+**Next up:** Auth setup, dashboard shell
 
 ---
 
@@ -418,17 +418,20 @@ Run ADR validation tasks before committing to the stack.
 
 **Stack context:** Dashboard is Vite + React SPA on Cloudflare Pages. API is Hono on Railway. Capture pages are static HTML on Cloudflare R2. Form submission via Cloudflare Worker → Supabase.
 
-**Blocked by:** Supabase Free project credentials (URL + anon key + service role key). Database schema, auth, and all API routes depend on this. Free tier is sufficient for all Sprint 1 work — no Pro features needed until Sprint 2 (pg_cron, custom SMTP).
+**Status:** In progress — Supabase credentials wired, schema deployed.
 
 **Business parallel:** Start 10DLC brand registration during Sprint 1 (Business Phase C). The 10–15 business day approval window is the critical path for Sprint 3 SMS launch. Also ensure Business Phase A (LLC, EIN, bank) is complete — 10DLC requires legal business name matching IRS records.
 
 ### P0 — Must ship
 
-- [ ] **Database schema + migrations**
-  - Tables: `users`, `capture_pages`, `fan_captures`, `pending_emails`, `sms_keywords`
+- [x] **Database schema + migrations** ✓ deployed 2026-03-22
+  - Tables: `artists`, `capture_pages`, `fan_captures`, `capture_events`, `pending_emails`, `email_suppression_list`
+  - `capture_events` table logs full interaction history (entry method per visit); `fan_captures` is deduplicated roster
   - Row-level security policies per artist (dashboard queries only — fan capture path uses `service_role`)
-  - Types generated via Supabase CLI and exported
   - Upsert constraint on `(artist_id, email)` in `fan_captures` for dedup across entry methods
+  - Partial index on `pending_emails(status, send_at) where status = 'pending'` for job polling
+  - SMS tables (`sms_keywords`, `sms_consent_log`, `sms_opt_outs`) deferred to Sprint 3
+  - Remaining: Types generated via Supabase CLI and exported, RLS tested with seed rows
   - *Acceptance:* Schema deployed, RLS tested with 100K seed rows (<100ms query with indexing), types available in app.
 
 - [ ] **Auth setup (Supabase Auth)**
