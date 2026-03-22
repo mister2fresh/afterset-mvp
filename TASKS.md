@@ -1,9 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 21, 2026 (v3 — business setup integrated)
-**Current phase:** Pre-Build
-**Sprint:** —
+**Last updated:** March 22, 2026 (v4 — project scaffolded)
+**Current phase:** Day 4 Project Setup (partially complete)
+**Sprint:** Pre-Build → Sprint 1 ready when Supabase credentials provided
+**Next blocker:** Supabase project URL + anon key + service role key
 
 ---
 
@@ -315,46 +316,54 @@ All five deep research ADRs are complete and accepted. Minor decisions (auth, re
 
 Full stack: Vite + React + Hono + Cloudflare Pages + Railway (per ADR-004).
 
-- [ ] Create new project repo on GitHub (single repo)
-- [ ] **Set up `web/` — Vite + React SPA**
-  - `npm create vite@latest web -- --template react-ts`
-  - Install TanStack Router + TanStack Query
-  - Install Tailwind CSS v4 (CSS-based config, NOT tailwind.config.ts)
-  - Install shadcn/ui (for dashboard components)
-  - Install Recharts (for analytics charts)
-- [ ] **Set up `api/` — Hono API server**
-  - Initialize Hono with Node.js adapter
-  - Install Zod for input validation
-  - Install Supabase JS client (`@supabase/supabase-js`)
-  - Install Resend SDK
-  - Set up basic health check endpoint (`/api/health`)
-- [ ] **Configure Supabase project**
+- [x] Create new project repo on GitHub (single repo)
+- [x] **Set up `web/` — Vite + React SPA** *(completed 2026-03-22)*
+  - Vite + React 19 + TypeScript via `pnpm create vite`
+  - TanStack Router (file-based routing) + TanStack Query
+  - Tailwind CSS v4 (CSS-based `@theme` config, NOT tailwind.config.ts)
+  - Recharts installed (shadcn/ui deferred to Sprint 1 dashboard shell)
+  - Supabase client wired to env vars (`web/src/lib/supabase.ts`)
+- [x] **Set up `api/` — Hono API server** *(completed 2026-03-22)*
+  - Hono with Node.js adapter + CORS + request logger
+  - Zod, Supabase JS client, Resend SDK installed
+  - Health check endpoint at `/api/health` — verified working
+  - `tsx watch` for hot-reload dev server
+- [x] **Set up monorepo tooling** *(completed 2026-03-22)*
+  - pnpm workspace (`web/` + `api/`)
+  - Root scripts: `dev:web`, `dev:api`, `build:web`, `build:api`, `lint`, `typecheck`
+  - Biome shared config: tabs, double quotes, semicolons, import sorting, `noExplicitAny`
+  - TypeScript strict mode in both projects — both pass `tsc --noEmit` clean
+  - Vite dev proxy: `/api/*` → localhost:3000
+- [x] **Set up environment variables structure** *(completed 2026-03-22)*
+  - `web/.env.example`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`
+  - `api/.env.example`: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `TELNYX_API_KEY`, `SENTRY_DSN`, `PORT`
+  - Cloudflare Worker env vars deferred to Cloudflare setup below
+- [x] Import design tokens from landing page *(completed 2026-03-22)*
+  - Midnight (#0a0e1a), midnight-light (#111827)
+  - Honey-gold (#E8C547), electric blue (#3b82f6)
+  - Bricolage Grotesque / DM Sans / Space Mono fonts (dashboard only — capture pages use system font stack)
+  - Defined as Tailwind v4 `@theme` vars in `web/src/index.css`
+- [x] Create `CLAUDE.md` for the app repo *(completed 2026-03-22)*
+  - Project structure, commands, design tokens, formatting conventions, MCP rules
+- [ ] **Configure Supabase project** ⛔ *Blocked: needs manual account creation*
   - Create Supabase Pro project
   - Enable pg_cron and pg_net extensions
   - Configure custom SMTP with Resend credentials (NON-NEGOTIABLE DAY 1 — default is 2 emails/hr)
   - Set up `send.afterset.net` domain in Resend: SPF, DKIM, DMARC records
   - Register Google Postmaster Tools for `send.afterset.net`
-- [ ] **Configure Cloudflare**
+  - Provide to Claude: project URL + anon key + service role key
+- [ ] **Configure Cloudflare** ⛔ *Blocked: can scaffold locally first, deploy later*
   - Set up Cloudflare Pages project connected to `web/` folder
   - Set up R2 bucket for capture page HTML files
   - Create Cloudflare Worker for capture form submission
   - Verify DNS for `afterset.net` — capture pages at `/c/[slug]`, Worker at `/api/capture`
-- [ ] **Configure Railway**
+- [ ] **Configure Railway** ⛔ *Blocked: can run API locally until deployment*
   - Create Railway Hobby project connected to `api/` folder
   - Verify GitHub auto-deploy works
   - Set up environment variables
   - Confirm actual compute cost after 24hrs idle (should be within $5 credit)
-- [ ] **Set up environment variables structure**
-  - `web/`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`
-  - `api/`: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `TELNYX_API_KEY`, `SENTRY_DSN`
-  - Cloudflare Worker: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
-- [ ] Import design tokens from landing page:
-  - Midnight (#0a0e1a), midnight-light (#111827)
-  - Honey-gold (#E8C547), electric blue (#3b82f6)
-  - Bricolage Grotesque / DM Sans / Space Mono fonts (dashboard only — capture pages use system font stack)
-  - Glass card surfaces, high-contrast patterns
 - [ ] Configure Sentry on both SPA and API — verify error capture from each
-- [ ] Create `CLAUDE.md` for the app repo (expand from landing page version)
+- [ ] Install and configure shadcn/ui *(deferred to Sprint 1 dashboard shell)*
 - [ ] Create `docs/CONVENTIONS.md`:
   - TypeScript strict mode, no `any`
   - All components: explicit prop types
@@ -405,6 +414,8 @@ Run ADR validation tasks before committing to the stack.
 **Goal:** An artist can create a capture page, generate a QR code, and a fan can scan it and submit their email.
 
 **Stack context:** Dashboard is Vite + React SPA on Cloudflare Pages. API is Hono on Railway. Capture pages are static HTML on Cloudflare R2. Form submission via Cloudflare Worker → Supabase.
+
+**Blocked by:** Supabase project credentials (URL + anon key + service role key). Database schema, auth, and all API routes depend on this.
 
 **Business parallel:** Start 10DLC brand registration during Sprint 1 (Business Phase C). The 10–15 business day approval window is the critical path for Sprint 3 SMS launch. Also ensure Business Phase A (LLC, EIN, bank) is complete — 10DLC requires legal business name matching IRS records.
 
