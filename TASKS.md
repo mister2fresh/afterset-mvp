@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 22, 2026 (v7 — Sprint 1 dashboard shell complete)
+**Last updated:** March 22, 2026 (v8 — Capture page creator complete, incentive upload task added)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
-**Next up:** Capture page creator, capture page build pipeline
+**Next up:** Capture page build pipeline, public capture page, incentive file upload
 
 ---
 
@@ -418,7 +418,7 @@ Run ADR validation tasks before committing to the stack.
 
 **Stack context:** Dashboard is Vite + React SPA on Cloudflare Pages. API is Hono on Railway. Capture pages are static HTML on Cloudflare R2. Form submission via Cloudflare Worker → Supabase.
 
-**Status:** In progress — schema deployed, auth complete, dashboard shell complete, capture page creator next.
+**Status:** In progress — schema deployed, auth complete, dashboard shell complete, capture page CRUD complete (incentive upload still needed). Build pipeline next.
 
 **Business parallel:** Start 10DLC brand registration during Sprint 1 (Business Phase C). The 10–15 business day approval window is the critical path for Sprint 3 SMS launch. Also ensure Business Phase A (LLC, EIN, bank) is complete — 10DLC requires legal business name matching IRS records.
 
@@ -450,13 +450,14 @@ Run ADR validation tasks before committing to the stack.
   - Design tokens from landing page applied (Bricolage Grotesque, honey-gold, midnight)
   - *Acceptance:* Authenticated artist sees dashboard with navigation. Empty states guide next actions. ✓
 
-- [ ] **Capture page creator (dashboard)**
+- [~] **Capture page creator (dashboard)** (CRUD complete, incentive upload remaining)
   - Form: title, value exchange message, streaming platform links, social links, color/accent picker
-  - Generates unique slug
-  - Saves to Supabase via Hono API
-  - Triggers build pipeline: Hono generates HTML → uploads to R2 → purges CDN cache
-  - Live within 5–10 seconds of save
-  - *Acceptance:* Artist creates a page, sees it in dashboard, edits propagate to live page within 15 seconds.
+  - Generates unique slug (server-side, with collision avoidance)
+  - Saves to Supabase via Hono API (auth middleware auto-creates artist record on first request)
+  - Edit support: pre-populated dialog with PATCH to update existing pages
+  - Delete support via card dropdown menu
+  - Build pipeline trigger deferred to next task
+  - *Acceptance:* Artist creates a page, sees it in dashboard, can edit and delete. ✓
 
 - [ ] **Capture page build pipeline**
   - Node.js script (~100 lines) on Hono API
@@ -492,6 +493,16 @@ Run ADR validation tasks before committing to the stack.
   - *Acceptance:* Artist can view and download a print-quality QR code that resolves to their capture page.
 
 ### P1 — Should ship
+
+- [ ] **Incentive file upload (dashboard)**
+  - Artist uploads a file (MP3, FLAC, PNG, PDF) as the incentive fans receive after submitting their email
+  - Accepted formats: audio (MP3, FLAC), image (PNG, JPG), document (PDF). Max 50MB per file.
+  - Stored in Supabase Storage (bucket per artist, private). Signed download URLs generated on demand.
+  - One incentive file per capture page — uploaded in the capture page creator/editor
+  - New `incentive_file_path` and `incentive_file_name` columns on `capture_pages` table (migration required)
+  - Dashboard shows file name, size, and a replace/remove option
+  - *Acceptance:* Artist uploads a file in the page creator, sees it attached, can replace or remove it. File persists in Supabase Storage.
+  - **Note:** Delivery to fans happens in Sprint 2 via the follow-up email (signed download link included in email template).
 
 - [ ] **Capture confirmation screen (in-page)**
   - "You're in!" displayed immediately via localStorage-first pattern (before network responds)
@@ -537,11 +548,12 @@ Run ADR validation tasks before committing to the stack.
   - *Acceptance:* System can send a fan email with proper headers, unsubscribe works, bounces update suppression list.
 
 - [ ] **Follow-up email template editor (dashboard)**
-  - Artist configures: subject line, body text, value exchange link/attachment
+  - Artist configures: subject line, body text, incentive file delivery
+  - If capture page has an incentive file (uploaded in Sprint 1), email includes a time-limited signed download link
   - Built with React Email components
   - Preview before saving
   - One template per capture page
-  - *Acceptance:* Artist creates and previews a follow-up email template tied to a capture page.
+  - *Acceptance:* Artist creates and previews a follow-up email template tied to a capture page. Incentive download link works and expires after 7 days.
 
 - [ ] **Delayed email trigger via pg_cron**
   - Configurable delay per capture page: immediate, 1 hour, next morning (9am in artist's timezone)
