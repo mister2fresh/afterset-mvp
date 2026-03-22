@@ -1,0 +1,27 @@
+{
+	"name": "api",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/index.ts",
+		"build": "tsc -b",
+		"start": "node dist/index.js",
+		"lint": "biome check --write .",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@hono/node-server": "^1.19.11",
+		"@supabase/supabase-js": "^2.99.3",
+		"hono": "^4.12.8",
+		"resend": "^6.9.4",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.8",
+		"@types/node": "^25.5.0",
+		"tsx": "^4.21.0",
+		"typescript": "~5.9.3",
+		"vitest": "^4.1.0"
+	}
+}
