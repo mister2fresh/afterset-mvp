@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 22, 2026 (v6 — Sprint 1 auth complete)
+**Last updated:** March 22, 2026 (v7 — Sprint 1 dashboard shell complete)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
-**Next up:** Dashboard shell, capture page creator
+**Next up:** Capture page creator, capture page build pipeline
 
 ---
 
@@ -366,7 +366,7 @@ Full stack: Vite + React + Hono + Cloudflare Pages + Railway (per ADR-004).
   - Set up environment variables
   - Confirm actual compute cost after 24hrs idle (should be within $5 credit)
 - [ ] Configure Sentry on both SPA and API — verify error capture from each
-- [ ] Install and configure shadcn/ui *(deferred to Sprint 1 dashboard shell)*
+- [x] Install and configure shadcn/ui *(completed 2026-03-22 — Radix Nova preset, Tailwind v4, brand-themed dark mode)*
 - [ ] Create `docs/CONVENTIONS.md`:
   - TypeScript strict mode, no `any`
   - All components: explicit prop types
@@ -418,7 +418,7 @@ Run ADR validation tasks before committing to the stack.
 
 **Stack context:** Dashboard is Vite + React SPA on Cloudflare Pages. API is Hono on Railway. Capture pages are static HTML on Cloudflare R2. Form submission via Cloudflare Worker → Supabase.
 
-**Status:** In progress — schema deployed, auth complete, dashboard shell next.
+**Status:** In progress — schema deployed, auth complete, dashboard shell complete, capture page creator next.
 
 **Business parallel:** Start 10DLC brand registration during Sprint 1 (Business Phase C). The 10–15 business day approval window is the critical path for Sprint 3 SMS launch. Also ensure Business Phase A (LLC, EIN, bank) is complete — 10DLC requires legal business name matching IRS records.
 
@@ -441,13 +441,14 @@ Run ADR validation tasks before committing to the stack.
   - Auth abstraction layer: `getUser()`, `signInWithMagicLink()`, `signOut()` in `web/src/lib/auth.ts` — no Supabase references outside lib/
   - *Acceptance:* Artist can sign up, log in, see dashboard shell. Magic link arrives in <30s. ✓ tested
 
-- [ ] **Artist dashboard shell**
+- [x] **Artist dashboard shell** ✓ completed 2026-03-22
   - Vite + React SPA with TanStack Router
-  - Layout with navigation (sidebar or top nav)
-  - Empty states for all sections
-  - Responsive (desktop-first, mobile-usable)
+  - Collapsible sidebar layout (shadcn Sidebar component) with mobile sheet overlay
+  - Routes: /dashboard (overview), /pages (capture pages), /fans, /analytics, /settings
+  - Empty states for all sections with contextual guidance
+  - shadcn/ui installed (Radix Nova preset, Tailwind v4) with brand-themed dark mode
   - Design tokens from landing page applied (Bricolage Grotesque, honey-gold, midnight)
-  - *Acceptance:* Authenticated artist sees dashboard with navigation. Empty states guide next actions.
+  - *Acceptance:* Authenticated artist sees dashboard with navigation. Empty states guide next actions. ✓
 
 - [ ] **Capture page creator (dashboard)**
   - Form: title, value exchange message, streaming platform links, social links, color/accent picker
