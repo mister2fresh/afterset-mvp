@@ -24,7 +24,7 @@ Reference summary of the five foundational decisions. Full rationale in the ADR 
 
 | Component | Decision | Cost | ADR |
 |---|---|---|---|
-| Database + Auth + Jobs | Supabase Pro (Micro compute) — Postgres, Auth (magic link + OAuth), pg_cron, Realtime Broadcast | $25/mo | ADR-001 |
+| Database + Auth + Jobs | Supabase Free for dev → Pro at launch. Postgres, Auth (magic link + OAuth), Realtime Broadcast. pg_cron/pg_net Pro-only (Sprint 2+). | $0 dev / $25 prod | ADR-001 |
 | Email sending | Resend Pro — shared domain `send.afterset.net` at launch, custom domains at ~200 artists. `EmailService` abstraction wraps all sends. | $20/mo | ADR-002 |
 | Capture pages (fan-facing) | Pre-built static HTML on Cloudflare R2 + CDN. ~5KB per page. Form POST to Cloudflare Worker (same origin). | $0/mo | ADR-003 |
 | Dashboard + API | Vite + React SPA on Cloudflare Pages (free) + Hono API on Railway Hobby. Single repo (`web/` + `api/`). | $5/mo | ADR-004 |
@@ -345,13 +345,16 @@ Full stack: Vite + React + Hono + Cloudflare Pages + Railway (per ADR-004).
   - Defined as Tailwind v4 `@theme` vars in `web/src/index.css`
 - [x] Create `CLAUDE.md` for the app repo *(completed 2026-03-22)*
   - Project structure, commands, design tokens, formatting conventions, MCP rules
-- [ ] **Configure Supabase project** ⛔ *Blocked: needs manual account creation*
-  - Create Supabase Pro project
-  - Enable pg_cron and pg_net extensions
-  - Configure custom SMTP with Resend credentials (NON-NEGOTIABLE DAY 1 — default is 2 emails/hr)
-  - Set up `send.afterset.net` domain in Resend: SPF, DKIM, DMARC records
-  - Register Google Postmaster Tools for `send.afterset.net`
-  - Provide to Claude: project URL + anon key + service role key
+- [~] **Configure Supabase project** ⛔ *In progress: creating free plan for dev*
+  - [ ] Create Supabase **Free** project for development
+  - [ ] Provide to Claude: project URL + anon key + service role key (Settings → API)
+  - [ ] Upgrade to Supabase **Pro** before launch — required for:
+    - pg_cron + pg_net (Sprint 2 delayed emails)
+    - Custom SMTP via Resend (Sprint 2 — free tier limited to 2 emails/hr)
+    - Higher connection/compute limits for production traffic
+  - [ ] Configure custom SMTP with Resend credentials *(Pro only, defer to Sprint 2)*
+  - [ ] Set up `send.afterset.net` domain in Resend: SPF, DKIM, DMARC records *(defer to Sprint 2)*
+  - [ ] Register Google Postmaster Tools for `send.afterset.net` *(defer to Sprint 2)*
 - [ ] **Configure Cloudflare** ⛔ *Blocked: can scaffold locally first, deploy later*
   - Set up Cloudflare Pages project connected to `web/` folder
   - Set up R2 bucket for capture page HTML files
@@ -415,7 +418,7 @@ Run ADR validation tasks before committing to the stack.
 
 **Stack context:** Dashboard is Vite + React SPA on Cloudflare Pages. API is Hono on Railway. Capture pages are static HTML on Cloudflare R2. Form submission via Cloudflare Worker → Supabase.
 
-**Blocked by:** Supabase project credentials (URL + anon key + service role key). Database schema, auth, and all API routes depend on this.
+**Blocked by:** Supabase Free project credentials (URL + anon key + service role key). Database schema, auth, and all API routes depend on this. Free tier is sufficient for all Sprint 1 work — no Pro features needed until Sprint 2 (pg_cron, custom SMTP).
 
 **Business parallel:** Start 10DLC brand registration during Sprint 1 (Business Phase C). The 10–15 business day approval window is the critical path for Sprint 3 SMS launch. Also ensure Business Phase A (LLC, EIN, bank) is complete — 10DLC requires legal business name matching IRS records.
 
