@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 22, 2026 (v5 — Sprint 1 schema deployed)
+**Last updated:** March 22, 2026 (v6 — Sprint 1 auth complete)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
-**Next up:** Auth setup, dashboard shell
+**Next up:** Dashboard shell, capture page creator
 
 ---
 
@@ -418,7 +418,7 @@ Run ADR validation tasks before committing to the stack.
 
 **Stack context:** Dashboard is Vite + React SPA on Cloudflare Pages. API is Hono on Railway. Capture pages are static HTML on Cloudflare R2. Form submission via Cloudflare Worker → Supabase.
 
-**Status:** In progress — Supabase credentials wired, schema deployed.
+**Status:** In progress — schema deployed, auth complete, dashboard shell next.
 
 **Business parallel:** Start 10DLC brand registration during Sprint 1 (Business Phase C). The 10–15 business day approval window is the critical path for Sprint 3 SMS launch. Also ensure Business Phase A (LLC, EIN, bank) is complete — 10DLC requires legal business name matching IRS records.
 
@@ -434,12 +434,12 @@ Run ADR validation tasks before committing to the stack.
   - Remaining: Types generated via Supabase CLI and exported, RLS tested with seed rows
   - *Acceptance:* Schema deployed, RLS tested with 100K seed rows (<100ms query with indexing), types available in app.
 
-- [ ] **Auth setup (Supabase Auth)**
-  - Magic link + Google OAuth for artist signup/login
+- [x] **Auth setup (Supabase Auth)** ✓ completed 2026-03-22
+  - Magic link for artist signup/login (Google OAuth deferred — no GCP project yet)
   - Session management via `supabase.auth.getSession()` + `onAuthStateChange()`
-  - Route protection via TanStack Router `beforeLoad` guard
-  - Auth abstraction layer: `getCurrentUser()` and `requireAuth()` don't reference Supabase directly
-  - *Acceptance:* Artist can sign up, log in, see dashboard shell. Magic link arrives in <30s (via Resend SMTP).
+  - Route protection via TanStack Router `beforeLoad` guard (`_authenticated` layout route)
+  - Auth abstraction layer: `getUser()`, `signInWithMagicLink()`, `signOut()` in `web/src/lib/auth.ts` — no Supabase references outside lib/
+  - *Acceptance:* Artist can sign up, log in, see dashboard shell. Magic link arrives in <30s. ✓ tested
 
 - [ ] **Artist dashboard shell**
   - Vite + React SPA with TanStack Router

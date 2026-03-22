@@ -3,7 +3,10 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import { getUser, initAuth } from "./lib/auth";
 import { routeTree } from "./routeTree.gen";
+
+await initAuth(() => router.invalidate());
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -16,7 +19,10 @@ const queryClient = new QueryClient({
 
 const router = createRouter({
 	routeTree,
-	context: { queryClient },
+	context: {
+		queryClient,
+		auth: { getUser },
+	},
 	defaultPreload: "intent",
 });
 
