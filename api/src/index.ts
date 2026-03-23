@@ -9,6 +9,8 @@ import captures from "./routes/captures.js";
 import email from "./routes/email.js";
 import emailTemplates from "./routes/email-templates.js";
 import incentive from "./routes/incentive.js";
+import sendBatch from "./routes/send-batch.js";
+import settings from "./routes/settings.js";
 
 const app = new Hono();
 
@@ -21,11 +23,32 @@ app.use(
 	}),
 );
 
-app.get("/api/health", (c) => {
-	return c.json({ status: "ok", timestamp: new Date().toISOString() });
+app.get("/api/health", async (c) => {
+	const { supabase } = await import("./lib/supabase.js");
+	const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+	const { count } = await supabase
+		.from("pending_emails")
+		.select("id", { count: "exact", head: true })
+		.eq("status", "pending")
+		.lt("send_at", oneHourAgo);
+
+	const stuckCount = count ?? 0;
+	const status = stuckCount > 0 ? "degraded" : "ok";
+
+	return c.json({
+		status,
+		timestamp: new Date().toISOString(),
+		...(stuckCount > 0 && { stuck_emails: stuckCount }),
+	});
 });
 
 app.route("/api/email", email);
+app.route("/api/emails", sendBatch);
+
+app.use("/api/settings", auth);
+app.use("/api/settings/*", auth);
+app.route("/api/settings", settings);
 
 app.use("/api/capture-pages", auth);
 app.use("/api/capture-pages/*", auth);

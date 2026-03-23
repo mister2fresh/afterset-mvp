@@ -34,6 +34,47 @@ function cleanupRateLimits() {
 	}
 }
 
+function calculateNextMorning(timezone: string): string {
+	const now = new Date();
+	// Format current hour in artist's timezone to determine if it's already past 9am
+	const formatter = new Intl.DateTimeFormat("en-US", {
+		timeZone: timezone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		hour12: false,
+	});
+	const parts = Object.fromEntries(formatter.formatToParts(now).map((p) => [p.type, p.value]));
+	const localHour = Number.parseInt(parts.hour, 10);
+
+	// Target: 9am in artist's timezone, tomorrow (or today if before 9am)
+	const daysToAdd = localHour >= 9 ? 1 : 0;
+	const target = new Date(now);
+	target.setDate(target.getDate() + daysToAdd);
+
+	// Build a date string in the artist's timezone at 09:00, then convert to UTC
+	const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+		timeZone: timezone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	});
+	const dateStr = dateFormatter.format(target); // YYYY-MM-DD
+	// Parse "YYYY-MM-DD 09:00" in the artist's timezone by computing the UTC offset
+	const nineAm = new Date(`${dateStr}T09:00:00`);
+	// Get the offset: difference between UTC interpretation and local interpretation
+	const utcNineAm = new Date(nineAm.getTime() + getTimezoneOffsetMs(timezone, nineAm));
+	return utcNineAm.toISOString();
+}
+
+function getTimezoneOffsetMs(timezone: string, date: Date): number {
+	// Calculate offset by comparing UTC and timezone-formatted date
+	const utcStr = date.toLocaleString("en-US", { timeZone: "UTC" });
+	const tzStr = date.toLocaleString("en-US", { timeZone: timezone });
+	return new Date(utcStr).getTime() - new Date(tzStr).getTime();
+}
+
 const ENTRY_METHODS = new Set(["d", "q", "n", "s"]);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CORS_HEADERS = {
@@ -135,6 +176,28 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	const page = pages[0];
 	const normalizedEmail = email.toLowerCase().trim();
 
+	// Look up email template + artist timezone for delay calculation
+	const templateRes = await supabaseRpc(
+		env,
+		`email_templates?capture_page_id=eq.${page.id}&is_active=eq.true&select=delay_mode`,
+		{},
+	);
+	const templateRows = templateRes.ok
+		? ((await templateRes.json()) as { delay_mode: string }[])
+		: [];
+	const delayMode = templateRows[0]?.delay_mode ?? "immediate";
+
+	let sendAt: string | undefined;
+	if (delayMode === "1_hour") {
+		sendAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+	} else if (delayMode === "next_morning") {
+		// Fetch artist timezone for correct 9am calculation
+		const tzRes = await supabaseRpc(env, `artists?id=eq.${page.artist_id}&select=timezone`, {});
+		const tzRows = tzRes.ok ? ((await tzRes.json()) as { timezone: string }[]) : [];
+		const tz = tzRows[0]?.timezone ?? "America/New_York";
+		sendAt = calculateNextMorning(tz);
+	}
+
 	// Upsert fan_captures — insert or update last_captured_at on conflict (artist_id, email)
 	const upsertRes = await supabaseRpc(env, "fan_captures?on_conflict=artist_id,email", {
 		method: "POST",
@@ -173,13 +236,14 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 		},
 	});
 
-	// Insert pending email for follow-up
+	// Insert pending email for follow-up (send_at based on template delay_mode)
 	await supabaseRpc(env, "pending_emails", {
 		method: "POST",
 		body: {
 			fan_capture_id: fanCaptureId,
 			artist_id: page.artist_id,
 			email: normalizedEmail,
+			...(sendAt && { send_at: sendAt }),
 		},
 	});
 
