@@ -1,0 +1,16 @@
+{
+	"name": "worker",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler dev",
+		"publish": "wrangler deploy",
+		"lint": "biome check --write .",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.8",
+		"@cloudflare/workers-types": "^4.20250320.0",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.0.0"
+	}
+}

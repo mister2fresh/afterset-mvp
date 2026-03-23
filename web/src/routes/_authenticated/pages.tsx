@@ -431,7 +431,7 @@ function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps)
 	});
 
 	const removeMutation = useMutation({
-		mutationFn: () => api.delete(`/capture-pages/${page!.id}/incentive`),
+		mutationFn: () => api.delete(`/capture-pages/${page?.id}/incentive`),
 		onSuccess: () => {
 			setFileRemoved(true);
 			queryClient.invalidateQueries({ queryKey: ["capture-pages"] });
@@ -645,9 +645,9 @@ function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps)
 							/>
 						) : hasExistingFile ? (
 							<IncentiveFileDisplay
-								name={page.incentive_file_name!}
-								size={page.incentive_file_size!}
-								contentType={page.incentive_content_type!}
+								name={page.incentive_file_name ?? ""}
+								size={page.incentive_file_size ?? 0}
+								contentType={page.incentive_content_type ?? ""}
 								onRemove={() => removeMutation.mutate()}
 								isRemoving={removeMutation.isPending}
 							/>
@@ -874,6 +874,7 @@ function CapturePagePreview({ form }: { form: FormData }) {
 					<div className="mt-1 flex gap-2">
 						{Array.from({ length: Math.min(streamingCount, 4) }).map((_, i) => (
 							<div
+								// biome-ignore lint/suspicious/noArrayIndexKey: static decorative placeholders
 								key={i}
 								className="size-6 rounded-full"
 								style={{ backgroundColor: form.secondary_color, opacity: 0.6 }}

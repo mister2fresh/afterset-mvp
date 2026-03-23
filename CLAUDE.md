@@ -10,6 +10,8 @@ web/                      # Vite + React SPA (artist dashboard)
   src/lib/                # Shared utilities (supabase client, etc.)
 api/                      # Hono API server (Node.js)
   src/                    # API routes and services
+worker/                   # Cloudflare Worker (serves capture pages from R2)
+  src/index.ts            # Worker entry point
 afterset/docs/adr/        # Architecture Decision Records (001–006)
 afterset/docs/research/   # Research that informed ADRs
 TASKS.md                  # Sprint tracker and task breakdown
@@ -54,6 +56,10 @@ pnpm dev:api              # Hono API at localhost:3000 (tsx watch)
 # Build
 pnpm build:web            # tsc + vite build → web/dist/
 pnpm build:api            # tsc → api/dist/
+
+# Worker (Cloudflare)
+pnpm dev:worker           # wrangler dev (local Worker)
+pnpm deploy:worker        # wrangler deploy (push to Cloudflare)
 
 # Quality
 pnpm lint                 # Biome check --write across all packages

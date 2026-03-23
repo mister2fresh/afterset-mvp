@@ -7,6 +7,8 @@
   "scripts": {
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api dev",
+    "dev:worker": "pnpm --filter worker dev",
+    "deploy:worker": "pnpm --filter worker run publish",
     "build:web": "pnpm --filter web build",
     "build:api": "pnpm --filter api build",
     "test": "pnpm --filter api test",

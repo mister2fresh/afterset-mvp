@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 22, 2026 (v11 — Build pipeline complete)
+**Last updated:** March 23, 2026 (v13 — Cloudflare Worker serving capture pages live)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
-**Next up:** Public capture page + CDN routing, Cloudflare Worker for fan submission, QR code generation
+**Next up:** Cloudflare Worker for fan email submission, QR code generation
 
 ---
 
@@ -355,11 +355,15 @@ Full stack: Vite + React + Hono + Cloudflare Pages + Railway (per ADR-004).
   - [ ] Configure custom SMTP with Resend credentials *(Pro only, defer to Sprint 2)*
   - [ ] Set up `send.afterset.net` domain in Resend: SPF, DKIM, DMARC records *(defer to Sprint 2)*
   - [ ] Register Google Postmaster Tools for `send.afterset.net` *(defer to Sprint 2)*
-- [ ] **Configure Cloudflare** ⛔ *Blocked: can scaffold locally first, deploy later*
-  - Set up Cloudflare Pages project connected to `web/` folder
-  - Set up R2 bucket for capture page HTML files
-  - Create Cloudflare Worker for capture form submission
-  - Verify DNS for `afterset.net` — capture pages at `/c/[slug]`, Worker at `/api/capture`
+- [~] **Configure Cloudflare** *In progress*
+  - [x] Add `afterset.net` to Cloudflare (Free plan), import iCloud email DNS records (MX, SPF, DKIM, apple-domain)
+  - [x] Set up R2 bucket `afterset-capture-pages` — 4 test pages already uploaded
+  - [x] R2 API credentials created and in `.env`
+  - [x] Nameserver propagation complete, Cloudflare active on `afterset.net` *(completed 2026-03-23)*
+  - [x] Cloudflare Worker serving capture pages from R2 (`GET /c/[slug]`) — deployed and verified live *(completed 2026-03-23)*
+  - [ ] Cloudflare Worker for capture form submission (`POST /api/capture`) — Sprint 1 P0 task
+  - [ ] Set up Cloudflare Pages project connected to `web/` folder
+  - [ ] Verify DNS for `afterset.net` — capture pages at `/c/[slug]`, Worker at `/api/capture`
 - [ ] **Configure Railway** ⛔ *Blocked: can run API locally until deployment*
   - Create Railway Hobby project connected to `api/` folder
   - Verify GitHub auto-deploy works
@@ -484,14 +488,13 @@ Run ADR validation tasks before committing to the stack.
   - Generated pages ~2.7–2.8KB uncompressed (well within 14KB budget)
   - *Acceptance:* Build runs in <10s. R2 files confirmed present. ✓ CDN serving deferred to public capture page task.
 
-- [ ] **Public capture page (`afterset.net/c/[slug]`)**
-  - Static HTML served from Cloudflare R2 + CDN
-  - Dark theme, system font stack, 7:1+ contrast, 48×48px touch targets
-  - Single email input as primary action
-  - Streaming platform follow buttons (inline SVG icons)
-  - Social follow links
-  - Value exchange messaging displayed
-  - Entry method tracking via query param (`?v=q` for QR, `?v=n` for NFC, `?v=s` for SMS, `?v=d` for direct)
+- [x] **Public capture page (`afterset.net/c/[slug]`)** ✓ completed 2026-03-23
+  - [x] Static HTML generated and uploaded to R2 (build pipeline complete)
+  - [x] Dark theme, system font stack, 7:1+ contrast, 48×48px touch targets
+  - [x] Single email input, streaming/social buttons, value exchange messaging, entry method tracking
+  - [x] Cloudflare Worker serving pages from R2 at `afterset.net/c/[slug]` — deployed and verified live
+  - [x] CDN routing verified end-to-end (nameservers propagated, pages load in browser)
+  - Build pipeline updated: R2 stores uncompressed HTML, Cloudflare CDN handles compression at edge
   - *Acceptance:* Page loads <2s on slow 3G. Total payload <14KB compressed. Dark theme legible at 10% brightness.
 
 - [ ] **Cloudflare Worker for fan email submission**

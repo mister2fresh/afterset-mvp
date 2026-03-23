@@ -1,11 +1,7 @@
-import { promisify } from "node:util";
-import { brotliCompress, constants } from "node:zlib";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { generateCaptureHtml } from "./capture-template.js";
 import { R2_BUCKET, r2 } from "./r2.js";
 import { supabase } from "./supabase.js";
-
-const compress = promisify(brotliCompress);
 
 export async function buildPage(
 	pageId: string,
@@ -21,10 +17,7 @@ export async function buildPage(
 	if (error || !page) throw new Error(error?.message ?? "Page not found");
 
 	const html = generateCaptureHtml(page);
-	const compressed = await compress(Buffer.from(html), {
-		params: { [constants.BROTLI_PARAM_QUALITY]: 11 },
-	});
-
+	const body = Buffer.from(html);
 	const key = `c/${page.slug}/index.html`;
 
 	let lastError: unknown;
@@ -34,13 +27,12 @@ export async function buildPage(
 				new PutObjectCommand({
 					Bucket: R2_BUCKET,
 					Key: key,
-					Body: compressed,
+					Body: body,
 					ContentType: "text/html; charset=utf-8",
-					ContentEncoding: "br",
 					CacheControl: "public, max-age=3600, s-maxage=86400",
 				}),
 			);
-			return { slug: page.slug, size: compressed.length };
+			return { slug: page.slug, size: body.length };
 		} catch (err) {
 			lastError = err;
 		}
