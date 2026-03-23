@@ -7,14 +7,19 @@ Fan-capture SaaS for gigging musicians.
 ```
 web/                      # Vite + React SPA (artist dashboard)
   src/routes/             # TanStack Router file-based routes
-  src/lib/                # Shared utilities (supabase client, etc.)
+  src/components/         # Shared components (captures-table, email-template-dialog)
+  src/lib/                # Shared utilities (supabase client, api client, auth)
 api/                      # Hono API server (Node.js)
-  src/                    # API routes and services
+  src/routes/             # Hono route modules (capture-pages, email-templates, captures, email, etc.)
+  src/lib/email/          # EmailService abstraction, Resend provider, template renderer, suppression
+  src/middleware/          # Auth middleware (Bearer token → artist context)
 worker/                   # Cloudflare Worker (serves capture pages from R2)
   src/index.ts            # Worker entry point
+supabase/migrations/      # SQL migrations (applied via `supabase db push`)
 afterset/docs/adr/        # Architecture Decision Records (001–006)
 afterset/docs/research/   # Research that informed ADRs
 TASKS.md                  # Sprint tracker and task breakdown
+BACKLOG.md                # Future feature requests and ideas
 biome.json                # Shared Biome config (linter + formatter)
 pnpm-workspace.yaml       # pnpm workspace definition
 ```
@@ -37,6 +42,8 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **Two separate fan-facing deploys:** R2 static HTML (template changes) and Cloudflare Worker (submission logic)
 - **Capture pages must fit in the 14KB TCP initial congestion window** — system fonts, inline CSS/JS, no external resources
 - **Domain is `afterset.net`** (not .com) — email subdomain is `send.afterset.net`
+- **One email template per capture page** — stored in `email_templates` table, editable from page card dropdown or dedicated Emails tab
+- **Email templates are plain text** — rendered to HTML at send/preview time via `renderFollowUpHtml()`, no React Email dependency
 
 ## Tech stack details
 
@@ -45,6 +52,8 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **Auth:** Supabase Auth (magic link + OAuth), client-side via `supabase.auth.getSession()`, route protection via TanStack Router `beforeLoad`
 - **Background jobs:** Supabase pg_cron for delayed follow-up emails
 - **SMS:** Telnyx (Twilio is fallback), GSM-7 encoding only in auto-replies
+- **Email:** Resend via `EmailService` abstraction — suppression checks, RFC 8058 unsubscribe, CAN-SPAM footer, webhook handler for bounces/complaints
+- **Email templates:** CRUD at `/api/capture-pages/:id/email-template` (GET/PUT/DELETE + preview POST), delay modes (immediate/1_hour/next_morning), optional incentive download link
 
 ## Commands
 
@@ -62,6 +71,7 @@ pnpm dev:worker           # wrangler dev (local Worker)
 pnpm deploy:worker        # wrangler deploy (push to Cloudflare)
 
 # Quality
+pnpm test                 # Vitest run (api tests)
 pnpm lint                 # Biome check --write across all packages
 pnpm typecheck            # tsc --noEmit across all packages
 ```
