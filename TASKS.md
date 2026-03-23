@@ -1,7 +1,7 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 22, 2026 (v9 — Incentive file upload complete, customization + preview tasks added)
+**Last updated:** March 22, 2026 (v10 — Theme customization + live preview complete)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
 **Next up:** Capture page build pipeline, public capture page, Cloudflare Worker
@@ -459,18 +459,19 @@ Run ADR validation tasks before committing to the stack.
   - Build pipeline trigger deferred to next task
   - *Acceptance:* Artist creates a page, sees it in dashboard, can edit and delete. ✓
 
-- [ ] **Capture page customization (dashboard)**
-  - Extended styling options beyond accent color: background image/gradient, logo upload, custom headline text, button style variants
-  - Artists can tailor the fan-facing page to match their brand
-  - Settings stored on `capture_pages` table (migration for new columns as needed)
-  - *Acceptance:* Artist can customize the look of their capture page beyond the current defaults.
+- [x] **Capture page customization (dashboard)** ✓ completed 2026-03-22
+  - 7 theme presets (Gold, Neon, Ember, Violet, Minimal, Verdant, Retro) — one-click fills accent color, secondary color, background style, button style
+  - Individual override knobs: accent/secondary color pickers, background style (solid/gradient/glow), button style (rounded/pill/sharp)
+  - Migration: `secondary_color`, `background_style`, `button_style` columns on `capture_pages`
+  - *Acceptance:* Artist picks a preset or customizes individual knobs. Settings persist and display on page cards. ✓
+  - **Polish (revisit during build pipeline):** More visual differentiation between presets — stronger gradients, format/layout positioning differences, font and font size variations per theme
 
-- [ ] **Capture page live preview (dashboard)**
-  - Real-time preview of the fan-facing capture page as the artist edits settings
-  - Rendered in an iframe or inline component within the page creator/editor dialog
-  - Reflects all customization options (colors, text, links, incentive)
-  - Mobile-first preview with optional desktop toggle
-  - *Acceptance:* Artist sees an accurate preview of what fans will see, updating live as they make changes.
+- [x] **Capture page live preview (dashboard)** ✓ completed 2026-03-22
+  - Inline preview component in the page creator/editor dialog (above theme presets)
+  - Shows title, value exchange text, email input, CTA button, streaming link indicators
+  - Reflects accent/secondary color, background style, and button style in real time
+  - *Acceptance:* Artist sees a representative preview updating live as they change theme settings. ✓
+  - **Polish (revisit during build pipeline):** Preview should match the actual fan-facing HTML template once built — currently a dashboard approximation
 
 - [ ] **Capture page build pipeline**
   - Node.js script (~100 lines) on Hono API

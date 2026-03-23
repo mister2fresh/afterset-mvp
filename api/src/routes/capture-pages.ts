@@ -7,16 +7,18 @@ const app = new Hono<AuthEnv>();
 
 const slugPattern = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
 const createSchema = z.object({
 	title: z.string().min(1).max(100),
 	slug: z.string().min(1).max(40).regex(slugPattern).optional(),
 	value_exchange_text: z.string().max(500).optional(),
 	streaming_links: z.record(z.string(), z.string().url()).optional(),
 	social_links: z.record(z.string(), z.string().url()).optional(),
-	accent_color: z
-		.string()
-		.regex(/^#[0-9a-fA-F]{6}$/)
-		.optional(),
+	accent_color: hexColor.optional(),
+	secondary_color: hexColor.optional(),
+	background_style: z.enum(["solid", "gradient", "glow"]).optional(),
+	button_style: z.enum(["rounded", "pill", "sharp"]).optional(),
 });
 
 const updateSchema = createSchema.partial();
@@ -66,7 +68,16 @@ app.post("/", async (c) => {
 	const parsed = createSchema.safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
-	const { title, value_exchange_text, streaming_links, social_links, accent_color } = parsed.data;
+	const {
+		title,
+		value_exchange_text,
+		streaming_links,
+		social_links,
+		accent_color,
+		secondary_color,
+		background_style,
+		button_style,
+	} = parsed.data;
 	const baseSlug = parsed.data.slug || slugify(title);
 	const slug = await findUniqueSlug(baseSlug);
 
@@ -80,6 +91,9 @@ app.post("/", async (c) => {
 			streaming_links: streaming_links ?? {},
 			social_links: social_links ?? {},
 			accent_color: accent_color ?? "#E8C547",
+			secondary_color: secondary_color ?? "#D4A017",
+			background_style: background_style ?? "solid",
+			button_style: button_style ?? "rounded",
 		})
 		.select()
 		.single();
