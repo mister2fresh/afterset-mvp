@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 22, 2026 (v8 — Capture page creator complete, incentive upload task added)
+**Last updated:** March 22, 2026 (v9 — Incentive file upload complete, customization + preview tasks added)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
-**Next up:** Capture page build pipeline, public capture page, incentive file upload
+**Next up:** Capture page build pipeline, public capture page, Cloudflare Worker
 
 ---
 
@@ -450,7 +450,7 @@ Run ADR validation tasks before committing to the stack.
   - Design tokens from landing page applied (Bricolage Grotesque, honey-gold, midnight)
   - *Acceptance:* Authenticated artist sees dashboard with navigation. Empty states guide next actions. ✓
 
-- [~] **Capture page creator (dashboard)** (CRUD complete, incentive upload remaining)
+- [x] **Capture page creator (dashboard)** ✓ completed 2026-03-22
   - Form: title, value exchange message, streaming platform links, social links, color/accent picker
   - Generates unique slug (server-side, with collision avoidance)
   - Saves to Supabase via Hono API (auth middleware auto-creates artist record on first request)
@@ -458,6 +458,19 @@ Run ADR validation tasks before committing to the stack.
   - Delete support via card dropdown menu
   - Build pipeline trigger deferred to next task
   - *Acceptance:* Artist creates a page, sees it in dashboard, can edit and delete. ✓
+
+- [ ] **Capture page customization (dashboard)**
+  - Extended styling options beyond accent color: background image/gradient, logo upload, custom headline text, button style variants
+  - Artists can tailor the fan-facing page to match their brand
+  - Settings stored on `capture_pages` table (migration for new columns as needed)
+  - *Acceptance:* Artist can customize the look of their capture page beyond the current defaults.
+
+- [ ] **Capture page live preview (dashboard)**
+  - Real-time preview of the fan-facing capture page as the artist edits settings
+  - Rendered in an iframe or inline component within the page creator/editor dialog
+  - Reflects all customization options (colors, text, links, incentive)
+  - Mobile-first preview with optional desktop toggle
+  - *Acceptance:* Artist sees an accurate preview of what fans will see, updating live as they make changes.
 
 - [ ] **Capture page build pipeline**
   - Node.js script (~100 lines) on Hono API
@@ -494,13 +507,14 @@ Run ADR validation tasks before committing to the stack.
 
 ### P1 — Should ship
 
-- [ ] **Incentive file upload (dashboard)**
-  - Artist uploads a file (MP3, FLAC, PNG, PDF) as the incentive fans receive after submitting their email
-  - Accepted formats: audio (MP3, FLAC), image (PNG, JPG), document (PDF). Max 50MB per file.
-  - Stored in Supabase Storage (bucket per artist, private). Signed download URLs generated on demand.
-  - One incentive file per capture page — uploaded in the capture page creator/editor
-  - New `incentive_file_path` and `incentive_file_name` columns on `capture_pages` table (migration required)
-  - Dashboard shows file name, size, and a replace/remove option
+- [x] **Incentive file upload (dashboard)** ✓ completed 2026-03-22
+  - Artist uploads a file as the incentive fans receive after submitting their email
+  - Accepted formats: audio (MP3, WAV, FLAC, AAC, OGG, M4A, AIFF), image (PNG, JPG, GIF), video (MP4, MOV, WebM), document (PDF), archive (ZIP). Max 250MB per file.
+  - Upload flow: API generates signed upload URL → client uploads directly to Supabase Storage (file never transits Railway)
+  - Stored in Supabase Storage (`incentives` bucket, private). Path: `{artist_id}/{capture_page_id}/{filename}`. Signed download URLs generated on demand.
+  - One incentive file per capture page — uploaded in the capture page creator/editor. Uploading a new file deletes the old one.
+  - New columns on `capture_pages`: `incentive_file_path`, `incentive_file_name`, `incentive_file_size`, `incentive_content_type` (migration required)
+  - Dashboard shows file name, size, type icon, and replace/remove options. Upload progress indicator.
   - *Acceptance:* Artist uploads a file in the page creator, sees it attached, can replace or remove it. File persists in Supabase Storage.
   - **Note:** Delivery to fans happens in Sprint 2 via the follow-up email (signed download link included in email template).
 
@@ -743,6 +757,10 @@ These are not scheduled. Pull from here once Sprints 1–3 ship.
 - [ ] Per-artist custom sending domains (Resend Scale at ~200 artists)
 - [ ] SES migration for cost optimization (at 500K–1M emails/month)
 - [ ] Dedicated-number-per-artist SMS (Telnyx, at 500+ Pro artists)
+- [ ] **Incentive type research** — research what fan incentives statistically perform best for email capture (free downloads, discount codes, exclusive content, early access, etc.) to inform product design
+- [ ] Link-based incentives — artist pastes a URL (mint page, exclusive video, playlist) instead of uploading a file
+- [ ] Discount code incentives — artist enters a code + optional storefront URL, delivered to fan after capture
+- [ ] NFT / crypto incentives — claim links, token gates, allowlist spots (Sound.xyz, Catalog, Mint Songs integration)
 
 ---
 

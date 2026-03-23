@@ -1,7 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ExternalLink, Loader2, MoreVertical, Pencil, Plus, QrCode, Trash2 } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import {
+	ExternalLink,
+	FileAudio,
+	FileImage,
+	FileText,
+	FileVideo,
+	Loader2,
+	MoreVertical,
+	Package,
+	Pencil,
+	Plus,
+	QrCode,
+	Trash2,
+	Upload,
+	X,
+} from "lucide-react";
+import { type FormEvent, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +38,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
+import { api, uploadToSignedUrl } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/pages")({
 	component: PagesPage,
@@ -38,9 +53,52 @@ type CapturePage = {
 	social_links: Record<string, string>;
 	accent_color: string;
 	is_active: boolean;
+	incentive_file_path: string | null;
+	incentive_file_name: string | null;
+	incentive_file_size: number | null;
+	incentive_content_type: string | null;
 	created_at: string;
 	updated_at: string;
 };
+
+const ACCEPTED_FILE_TYPES = [
+	"audio/mpeg",
+	"audio/wav",
+	"audio/flac",
+	"audio/aac",
+	"audio/ogg",
+	"audio/mp4",
+	"audio/aiff",
+	"audio/x-aiff",
+	"audio/x-m4a",
+	"audio/x-flac",
+	"audio/x-wav",
+	"image/png",
+	"image/jpeg",
+	"image/gif",
+	"video/mp4",
+	"video/quicktime",
+	"video/webm",
+	"application/pdf",
+	"application/zip",
+	"application/x-zip-compressed",
+].join(",");
+
+const MAX_FILE_SIZE = 262144000; // 250MB
+
+function formatFileSize(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileTypeIcon(contentType: string) {
+	if (contentType.startsWith("audio/")) return FileAudio;
+	if (contentType.startsWith("image/")) return FileImage;
+	if (contentType.startsWith("video/")) return FileVideo;
+	if (contentType === "application/pdf") return FileText;
+	return Package;
+}
 
 const STREAMING_PLATFORMS = [
 	{ key: "spotify", label: "Spotify" },
@@ -198,6 +256,15 @@ function PageCard({ page, onEdit }: { page: CapturePage; onEdit: () => void }) {
 				{page.value_exchange_text && (
 					<p className="text-sm text-muted-foreground line-clamp-2">{page.value_exchange_text}</p>
 				)}
+				{page.incentive_file_name && page.incentive_content_type && (
+					<div className="flex items-center gap-2 text-xs text-muted-foreground">
+						{(() => {
+							const Icon = fileTypeIcon(page.incentive_content_type);
+							return <Icon className="size-3.5" />;
+						})()}
+						<span className="truncate">{page.incentive_file_name}</span>
+					</div>
+				)}
 				<div className="flex items-center justify-between">
 					<Badge variant={page.is_active ? "default" : "secondary"}>
 						{page.is_active ? "Active" : "Inactive"}
@@ -224,26 +291,83 @@ type PageFormDialogProps =
 function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps) {
 	const queryClient = useQueryClient();
 	const [form, setForm] = useState<FormData>(page ? formFromPage(page) : EMPTY_FORM);
+	const [pendingFile, setPendingFile] = useState<File | null>(null);
+	const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+	const [uploadError, setUploadError] = useState<string | null>(null);
+	const [fileRemoved, setFileRemoved] = useState(false);
+	const [isDragging, setIsDragging] = useState(false);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	const hasExistingFile = mode === "edit" && page.incentive_file_name && !fileRemoved;
 
 	const mutation = useMutation({
-		mutationFn: (data: FormData) => {
+		mutationFn: async (data: FormData) => {
 			const payload = {
 				...data,
 				value_exchange_text: data.value_exchange_text || undefined,
 				streaming_links: stripEmpty(data.streaming_links),
 				social_links: stripEmpty(data.social_links),
 			};
+
+			let created: CapturePage;
 			if (mode === "edit") {
-				return api.patch<CapturePage>(`/capture-pages/${page.id}`, payload);
+				created = await api.patch<CapturePage>(`/capture-pages/${page.id}`, payload);
+			} else {
+				created = await api.post<CapturePage>("/capture-pages", payload);
 			}
-			return api.post<CapturePage>("/capture-pages", payload);
+
+			// Upload incentive file if one is pending
+			if (pendingFile) {
+				setUploadProgress(0);
+				const { signed_url, token } = await api.post<{
+					signed_url: string;
+					token: string;
+					path: string;
+				}>(`/capture-pages/${created.id}/incentive/upload-url`, {
+					filename: pendingFile.name,
+					content_type: pendingFile.type,
+					file_size: pendingFile.size,
+				});
+
+				await uploadToSignedUrl(signed_url, token, pendingFile, setUploadProgress);
+			}
+
+			return created;
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["capture-pages"] });
-			if (mode === "create") setForm(EMPTY_FORM);
+			if (mode === "create") {
+				setForm(EMPTY_FORM);
+				setPendingFile(null);
+			}
+			setUploadProgress(null);
+			setUploadError(null);
 			onOpenChange(false);
 		},
+		onError: () => {
+			setUploadProgress(null);
+		},
 	});
+
+	const removeMutation = useMutation({
+		mutationFn: () => api.delete(`/capture-pages/${page!.id}/incentive`),
+		onSuccess: () => {
+			setFileRemoved(true);
+			queryClient.invalidateQueries({ queryKey: ["capture-pages"] });
+		},
+	});
+
+	function handleFileSelect(file: File | undefined) {
+		setUploadError(null);
+		if (!file) return;
+
+		if (file.size > MAX_FILE_SIZE) {
+			setUploadError(`File too large. Maximum size is ${formatFileSize(MAX_FILE_SIZE)}.`);
+			return;
+		}
+
+		setPendingFile(file);
+	}
 
 	function handleSubmit(e: FormEvent) {
 		e.preventDefault();
@@ -317,6 +441,65 @@ function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps)
 								maxLength={7}
 							/>
 						</div>
+					</div>
+
+					<div className="space-y-2">
+						<Label>
+							Incentive File <span className="text-muted-foreground">(optional)</span>
+						</Label>
+						<p className="text-xs text-muted-foreground">
+							Upload a file fans receive after signing up — music, artwork, PDF, video, or a ZIP
+							bundle.
+						</p>
+
+						{pendingFile ? (
+							<IncentiveFileDisplay
+								name={pendingFile.name}
+								size={pendingFile.size}
+								contentType={pendingFile.type}
+								progress={uploadProgress}
+								onRemove={() => {
+									setPendingFile(null);
+									if (fileInputRef.current) fileInputRef.current.value = "";
+								}}
+							/>
+						) : hasExistingFile ? (
+							<IncentiveFileDisplay
+								name={page.incentive_file_name!}
+								size={page.incentive_file_size!}
+								contentType={page.incentive_content_type!}
+								onRemove={() => removeMutation.mutate()}
+								isRemoving={removeMutation.isPending}
+							/>
+						) : (
+							<label
+								className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-6 transition-colors ${isDragging ? "border-honey-gold bg-honey-gold/10" : "border-border hover:border-honey-gold/50 hover:bg-muted/50"}`}
+								onDragOver={(e) => {
+									e.preventDefault();
+									setIsDragging(true);
+								}}
+								onDragLeave={() => setIsDragging(false)}
+								onDrop={(e) => {
+									e.preventDefault();
+									setIsDragging(false);
+									handleFileSelect(e.dataTransfer.files[0]);
+								}}
+							>
+								<Upload className="size-6 text-muted-foreground" />
+								<span className="text-sm text-muted-foreground">
+									Drag & drop or click to choose a file (max {formatFileSize(MAX_FILE_SIZE)})
+								</span>
+								<input
+									ref={fileInputRef}
+									type="file"
+									accept={ACCEPTED_FILE_TYPES}
+									className="hidden"
+									onChange={(e) => handleFileSelect(e.target.files?.[0])}
+								/>
+							</label>
+						)}
+
+						{uploadError && <p className="text-sm text-destructive">{uploadError}</p>}
 					</div>
 
 					<div className="space-y-3">
@@ -403,6 +586,55 @@ function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps)
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			{dialogContent}
 		</Dialog>
+	);
+}
+
+function IncentiveFileDisplay({
+	name,
+	size,
+	contentType,
+	progress,
+	onRemove,
+	isRemoving,
+}: {
+	name: string;
+	size: number;
+	contentType: string;
+	progress?: number | null;
+	onRemove: () => void;
+	isRemoving?: boolean;
+}) {
+	const Icon = fileTypeIcon(contentType);
+	const isUploading = progress !== null && progress !== undefined;
+
+	return (
+		<div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+			<Icon className="size-8 shrink-0 text-honey-gold" />
+			<div className="min-w-0 flex-1">
+				<p className="truncate text-sm font-medium">{name}</p>
+				<p className="text-xs text-muted-foreground">{formatFileSize(size)}</p>
+				{isUploading && (
+					<div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+						<div
+							className="h-full rounded-full bg-honey-gold transition-[width] duration-200"
+							style={{ width: `${progress}%` }}
+						/>
+					</div>
+				)}
+			</div>
+			{!isUploading && (
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon"
+					className="size-7 shrink-0"
+					onClick={onRemove}
+					disabled={isRemoving}
+				>
+					{isRemoving ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+				</Button>
+			)}
+		</div>
 	);
 }
 

@@ -24,6 +24,33 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
 	return res.json();
 }
 
+export async function uploadToSignedUrl(
+	signedUrl: string,
+	token: string,
+	file: File,
+	onProgress?: (percent: number) => void,
+): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const xhr = new XMLHttpRequest();
+		xhr.open("PUT", signedUrl);
+		xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+		xhr.setRequestHeader("Content-Type", file.type);
+
+		if (onProgress) {
+			xhr.upload.addEventListener("progress", (e) => {
+				if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+			});
+		}
+
+		xhr.addEventListener("load", () => {
+			if (xhr.status >= 200 && xhr.status < 300) resolve();
+			else reject(new Error(`Upload failed: ${xhr.status}`));
+		});
+		xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+		xhr.send(file);
+	});
+}
+
 export const api = {
 	get: <T>(path: string) => fetchApi<T>(path),
 	post: <T>(path: string, body: unknown) =>

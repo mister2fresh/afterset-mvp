@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth } from "./middleware/auth.js";
 import capturePages from "./routes/capture-pages.js";
+import incentive from "./routes/incentive.js";
 
 const app = new Hono();
 
@@ -23,6 +24,7 @@ app.get("/api/health", (c) => {
 app.use("/api/capture-pages", auth);
 app.use("/api/capture-pages/*", auth);
 app.route("/api/capture-pages", capturePages);
+app.route("/api/capture-pages", incentive);
 
 const port = Number(process.env.PORT) || 3000;
 console.log(`API server running on port ${port}`);
