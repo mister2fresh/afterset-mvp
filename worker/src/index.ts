@@ -4,6 +4,36 @@ interface Env {
 	SUPABASE_SERVICE_ROLE_KEY: string;
 }
 
+// Rate limiting: 5 submissions per IP per slug per 60s window
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function isRateLimited(ip: string, slug: string): boolean {
+	const key = `${ip}:${slug}`;
+	const now = Date.now();
+	const entry = rateLimitMap.get(key);
+
+	if (!entry || now >= entry.resetAt) {
+		rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+		return false;
+	}
+
+	entry.count++;
+	return entry.count > RATE_LIMIT_MAX;
+}
+
+// Periodic cleanup of expired entries (runs at most once per window)
+let lastCleanup = 0;
+function cleanupRateLimits() {
+	const now = Date.now();
+	if (now - lastCleanup < RATE_LIMIT_WINDOW_MS) return;
+	lastCleanup = now;
+	for (const [key, entry] of rateLimitMap) {
+		if (now >= entry.resetAt) rateLimitMap.delete(key);
+	}
+}
+
 const ENTRY_METHODS = new Set(["d", "q", "n", "s"]);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CORS_HEADERS = {
@@ -75,6 +105,13 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	}
 	if (typeof slug !== "string" || slug.length === 0) {
 		return json({ error: "Missing slug" }, 400);
+	}
+
+	// Rate limit by IP + slug
+	cleanupRateLimits();
+	const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
+	if (isRateLimited(clientIp, slug)) {
+		return json({ error: "Too many submissions. Please wait a minute and try again." }, 429);
 	}
 
 	const method =

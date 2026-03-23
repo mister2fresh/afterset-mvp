@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	Download,
 	ExternalLink,
@@ -15,6 +15,7 @@ import {
 	QrCode,
 	Trash2,
 	Upload,
+	Users,
 	X,
 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
@@ -226,8 +227,16 @@ function useCapturePages() {
 	});
 }
 
+function useCaptureCounts() {
+	return useQuery({
+		queryKey: ["capture-counts"],
+		queryFn: () => api.get<Record<string, number>>("/captures/counts"),
+	});
+}
+
 function PagesPage() {
 	const { data: pages, isLoading } = useCapturePages();
+	const { data: counts } = useCaptureCounts();
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editingPage, setEditingPage] = useState<CapturePage | null>(null);
 
@@ -251,7 +260,12 @@ function PagesPage() {
 			{hasPages ? (
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{pages.map((page) => (
-						<PageCard key={page.id} page={page} onEdit={() => setEditingPage(page)} />
+						<PageCard
+							key={page.id}
+							page={page}
+							captureCount={counts?.[page.id] ?? 0}
+							onEdit={() => setEditingPage(page)}
+						/>
 					))}
 				</div>
 			) : (
@@ -320,7 +334,15 @@ async function downloadQr(pageId: string, slug: string) {
 	URL.revokeObjectURL(url);
 }
 
-function PageCard({ page, onEdit }: { page: CapturePage; onEdit: () => void }) {
+function PageCard({
+	page,
+	captureCount,
+	onEdit,
+}: {
+	page: CapturePage;
+	captureCount: number;
+	onEdit: () => void;
+}) {
 	const queryClient = useQueryClient();
 	const qrUrl = useQrPreview(page.id);
 
@@ -397,6 +419,16 @@ function PageCard({ page, onEdit }: { page: CapturePage; onEdit: () => void }) {
 						<span className="truncate">{page.incentive_file_name}</span>
 					</div>
 				)}
+				<Link
+					to="/fans"
+					search={{ page_id: page.id, page_title: page.title }}
+					className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+				>
+					<Users className="size-3.5" />
+					<span>
+						{captureCount} {captureCount === 1 ? "capture" : "captures"}
+					</span>
+				</Link>
 				<div className="flex items-center justify-between">
 					<Badge variant={page.is_active ? "default" : "secondary"}>
 						{page.is_active ? "Active" : "Inactive"}

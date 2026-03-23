@@ -5,6 +5,7 @@ import { logger } from "hono/logger";
 import { auth } from "./middleware/auth.js";
 import build from "./routes/build.js";
 import capturePages from "./routes/capture-pages.js";
+import captures from "./routes/captures.js";
 import incentive from "./routes/incentive.js";
 
 const app = new Hono();
@@ -27,6 +28,10 @@ app.use("/api/capture-pages/*", auth);
 app.route("/api/capture-pages", capturePages);
 app.route("/api/capture-pages", incentive);
 app.route("/api/capture-pages", build);
+
+app.use("/api/captures", auth);
+app.use("/api/captures/*", auth);
+app.route("/api/captures", captures);
 
 const port = Number(process.env.PORT) || 3000;
 console.log(`API server running on port ${port}`);
