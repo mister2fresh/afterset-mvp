@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth } from "./middleware/auth.js";
+import analytics from "./routes/analytics.js";
 import build from "./routes/build.js";
 import capturePages from "./routes/capture-pages.js";
 import captures from "./routes/captures.js";
@@ -56,6 +57,11 @@ app.route("/api/capture-pages", capturePages);
 app.route("/api/capture-pages", incentive);
 app.route("/api/capture-pages", build);
 app.route("/api/capture-pages", emailTemplates);
+app.route("/api/capture-pages", analytics);
+
+app.use("/api/analytics", auth);
+app.use("/api/analytics/*", auth);
+app.route("/api/analytics", analytics);
 
 app.use("/api/captures", auth);
 app.use("/api/captures/*", auth);
