@@ -80,6 +80,12 @@ pnpm typecheck            # tsc --noEmit across all packages
 
 Capture pages use system font stack — no custom fonts.
 
+## Security
+
+- NEVER pass secrets (API keys, tokens, service role keys) as CLI arguments or in URLs — they leak into shell history and process lists
+- To verify a secret is set, check for its presence (e.g., `grep -c SUPABASE_SERVICE_ROLE_KEY .env`) without printing the value
+- To test authenticated endpoints, ask the user to run the command interactively (`!` prefix) or use environment variable references (`$VAR`) — never inline the value
+
 ## Formatting
 
 - Biome: tabs, double quotes, semicolons, 100-char line width
