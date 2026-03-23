@@ -4,7 +4,8 @@ compatibility_date = "2024-12-01"
 workers_dev = false
 
 routes = [
-  { pattern = "afterset.net/c/*", zone_name = "afterset.net" }
+  { pattern = "afterset.net/c/*", zone_name = "afterset.net" },
+  { pattern = "afterset.net/api/capture", zone_name = "afterset.net" }
 ]
 
 [[r2_buckets]]
@@ -13,3 +14,4 @@ bucket_name = "afterset-capture-pages"
 
 [vars]
 ENVIRONMENT = "production"
+SUPABASE_URL = "https://mnoajavdnawrmqsnbouy.supabase.co"

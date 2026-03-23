@@ -142,6 +142,8 @@ h1{font-size:1.5rem;font-weight:700;letter-spacing:-.025em;line-height:1.2;margi
 <h1>${title}</h1>
 ${subtitle ? `<p class="sub">${subtitle}</p>` : ""}
 <form class="f" id="cf" action="/api/capture" method="POST">
+<input type="hidden" name="slug" value="${page.slug}">
+<input type="hidden" name="entry_method" value="d">
 <input type="email" name="email" placeholder="your@email.com" required aria-label="Email address" autocomplete="email" inputmode="email">
 <button type="submit">Join</button>
 </form>
@@ -152,7 +154,7 @@ ${socialHtml}
 <p class="pw">Powered by <a href="https://afterset.net" target="_blank" rel="noopener">Afterset</a></p>
 </main>
 <script>
-(function(){var f=document.getElementById("cf"),ok=document.getElementById("ok"),er=document.getElementById("er"),p=new URLSearchParams(location.search);f.addEventListener("submit",function(e){e.preventDefault();var b=f.querySelector("button");b.disabled=true;b.textContent="...";er.style.display="none";fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:f.email.value,slug:"${page.slug}",entry_method:p.get("v")||"d"})}).then(function(r){if(!r.ok)throw new Error();f.style.display="none";ok.style.display="block"}).catch(function(){er.textContent="Something went wrong. Please try again.";er.style.display="block";b.disabled=false;b.textContent="Join"})})()
+(function(){var f=document.getElementById("cf"),ok=document.getElementById("ok"),er=document.getElementById("er"),p=new URLSearchParams(location.search),v=p.get("v")||"d";f.entry_method.value=v;f.addEventListener("submit",function(e){e.preventDefault();var b=f.querySelector("button");b.disabled=true;b.textContent="...";er.style.display="none";fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:f.email.value,slug:"${page.slug}",entry_method:v})}).then(function(r){if(!r.ok)throw new Error();f.style.display="none";ok.style.display="block"}).catch(function(){er.textContent="Something went wrong. Please try again.";er.style.display="block";b.disabled=false;b.textContent="Join"})})()
 </script>
 <!-- built: ${new Date().toISOString()} -->
 </body>

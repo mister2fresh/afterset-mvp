@@ -4,4 +4,5 @@ dist
 .env.local
 .env.*.local
 *.tsbuildinfo
+.wrangler
 .routeTree.gen.ts

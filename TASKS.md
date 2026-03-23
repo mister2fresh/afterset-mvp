@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v13 — Cloudflare Worker serving capture pages live)
+**Last updated:** March 23, 2026 (v14 — Fan email submission Worker live)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
-**Next up:** Cloudflare Worker for fan email submission, QR code generation
+**Next up:** QR code generation, capture confirmation screen, basic capture list
 
 ---
 
@@ -497,12 +497,14 @@ Run ADR validation tasks before committing to the stack.
   - Build pipeline updated: R2 stores uncompressed HTML, Cloudflare CDN handles compression at edge
   - *Acceptance:* Page loads <2s on slow 3G. Total payload <14KB compressed. Dark theme legible at 10% brightness.
 
-- [ ] **Cloudflare Worker for fan email submission**
+- [x] **Cloudflare Worker for fan email submission** ✓ completed 2026-03-23
   - POST endpoint at `afterset.net/api/capture` (same origin as capture page)
   - Validates email format
   - Writes to `fan_captures` via Supabase `service_role` key (bypasses RLS + Auth)
   - Upserts on `(artist_id, email)` — handles duplicates gracefully, returns 200 OK regardless
-  - Writes to `pending_emails` with configurable `send_at` timestamp
+  - Writes to `capture_events` and `pending_emails`
+  - Capture template updated with hidden `slug` and `entry_method` inputs + JS sets entry_method from `?v=` query param
+  - Tested end-to-end on `afterset.net/c/shoes`
   - *Acceptance:* Fan submits email, it appears in artist's fan list. Duplicate submissions handled silently.
 
 - [ ] **QR code generation + download**
