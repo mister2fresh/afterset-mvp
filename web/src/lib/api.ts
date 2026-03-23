@@ -51,6 +51,20 @@ export async function uploadToSignedUrl(
 	});
 }
 
+async function fetchApiBlob(path: string): Promise<Blob> {
+	const {
+		data: { session },
+	} = await supabase.auth.getSession();
+	if (!session) throw new Error("Not authenticated");
+
+	const res = await fetch(`/api${path}`, {
+		headers: { Authorization: `Bearer ${session.access_token}` },
+	});
+
+	if (!res.ok) throw new Error(`API error ${res.status}`);
+	return res.blob();
+}
+
 export const api = {
 	get: <T>(path: string) => fetchApi<T>(path),
 	post: <T>(path: string, body: unknown) =>
@@ -58,4 +72,5 @@ export const api = {
 	patch: <T>(path: string, body: unknown) =>
 		fetchApi<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
 	delete: (path: string) => fetchApi<void>(path, { method: "DELETE" }),
+	getBlob: (path: string) => fetchApiBlob(path),
 };

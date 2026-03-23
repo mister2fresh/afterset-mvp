@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+	Download,
 	ExternalLink,
 	FileAudio,
 	FileImage,
@@ -16,7 +17,7 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -286,8 +287,42 @@ function PagesPage() {
 	);
 }
 
+function useQrPreview(pageId: string) {
+	const [url, setUrl] = useState<string | null>(null);
+
+	const load = useCallback(async () => {
+		const blob = await api.getBlob(`/capture-pages/${pageId}/qr.png`);
+		setUrl((prev) => {
+			if (prev) URL.revokeObjectURL(prev);
+			return URL.createObjectURL(blob);
+		});
+	}, [pageId]);
+
+	useEffect(() => {
+		load();
+		return () =>
+			setUrl((prev) => {
+				if (prev) URL.revokeObjectURL(prev);
+				return null;
+			});
+	}, [load]);
+
+	return url;
+}
+
+async function downloadQr(pageId: string, slug: string) {
+	const blob = await api.getBlob(`/capture-pages/${pageId}/qr.png?download=1`);
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = `${slug}-qr.png`;
+	a.click();
+	URL.revokeObjectURL(url);
+}
+
 function PageCard({ page, onEdit }: { page: CapturePage; onEdit: () => void }) {
 	const queryClient = useQueryClient();
+	const qrUrl = useQrPreview(page.id);
 
 	const deleteMutation = useMutation({
 		mutationFn: () => api.delete(`/capture-pages/${page.id}`),
@@ -320,6 +355,10 @@ function PageCard({ page, onEdit }: { page: CapturePage; onEdit: () => void }) {
 							<Pencil />
 							Edit
 						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => downloadQr(page.id, page.slug)}>
+							<Download />
+							Download QR
+						</DropdownMenuItem>
 						<DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate()}>
 							<Trash2 />
 							Delete
@@ -328,6 +367,24 @@ function PageCard({ page, onEdit }: { page: CapturePage; onEdit: () => void }) {
 				</DropdownMenu>
 			</CardHeader>
 			<CardContent className="space-y-3">
+				{qrUrl && (
+					<div className="flex items-center gap-3">
+						<img
+							src={qrUrl}
+							alt={`QR code for ${page.slug}`}
+							className="size-20 rounded border border-border bg-white p-1"
+						/>
+						<Button
+							variant="outline"
+							size="sm"
+							className="gap-1.5"
+							onClick={() => downloadQr(page.id, page.slug)}
+						>
+							<Download className="size-3.5" />
+							Download QR
+						</Button>
+					</div>
+				)}
 				{page.value_exchange_text && (
 					<p className="text-sm text-muted-foreground line-clamp-2">{page.value_exchange_text}</p>
 				)}

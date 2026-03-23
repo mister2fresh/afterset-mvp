@@ -16,12 +16,14 @@
 		"@hono/node-server": "^1.19.11",
 		"@supabase/supabase-js": "^2.99.3",
 		"hono": "^4.12.8",
+		"qrcode": "^1.5.4",
 		"resend": "^6.9.4",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.8",
 		"@types/node": "^25.5.0",
+		"@types/qrcode": "^1.5.6",
 		"tsx": "^4.21.0",
 		"typescript": "~5.9.3",
 		"vitest": "^4.1.0"

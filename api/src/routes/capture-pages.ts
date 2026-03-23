@@ -1,7 +1,11 @@
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { Hono } from "hono";
 import { z } from "zod";
 import { buildPage } from "../lib/build-page.js";
+import { generateQrPng } from "../lib/generate-qr.js";
+import { R2_BUCKET, r2 } from "../lib/r2.js";
 import { supabase } from "../lib/supabase.js";
+import { deleteQr, uploadQr } from "../lib/upload-qr.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const app = new Hono<AuthEnv>();
@@ -121,6 +125,39 @@ app.get("/:id", async (c) => {
 	return c.json(data);
 });
 
+// QR code
+app.get("/:id/qr.png", async (c) => {
+	const artist = c.get("artist");
+	const { data: page, error } = await supabase
+		.from("capture_pages")
+		.select("slug")
+		.eq("id", c.req.param("id"))
+		.eq("artist_id", artist.id)
+		.maybeSingle();
+
+	if (error) return c.json({ error: error.message }, 500);
+	if (!page) return c.json({ error: "Not found" }, 404);
+
+	const key = `c/${page.slug}/qr.png`;
+	let body: Uint8Array;
+
+	try {
+		const obj = await r2.send(new GetObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+		body = await obj.Body!.transformToByteArray();
+	} catch {
+		body = await generateQrPng(page.slug);
+		uploadQr(page.slug).catch(() => {});
+	}
+
+	const download = c.req.query("download");
+	const headers: Record<string, string> = { "Content-Type": "image/png" };
+	if (download) {
+		headers["Content-Disposition"] = `attachment; filename="${page.slug}-qr.png"`;
+	}
+
+	return new Response(Buffer.from(body), { headers });
+});
+
 // Update
 app.patch("/:id", async (c) => {
 	const artist = c.get("artist");
@@ -129,6 +166,8 @@ app.patch("/:id", async (c) => {
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
 	const updates = { ...parsed.data };
+
+	let oldSlug: string | null = null;
 
 	if (updates.slug) {
 		const { data: existing } = await supabase
@@ -139,6 +178,15 @@ app.patch("/:id", async (c) => {
 			.maybeSingle();
 
 		if (existing) return c.json({ error: "Slug already taken" }, 409);
+
+		const { data: current } = await supabase
+			.from("capture_pages")
+			.select("slug")
+			.eq("id", c.req.param("id"))
+			.eq("artist_id", artist.id)
+			.single();
+
+		if (current && current.slug !== updates.slug) oldSlug = current.slug;
 	}
 
 	const { data, error } = await supabase
@@ -153,6 +201,7 @@ app.patch("/:id", async (c) => {
 	if (!data) return c.json({ error: "Not found" }, 404);
 
 	buildPage(data.id, artist.id).catch(() => {});
+	if (oldSlug) deleteQr(oldSlug).catch(() => {});
 
 	return c.json(data);
 });

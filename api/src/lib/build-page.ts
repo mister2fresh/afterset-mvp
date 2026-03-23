@@ -2,6 +2,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { generateCaptureHtml } from "./capture-template.js";
 import { R2_BUCKET, r2 } from "./r2.js";
 import { supabase } from "./supabase.js";
+import { uploadQr } from "./upload-qr.js";
 
 export async function buildPage(
 	pageId: string,
@@ -23,15 +24,18 @@ export async function buildPage(
 	let lastError: unknown;
 	for (let attempt = 0; attempt < 3; attempt++) {
 		try {
-			await r2.send(
-				new PutObjectCommand({
-					Bucket: R2_BUCKET,
-					Key: key,
-					Body: body,
-					ContentType: "text/html; charset=utf-8",
-					CacheControl: "public, max-age=3600, s-maxage=86400",
-				}),
-			);
+			await Promise.all([
+				r2.send(
+					new PutObjectCommand({
+						Bucket: R2_BUCKET,
+						Key: key,
+						Body: body,
+						ContentType: "text/html; charset=utf-8",
+						CacheControl: "public, max-age=3600, s-maxage=86400",
+					}),
+				),
+				uploadQr(page.slug),
+			]);
 			return { slug: page.slug, size: body.length };
 		} catch (err) {
 			lastError = err;

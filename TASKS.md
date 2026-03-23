@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v14 — Fan email submission Worker live)
+**Last updated:** March 23, 2026 (v15 — QR code generation + download)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
-**Next up:** QR code generation, capture confirmation screen, basic capture list
+**Next up:** Capture confirmation screen, basic capture list, rate limiting
 
 ---
 
@@ -507,11 +507,13 @@ Run ADR validation tasks before committing to the stack.
   - Tested end-to-end on `afterset.net/c/shoes`
   - *Acceptance:* Fan submits email, it appears in artist's fan list. Duplicate submissions handled silently.
 
-- [ ] **QR code generation + download**
-  - Server-side generation, cached per capture page
-  - Downloadable as high-res PNG (300+ DPI for print)
-  - QR encodes direct URL only (`https://afterset.net/c/[slug]?v=q`) — never shortener URLs
-  - Displayed in artist dashboard
+- [x] **QR code generation + download** ✓ completed 2026-03-23
+  - Server-side generation via `qrcode` lib, 1200x1200 PNG (300 DPI at 4"), error correction H
+  - Cached in R2 at `c/{slug}/qr.png`, generated alongside HTML in `buildPage`
+  - QR encodes `https://afterset.net/c/[slug]?v=q` — never shortener URLs
+  - API endpoint `GET /capture-pages/:id/qr.png` serves cached PNG, `?download=1` triggers file download
+  - Dashboard shows QR thumbnail on each page card with download button
+  - Old QR cleaned up from R2 on slug change
   - *Acceptance:* Artist can view and download a print-quality QR code that resolves to their capture page.
 
 ### P1 — Should ship
