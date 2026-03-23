@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, redirect, useMatchRoute } from "@tanstack/react-router";
-import { BarChart3, LayoutDashboard, LogOut, QrCode, Settings, Users } from "lucide-react";
+import { BarChart3, LayoutDashboard, LogOut, Mail, QrCode, Settings, Users } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -38,6 +38,7 @@ export const Route = createFileRoute("/_authenticated")({
 const navItems = [
 	{ to: "/dashboard", label: "Overview", icon: LayoutDashboard },
 	{ to: "/pages", label: "Capture Pages", icon: QrCode },
+	{ to: "/emails", label: "Emails", icon: Mail },
 	{ to: "/fans", label: "Fans", icon: Users },
 	{ to: "/analytics", label: "Analytics", icon: BarChart3 },
 	{ to: "/settings", label: "Settings", icon: Settings },

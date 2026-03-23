@@ -8,6 +8,7 @@ import {
 	FileText,
 	FileVideo,
 	Loader2,
+	Mail,
 	MoreVertical,
 	Package,
 	Pencil,
@@ -19,6 +20,7 @@ import {
 	X,
 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { EmailTemplateBadge, EmailTemplateDialog } from "@/components/email-template-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -345,6 +347,7 @@ function PageCard({
 }) {
 	const queryClient = useQueryClient();
 	const qrUrl = useQrPreview(page.id);
+	const [emailOpen, setEmailOpen] = useState(false);
 
 	const deleteMutation = useMutation({
 		mutationFn: () => api.delete(`/capture-pages/${page.id}`),
@@ -377,6 +380,10 @@ function PageCard({
 							<Pencil />
 							Edit
 						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => setEmailOpen(true)}>
+							<Mail />
+							Follow-Up Email
+						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => downloadQr(page.id, page.slug)}>
 							<Download />
 							Download QR
@@ -388,6 +395,13 @@ function PageCard({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</CardHeader>
+			<EmailTemplateDialog
+				pageId={page.id}
+				pageTitle={page.title}
+				hasIncentive={!!page.incentive_file_name}
+				open={emailOpen}
+				onOpenChange={setEmailOpen}
+			/>
 			<CardContent className="space-y-3">
 				{qrUrl && (
 					<div className="flex items-center gap-3">
@@ -430,9 +444,12 @@ function PageCard({
 					</span>
 				</Link>
 				<div className="flex items-center justify-between">
-					<Badge variant={page.is_active ? "default" : "secondary"}>
-						{page.is_active ? "Active" : "Inactive"}
-					</Badge>
+					<div className="flex items-center gap-1.5">
+						<Badge variant={page.is_active ? "default" : "secondary"}>
+							{page.is_active ? "Active" : "Inactive"}
+						</Badge>
+						<EmailTemplateBadge pageId={page.id} />
+					</div>
 					<div className="flex items-center gap-2">
 						<div className="flex gap-0.5">
 							<div

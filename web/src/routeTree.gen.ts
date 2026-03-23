@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedPagesRouteImport } from './routes/_authenticated/pages'
 import { Route as AuthenticatedFansRouteImport } from './routes/_authenticated/fans'
+import { Route as AuthenticatedEmailsRouteImport } from './routes/_authenticated/emails'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
 
@@ -47,6 +48,11 @@ const AuthenticatedFansRoute = AuthenticatedFansRouteImport.update({
   path: '/fans',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedEmailsRoute = AuthenticatedEmailsRouteImport.update({
+  id: '/emails',
+  path: '/emails',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/emails': typeof AuthenticatedEmailsRoute
   '/fans': typeof AuthenticatedFansRoute
   '/pages': typeof AuthenticatedPagesRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/emails': typeof AuthenticatedEmailsRoute
   '/fans': typeof AuthenticatedFansRoute
   '/pages': typeof AuthenticatedPagesRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/emails': typeof AuthenticatedEmailsRoute
   '/_authenticated/fans': typeof AuthenticatedFansRoute
   '/_authenticated/pages': typeof AuthenticatedPagesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/analytics'
     | '/dashboard'
+    | '/emails'
     | '/fans'
     | '/pages'
     | '/settings'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/analytics'
     | '/dashboard'
+    | '/emails'
     | '/fans'
     | '/pages'
     | '/settings'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/analytics'
     | '/_authenticated/dashboard'
+    | '/_authenticated/emails'
     | '/_authenticated/fans'
     | '/_authenticated/pages'
     | '/_authenticated/settings'
@@ -168,6 +180,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFansRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/emails': {
+      id: '/_authenticated/emails'
+      path: '/emails'
+      fullPath: '/emails'
+      preLoaderRoute: typeof AuthenticatedEmailsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -188,6 +207,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEmailsRoute: typeof AuthenticatedEmailsRoute
   AuthenticatedFansRoute: typeof AuthenticatedFansRoute
   AuthenticatedPagesRoute: typeof AuthenticatedPagesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -196,6 +216,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEmailsRoute: AuthenticatedEmailsRoute,
   AuthenticatedFansRoute: AuthenticatedFansRoute,
   AuthenticatedPagesRoute: AuthenticatedPagesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,

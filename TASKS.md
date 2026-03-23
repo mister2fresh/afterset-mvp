@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v17 — Resend email integration)
+**Last updated:** March 23, 2026 (v18 — Follow-up email template editor)
 **Current phase:** Sprint 2 — Follow-Up & Analytics
 **Sprint:** Sprint 2 in progress
-**Next up:** Follow-up email template editor, delayed email job
+**Next up:** Delayed email trigger via pg_cron, per-page analytics
 
 ---
 
@@ -573,12 +573,14 @@ Run ADR validation tasks before committing to the stack.
   - *Acceptance:* System can send a fan email with proper headers, unsubscribe works, bounces update suppression list.
   - **Requires setup before testing:** see env vars and Resend dashboard config below
 
-- [ ] **Follow-up email template editor (dashboard)**
-  - Artist configures: subject line, body text, incentive file delivery
-  - If capture page has an incentive file (uploaded in Sprint 1), email includes a time-limited signed download link
-  - Built with React Email components
-  - Preview before saving
-  - One template per capture page
+- [x] **Follow-up email template editor (dashboard)** *(done 2026-03-23)*
+  - `email_templates` table: one per capture page, subject/body/delay_mode/include_incentive_link/is_active
+  - API routes: `GET/PUT/DELETE /api/capture-pages/:id/email-template` + preview endpoint
+  - Email HTML renderer: `renderFollowUpHtml()` — clean email with incentive download CTA
+  - Dashboard: `EmailTemplateDialog` accessible from PageCard dropdown + dedicated "Emails" sidebar tab
+  - Emails tab shows all pages grouped by configured/unconfigured with template preview cards
+  - Delay modes: immediate, 1 hour, next morning (9am)
+  - Live email preview in sandboxed iframe
   - *Acceptance:* Artist creates and previews a follow-up email template tied to a capture page. Incentive download link works and expires after 7 days.
 
 - [ ] **Delayed email trigger via pg_cron**
@@ -625,6 +627,12 @@ Run ADR validation tasks before committing to the stack.
   - *Acceptance:* Verification submitted. Number provisioned. Approval pending.
 
 ### P2
+
+- [ ] **Sequential email sequences (drip campaigns)**
+  - Allow multiple follow-up emails per capture page, sent on a schedule (e.g. Day 1, Day 3, Day 7)
+  - Artist configures sequence of emails with relative delays, not just a single follow-up
+  - Requires: `email_templates` table refactored from one-per-page to many-per-page with `sequence_order` and `delay_after_previous`
+  - *Acceptance:* Artist creates a 3-email sequence; fans receive each email at the configured intervals.
 
 - [ ] **Email open tracking**
   - Track whether follow-up email was opened

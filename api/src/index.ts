@@ -7,6 +7,7 @@ import build from "./routes/build.js";
 import capturePages from "./routes/capture-pages.js";
 import captures from "./routes/captures.js";
 import email from "./routes/email.js";
+import emailTemplates from "./routes/email-templates.js";
 import incentive from "./routes/incentive.js";
 
 const app = new Hono();
@@ -31,6 +32,7 @@ app.use("/api/capture-pages/*", auth);
 app.route("/api/capture-pages", capturePages);
 app.route("/api/capture-pages", incentive);
 app.route("/api/capture-pages", build);
+app.route("/api/capture-pages", emailTemplates);
 
 app.use("/api/captures", auth);
 app.use("/api/captures/*", auth);
