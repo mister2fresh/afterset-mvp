@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v16 — Capture confirmation screen)
-**Current phase:** Sprint 1 — Core Capture Flow
-**Sprint:** Sprint 1 in progress
-**Next up:** Basic capture list, rate limiting, mobile performance validation
+**Last updated:** March 23, 2026 (v17 — Resend email integration)
+**Current phase:** Sprint 2 — Follow-Up & Analytics
+**Sprint:** Sprint 2 in progress
+**Next up:** Follow-up email template editor, delayed email job
 
 ---
 
@@ -563,15 +563,15 @@ Run ADR validation tasks before committing to the stack.
 
 ### P0
 
-- [ ] **Resend email integration**
-  - Integrate Resend SDK in Hono API
-  - Send from `send.afterset.net` (SPF/DKIM/DMARC configured in Day 4)
-  - Inject `List-Unsubscribe` and `List-Unsubscribe-Post` headers on every fan email
-  - Build RFC 8058 one-click unsubscribe POST endpoint
-  - Configure Resend webhooks: `email.bounced`, `email.complained`, `email.delivered`
-  - Application-level suppression list in Supabase: keyed by `(email, artist_id)`
-  - Physical address in email footer (CAN-SPAM)
+- [x] **Resend email integration** *(done 2026-03-23)*
+  - `EmailService` abstraction in `api/src/lib/email/` — `ResendEmailService` wraps Resend SDK with suppression checks, `List-Unsubscribe` + `List-Unsubscribe-Post` header injection, CAN-SPAM footer
+  - RFC 8058 one-click unsubscribe: `POST /api/email/unsubscribe` (HMAC-signed tokens, no DB lookup)
+  - Browser fallback: `GET /api/email/unsubscribe` returns confirmation HTML
+  - Resend webhook receiver: `POST /api/email/webhooks/resend` — handles `email.bounced`, `email.complained`, `email.delivered` with Svix signature verification via SDK
+  - Suppression list: `isSuppressed()` / `addSuppression()` / `filterSuppressed()` — checked transparently inside `send()` and `sendBatch()`
+  - Migration: `provider_message_id` column on `pending_emails` for webhook correlation
   - *Acceptance:* System can send a fan email with proper headers, unsubscribe works, bounces update suppression list.
+  - **Requires setup before testing:** see env vars and Resend dashboard config below
 
 - [ ] **Follow-up email template editor (dashboard)**
   - Artist configures: subject line, body text, incentive file delivery

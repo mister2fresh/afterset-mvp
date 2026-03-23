@@ -6,6 +6,7 @@ import { auth } from "./middleware/auth.js";
 import build from "./routes/build.js";
 import capturePages from "./routes/capture-pages.js";
 import captures from "./routes/captures.js";
+import email from "./routes/email.js";
 import incentive from "./routes/incentive.js";
 
 const app = new Hono();
@@ -22,6 +23,8 @@ app.use(
 app.get("/api/health", (c) => {
 	return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+app.route("/api/email", email);
 
 app.use("/api/capture-pages", auth);
 app.use("/api/capture-pages/*", auth);
