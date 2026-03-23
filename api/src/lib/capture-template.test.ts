@@ -12,6 +12,8 @@ function basePage(overrides = {}) {
 		button_style: "rounded" as const,
 		streaming_links: {} as Record<string, string>,
 		social_links: {} as Record<string, string>,
+		incentive_file_name: null as string | null,
+		incentive_content_type: null as string | null,
 		...overrides,
 	};
 }
@@ -146,7 +148,7 @@ describe("generateCaptureHtml", () => {
 
 	it("embeds slug in form submission script", () => {
 		const html = generateCaptureHtml(basePage({ slug: "my-cool-show" }));
-		expect(html).toContain('slug:"my-cool-show"');
+		expect(html).toContain('S="my-cool-show"');
 	});
 
 	it("includes entry method tracking from query param", () => {
@@ -157,6 +159,54 @@ describe("generateCaptureHtml", () => {
 	it("includes build timestamp comment", () => {
 		const html = generateCaptureHtml(basePage());
 		expect(html).toMatch(/<!-- built: \d{4}-\d{2}-\d{2}T/);
+	});
+
+	it("shows generic confirmation when no incentive", () => {
+		const html = generateCaptureHtml(basePage());
+		expect(html).toContain("You're in!");
+		expect(html).toContain("We&#39;ll be in touch soon.");
+	});
+
+	it("shows incentive-specific confirmation for audio", () => {
+		const html = generateCaptureHtml(
+			basePage({
+				incentive_file_name: "track.mp3",
+				incentive_content_type: "audio/mpeg",
+			}),
+		);
+		expect(html).toContain("send a track to your inbox");
+	});
+
+	it("shows incentive-specific confirmation for video", () => {
+		const html = generateCaptureHtml(
+			basePage({
+				incentive_file_name: "clip.mp4",
+				incentive_content_type: "video/mp4",
+			}),
+		);
+		expect(html).toContain("send a video to your inbox");
+	});
+
+	it("shows incentive-specific confirmation for PDF", () => {
+		const html = generateCaptureHtml(
+			basePage({
+				incentive_file_name: "setlist.pdf",
+				incentive_content_type: "application/pdf",
+			}),
+		);
+		expect(html).toContain("send a PDF to your inbox");
+	});
+
+	it("uses localStorage key for offline queue", () => {
+		const html = generateCaptureHtml(basePage());
+		expect(html).toContain("afterset_q");
+		expect(html).toContain("localStorage");
+	});
+
+	it("uses keepalive and AbortController in fetch", () => {
+		const html = generateCaptureHtml(basePage());
+		expect(html).toContain("keepalive:true");
+		expect(html).toContain("AbortController");
 	});
 
 	it("has 48px minimum touch targets on button", () => {

@@ -8,6 +8,8 @@ type CapturePage = {
 	button_style: "rounded" | "pill" | "sharp";
 	streaming_links: Record<string, string>;
 	social_links: Record<string, string>;
+	incentive_file_name: string | null;
+	incentive_content_type: string | null;
 };
 
 const BUTTON_RADIUS: Record<string, string> = {
@@ -105,6 +107,16 @@ function renderIconLinks(
 	return `<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px">${items}</div>`;
 }
 
+function incentiveLabel(contentType: string | null): string {
+	if (!contentType) return "";
+	if (contentType.startsWith("audio/")) return "a track";
+	if (contentType.startsWith("video/")) return "a video";
+	if (contentType.startsWith("image/")) return "an image";
+	if (contentType === "application/pdf") return "a PDF";
+	if (contentType === "application/zip") return "a file";
+	return "a file";
+}
+
 export function generateCaptureHtml(page: CapturePage): string {
 	const bg = cssBackground(page.background_style, page.accent_color, page.secondary_color);
 	const btnRadius = BUTTON_RADIUS[page.button_style] ?? "6px";
@@ -112,6 +124,11 @@ export function generateCaptureHtml(page: CapturePage): string {
 	const subtitle = page.value_exchange_text ? escapeHtml(page.value_exchange_text) : "";
 	const streamingHtml = renderIconLinks(page.streaming_links, STREAMING_ICONS, page.accent_color);
 	const socialHtml = renderIconLinks(page.social_links, SOCIAL_ICONS, page.accent_color);
+
+	const hasIncentive = page.incentive_file_name && page.incentive_content_type;
+	const incentiveMsg = hasIncentive
+		? `We&#39;ll send ${incentiveLabel(page.incentive_content_type)} to your inbox shortly.`
+		: "We&#39;ll be in touch soon.";
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -131,7 +148,9 @@ h1{font-size:1.5rem;font-weight:700;letter-spacing:-.025em;line-height:1.2;margi
 .f input::placeholder{color:#6b7280}
 .f button{padding:12px 24px;border:none;background:${page.accent_color};color:#0a0e1a;font-size:.875rem;font-weight:600;border-radius:${btnRadius};cursor:pointer;white-space:nowrap;min-height:48px;min-width:48px}
 .f button:active{opacity:.9}
-.ok{display:none;color:#4ade80;font-size:.875rem;margin-top:12px}
+.ok{display:none;margin-top:12px}
+.ok-h{color:#4ade80;font-size:1rem;font-weight:600;margin-bottom:6px}
+.ok-d{color:#9ca3af;font-size:.875rem;line-height:1.5}
 .err{display:none;color:#f87171;font-size:.875rem;margin-top:8px}
 .pw{font-size:.7rem;color:#4b5563;margin-top:24px}
 .pw a{color:#6b7280}
@@ -147,14 +166,14 @@ ${subtitle ? `<p class="sub">${subtitle}</p>` : ""}
 <input type="email" name="email" placeholder="your@email.com" required aria-label="Email address" autocomplete="email" inputmode="email">
 <button type="submit">Join</button>
 </form>
-<p class="ok" id="ok">You're in! Check your inbox.</p>
+<div class="ok" id="ok"><p class="ok-h">You're in!</p><p class="ok-d">${incentiveMsg}</p></div>
 <p class="err" id="er"></p>
 ${streamingHtml}
 ${socialHtml}
 <p class="pw">Powered by <a href="https://afterset.net" target="_blank" rel="noopener">Afterset</a></p>
 </main>
 <script>
-(function(){var f=document.getElementById("cf"),ok=document.getElementById("ok"),er=document.getElementById("er"),p=new URLSearchParams(location.search),v=p.get("v")||"d";f.entry_method.value=v;f.addEventListener("submit",function(e){e.preventDefault();var b=f.querySelector("button");b.disabled=true;b.textContent="...";er.style.display="none";fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:f.email.value,slug:"${page.slug}",entry_method:v})}).then(function(r){if(!r.ok)throw new Error();f.style.display="none";ok.style.display="block"}).catch(function(){er.textContent="Something went wrong. Please try again.";er.style.display="block";b.disabled=false;b.textContent="Join"})})()
+(function(){var K="afterset_q",S="${page.slug}",f=document.getElementById("cf"),ok=document.getElementById("ok"),er=document.getElementById("er"),p=new URLSearchParams(location.search),v=p.get("v")||"d";f.entry_method.value=v;function send(d){var ac=new AbortController;var t=setTimeout(function(){ac.abort()},10000);return fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d),signal:ac.signal,keepalive:true}).then(function(r){clearTimeout(t);if(!r.ok)throw new Error();dequeue(d.email);return true}).catch(function(){clearTimeout(t);enqueue(d);return false})}function enqueue(d){try{var q=JSON.parse(localStorage.getItem(K)||"[]");if(!q.some(function(x){return x.email===d.email&&x.slug===d.slug}))q.push(d);localStorage.setItem(K,JSON.stringify(q))}catch(e){}}function dequeue(email){try{var q=JSON.parse(localStorage.getItem(K)||"[]");q=q.filter(function(x){return x.email!==email||x.slug!==S});q.length?localStorage.setItem(K,JSON.stringify(q)):localStorage.removeItem(K)}catch(e){}}function showOk(){f.style.display="none";ok.style.display="block"}function retry(){try{var q=JSON.parse(localStorage.getItem(K)||"[]");q.forEach(function(d){send(d)})}catch(e){}}retry();f.addEventListener("submit",function(e){e.preventDefault();var email=f.email.value;var d={email:email,slug:S,entry_method:v};showOk();send(d)})})()
 </script>
 <!-- built: ${new Date().toISOString()} -->
 </body>

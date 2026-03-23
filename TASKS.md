@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v15 — QR code generation + download)
+**Last updated:** March 23, 2026 (v16 — Capture confirmation screen)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
-**Next up:** Capture confirmation screen, basic capture list, rate limiting
+**Next up:** Basic capture list, rate limiting, mobile performance validation
 
 ---
 
@@ -529,11 +529,11 @@ Run ADR validation tasks before committing to the stack.
   - *Acceptance:* Artist uploads a file in the page creator, sees it attached, can replace or remove it. File persists in Supabase Storage.
   - **Note:** Delivery to fans happens in Sprint 2 via the follow-up email (signed download link included in email template).
 
-- [ ] **Capture confirmation screen (in-page)**
+- [x] **Capture confirmation screen (in-page)** *(done 2026-03-23)*
   - "You're in!" displayed immediately via localStorage-first pattern (before network responds)
-  - Shows value exchange message / next steps
+  - Shows incentive-specific message ("We'll send a track to your inbox") or generic ("We'll be in touch soon")
   - `fetch()` POST fires with `keepalive: true` and 10-second `AbortController` timeout
-  - On page reload, retries any unsent submissions from localStorage
+  - On page reload, retries any unsent submissions from localStorage queue (`afterset_q`)
   - *Acceptance:* Fan sees confirmation within 200ms of tapping submit, even on poor connectivity.
 
 - [ ] **Basic capture list (dashboard)**
