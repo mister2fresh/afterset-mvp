@@ -11,6 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.1014.0",
 		"@hono/node-server": "^1.19.11",
 		"@supabase/supabase-js": "^2.99.3",
 		"hono": "^4.12.8",

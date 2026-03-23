@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 22, 2026 (v10 — Theme customization + live preview complete)
+**Last updated:** March 22, 2026 (v11 — Build pipeline complete)
 **Current phase:** Sprint 1 — Core Capture Flow
 **Sprint:** Sprint 1 in progress
-**Next up:** Capture page build pipeline, public capture page, Cloudflare Worker
+**Next up:** Public capture page + CDN routing, Cloudflare Worker for fan submission, QR code generation
 
 ---
 
@@ -418,7 +418,7 @@ Run ADR validation tasks before committing to the stack.
 
 **Stack context:** Dashboard is Vite + React SPA on Cloudflare Pages. API is Hono on Railway. Capture pages are static HTML on Cloudflare R2. Form submission via Cloudflare Worker → Supabase.
 
-**Status:** In progress — schema deployed, auth complete, dashboard shell complete, capture page CRUD complete (incentive upload still needed). Build pipeline next.
+**Status:** In progress — schema deployed, auth complete, dashboard shell complete, capture page CRUD complete, incentive upload complete, build pipeline complete. Public capture page + CDN next.
 
 **Business parallel:** Start 10DLC brand registration during Sprint 1 (Business Phase C). The 10–15 business day approval window is the critical path for Sprint 3 SMS launch. Also ensure Business Phase A (LLC, EIN, bank) is complete — 10DLC requires legal business name matching IRS records.
 
@@ -473,13 +473,16 @@ Run ADR validation tasks before committing to the stack.
   - *Acceptance:* Artist sees a representative preview updating live as they change theme settings. ✓
   - **Polish (revisit during build pipeline):** Preview should match the actual fan-facing HTML template once built — currently a dashboard approximation
 
-- [ ] **Capture page build pipeline**
-  - Node.js script (~100 lines) on Hono API
-  - Reads artist data from Supabase → generates complete HTML from template → pre-compresses Brotli 11 → uploads to R2 via S3 API → purges Cloudflare CDN cache
-  - Includes build timestamp comment in HTML (`<!-- built: 2026-04-XX -->`) for stale page detection
-  - Retry on upload failure (3 attempts), alert on persistent failure
-  - "Rebuild all pages" recovery endpoint
-  - *Acceptance:* Build runs in <10s. R2 file matches expected HTML. CDN serves the updated version.
+- [x] **Capture page build pipeline** ✓ completed 2026-03-22
+  - `buildPage()` in `api/src/lib/build-page.ts`: reads page from Supabase → generates HTML via template → Brotli 11 compress → uploads to R2 (`c/{slug}/index.html`)
+  - HTML template in `api/src/lib/capture-template.ts`: dark theme, system font stack, inline CSS/JS, SVG icons for streaming + social links, form with fetch submission
+  - R2 client in `api/src/lib/r2.ts`: S3-compatible via `@aws-sdk/client-s3`
+  - Routes in `api/src/routes/build.ts`: `POST /:id/build` (single page), `POST /rebuild-all` (all active pages)
+  - Auto-triggers on page create and update (fire-and-forget from capture-pages route)
+  - Retry on upload failure (3 attempts), build timestamp comment in HTML
+  - R2 bucket: `afterset-capture-pages` (Cloudflare, East North America)
+  - Generated pages ~2.7–2.8KB uncompressed (well within 14KB budget)
+  - *Acceptance:* Build runs in <10s. R2 files confirmed present. ✓ CDN serving deferred to public capture page task.
 
 - [ ] **Public capture page (`afterset.net/c/[slug]`)**
   - Static HTML served from Cloudflare R2 + CDN

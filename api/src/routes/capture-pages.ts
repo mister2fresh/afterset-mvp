@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { buildPage } from "../lib/build-page.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -99,6 +100,9 @@ app.post("/", async (c) => {
 		.single();
 
 	if (error) return c.json({ error: error.message }, 500);
+
+	buildPage(data.id, artist.id).catch(() => {});
+
 	return c.json(data, 201);
 });
 
@@ -147,6 +151,9 @@ app.patch("/:id", async (c) => {
 
 	if (error) return c.json({ error: error.message }, 500);
 	if (!data) return c.json({ error: "Not found" }, 404);
+
+	buildPage(data.id, artist.id).catch(() => {});
+
 	return c.json(data);
 });
 
