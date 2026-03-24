@@ -23,7 +23,15 @@ type OverviewData = {
 	total_fans: number;
 	total_pages: number;
 	this_week: number;
-	pages: { id: string; title: string; slug: string; captures: number }[];
+	pages: {
+		id: string;
+		title: string;
+		slug: string;
+		captures: number;
+		emails_sent: number;
+		emails_opened: number;
+		open_rate: number;
+	}[];
 	daily: { date: string; count: number }[];
 };
 
@@ -110,6 +118,11 @@ function DashboardPage() {
 										<span className="shrink-0 tabular-nums text-muted-foreground">
 											{p.captures}
 										</span>
+										{p.emails_sent > 0 && (
+											<span className="shrink-0 text-xs text-muted-foreground">
+												{Math.round(p.open_rate * 100)}%
+											</span>
+										)}
 										<div className="h-2 w-16 shrink-0 overflow-hidden rounded-full bg-muted">
 											<div
 												className="h-full rounded-full bg-honey-gold transition-[width]"

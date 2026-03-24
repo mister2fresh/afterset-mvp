@@ -78,7 +78,17 @@ async function handleWebhookEvent(event: WebhookEventPayload): Promise<void> {
 			.from("pending_emails")
 			.update({ status: "sent" })
 			.eq("provider_message_id", event.data.email_id);
+	} else if (event.type === "email.opened") {
+		await handleEmailOpened(event.data.email_id);
 	}
+}
+
+async function handleEmailOpened(emailId: string): Promise<void> {
+	await supabase
+		.from("pending_emails")
+		.update({ opened_at: new Date().toISOString() })
+		.eq("provider_message_id", emailId)
+		.is("opened_at", null);
 }
 
 async function handleBounceOrComplaint(

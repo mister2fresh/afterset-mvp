@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v20 — Sprint 2 P1: dashboard overview, fan filtering, CSV export)
+**Last updated:** March 23, 2026 (v21 — Sprint 2 P2: email open tracking)
 **Current phase:** Sprint 2 — Follow-Up & Analytics
-**Sprint:** Sprint 2 in progress — P0 + P1 (dashboard, fan list, CSV) complete
-**Next up:** Telnyx toll-free verification submission (manual), then P2 stretch goals
+**Sprint:** Sprint 2 in progress — P0 + P1 complete, P2 email open tracking done
+**Next up:** Sequential email sequences (drip campaigns), then Telnyx toll-free verification (manual)
 
 ---
 
@@ -637,9 +637,11 @@ Run ADR validation tasks before committing to the stack.
   - Requires: `email_templates` table refactored from one-per-page to many-per-page with `sequence_order` and `delay_after_previous`
   - *Acceptance:* Artist creates a 3-email sequence; fans receive each email at the configured intervals.
 
-- [ ] **Email open tracking**
-  - Track whether follow-up email was opened
-  - Display open rate per page in analytics
+- [x] **Email open tracking** *(done 2026-03-23)*
+  - Resend `email.opened` webhook updates `opened_at` on `pending_emails` (first-open-only, idempotent)
+  - Overview API returns `emails_sent`, `emails_opened`, `open_rate` per page
+  - Per-page analytics API returns `email: { sent, opened, open_rate }`
+  - Dashboard + Analytics pages display open rate per page
   - *Acceptance:* Analytics dashboard shows open rate percentage per capture page.
 
 ---

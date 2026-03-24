@@ -76,7 +76,36 @@ app.get("/:id/analytics", async (c) => {
 		count,
 	}));
 
-	return c.json({ total, methods, daily });
+	// Email open stats — fetch capture event IDs, then query pending_emails
+	const { data: captureEventIds } = await supabase
+		.from("capture_events")
+		.select("id")
+		.eq("capture_page_id", pageId);
+
+	const ceIds = (captureEventIds ?? []).map((e) => e.id);
+	const { data: emailData } =
+		ceIds.length > 0
+			? await supabase
+					.from("pending_emails")
+					.select("opened_at")
+					.eq("status", "sent")
+					.in("fan_capture_id", ceIds)
+			: { data: [] };
+
+	const sentEmails = emailData ?? [];
+	const emailSent = sentEmails.length;
+	const emailOpened = sentEmails.filter((e) => e.opened_at !== null).length;
+
+	return c.json({
+		total,
+		methods,
+		daily,
+		email: {
+			sent: emailSent,
+			opened: emailOpened,
+			open_rate: emailSent > 0 ? emailOpened / emailSent : 0,
+		},
+	});
 });
 
 // GET /analytics/overview — aggregate stats across all pages
@@ -101,7 +130,7 @@ app.get("/", async (c) => {
 
 	const { data: events } = await supabase
 		.from("capture_events")
-		.select("capture_page_id, entry_method, captured_at")
+		.select("id, capture_page_id, entry_method, captured_at")
 		.in("capture_page_id", pageIds);
 
 	const rows = events ?? [];
@@ -120,13 +149,45 @@ app.get("/", async (c) => {
 		.select("id, title, slug")
 		.in("id", pageIds);
 
+	// Email open stats per page
+	const { data: emailRows } = await supabase
+		.from("pending_emails")
+		.select("fan_capture_id, opened_at")
+		.eq("artist_id", artist.id)
+		.eq("status", "sent");
+
+	// Map capture_event id -> capture_page_id (reuse already-fetched events)
+	const ceToPage = new Map<string, string>();
+	for (const row of rows) {
+		ceToPage.set(row.id, row.capture_page_id);
+	}
+
+	// Aggregate email stats per page
+	const pageEmailSent = new Map<string, number>();
+	const pageEmailOpened = new Map<string, number>();
+	for (const email of emailRows ?? []) {
+		const pid = ceToPage.get(email.fan_capture_id);
+		if (!pid) continue;
+		pageEmailSent.set(pid, (pageEmailSent.get(pid) ?? 0) + 1);
+		if (email.opened_at) {
+			pageEmailOpened.set(pid, (pageEmailOpened.get(pid) ?? 0) + 1);
+		}
+	}
+
 	const pageStats = (pageDetails ?? [])
-		.map((p) => ({
-			id: p.id,
-			title: p.title,
-			slug: p.slug,
-			captures: pageCounts.get(p.id) ?? 0,
-		}))
+		.map((p) => {
+			const sent = pageEmailSent.get(p.id) ?? 0;
+			const opened = pageEmailOpened.get(p.id) ?? 0;
+			return {
+				id: p.id,
+				title: p.title,
+				slug: p.slug,
+				captures: pageCounts.get(p.id) ?? 0,
+				emails_sent: sent,
+				emails_opened: opened,
+				open_rate: sent > 0 ? opened / sent : 0,
+			};
+		})
 		.sort((a, b) => b.captures - a.captures);
 
 	// Daily time series (last 30 days) for growth chart

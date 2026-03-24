@@ -25,13 +25,22 @@ type OverviewData = {
 	total_fans: number;
 	total_pages: number;
 	this_week: number;
-	pages: { id: string; title: string; slug: string; captures: number }[];
+	pages: {
+		id: string;
+		title: string;
+		slug: string;
+		captures: number;
+		emails_sent: number;
+		emails_opened: number;
+		open_rate: number;
+	}[];
 };
 
 type PageAnalytics = {
 	total: number;
 	methods: { method: string; count: number }[];
 	daily: { date: string; count: number }[];
+	email: { sent: number; opened: number; open_rate: number };
 };
 
 const METHOD_LABELS: Record<string, string> = {
@@ -114,6 +123,11 @@ function AnalyticsPage() {
 								>
 									<span className="min-w-0 flex-1 truncate">{p.title}</span>
 									<span className="shrink-0 tabular-nums text-muted-foreground">{p.captures}</span>
+									{p.emails_sent > 0 && (
+										<span className="shrink-0 text-xs text-muted-foreground">
+											{Math.round(p.open_rate * 100)}% opens
+										</span>
+									)}
 									<div className="h-2 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
 										<div
 											className="h-full rounded-full bg-honey-gold transition-[width]"
@@ -134,9 +148,34 @@ function AnalyticsPage() {
 						<Loader2 className="size-5 animate-spin text-muted-foreground" />
 					</div>
 				) : pageData ? (
-					<div className="grid gap-4 lg:grid-cols-2">
-						<MethodBreakdownChart methods={pageData.methods} total={pageData.total} />
-						<DailyChart daily={pageData.daily} />
+					<div className="space-y-4">
+						{pageData.email.sent > 0 && (
+							<Card>
+								<CardHeader>
+									<CardTitle className="text-sm font-medium">Email Performance</CardTitle>
+								</CardHeader>
+								<CardContent className="flex items-center gap-6">
+									<div>
+										<p className="font-display text-2xl font-bold">
+											{Math.round(pageData.email.open_rate * 100)}%
+										</p>
+										<p className="text-xs text-muted-foreground">Open Rate</p>
+									</div>
+									<div>
+										<p className="text-lg tabular-nums">{pageData.email.sent}</p>
+										<p className="text-xs text-muted-foreground">Sent</p>
+									</div>
+									<div>
+										<p className="text-lg tabular-nums">{pageData.email.opened}</p>
+										<p className="text-xs text-muted-foreground">Opened</p>
+									</div>
+								</CardContent>
+							</Card>
+						)}
+						<div className="grid gap-4 lg:grid-cols-2">
+							<MethodBreakdownChart methods={pageData.methods} total={pageData.total} />
+							<DailyChart daily={pageData.daily} />
+						</div>
 					</div>
 				) : null)}
 		</div>
