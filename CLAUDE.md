@@ -53,9 +53,9 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **Background jobs:** Supabase pg_cron for delayed follow-up emails
 - **SMS:** Telnyx (Twilio is fallback), GSM-7 encoding only in auto-replies
 - **Email:** Resend via `EmailService` abstraction — suppression checks, RFC 8058 unsubscribe, CAN-SPAM footer, webhook handler for bounces/complaints/opens (open tracking via `email.opened` webhook, stored as `opened_at` on `pending_emails`)
-- **Email templates:** CRUD at `/api/capture-pages/:id/email-template` (GET/PUT/DELETE + preview POST), delay modes (immediate/1_hour/next_morning), optional incentive download link. GET returns `null` (not 404) when no template exists.
+- **Email sequences (drip campaigns):** Multiple templates per capture page via `sequence_order` (0–4, max 5 steps). Sequence CRUD at `/api/capture-pages/:id/email-sequence` (GET returns array) and `/api/capture-pages/:id/email-sequence/:order` (PUT/DELETE + preview POST). Step 0 uses `delay_mode` (immediate/1_hour/next_morning), steps 1+ use `delay_days` (sent at 9am artist timezone). Legacy singular endpoints (`/email-template`) still work targeting step 0. `pending_emails.email_template_id` links each queued email to its template; `UNIQUE(fan_capture_id, email_template_id)` prevents resubmit duplicates.
 - **Captures API:** `GET /api/captures` supports query params: `page_id`, `method`, `date_from`, `date_to`, `search` (email ilike). `GET /api/captures/export` returns CSV with same filters.
-- **Analytics API:** `GET /api/analytics` returns `total_fans`, `total_pages`, `this_week`, `pages[]` (ranked, with `emails_sent`/`emails_opened`/`open_rate`), `daily[]` (last 30 days). Per-page: `GET /api/capture-pages/:id/analytics` includes `email: { sent, opened, open_rate }`.
+- **Analytics API:** `GET /api/analytics` returns `total_fans`, `total_pages`, `this_week`, `pages[]` (ranked, with `emails_sent`/`emails_opened`/`open_rate`), `daily[]` (last 30 days). Per-page: `GET /api/capture-pages/:id/analytics` includes `email: { sent, opened, open_rate, steps[] }` with per-step breakdown.
 
 ## Commands
 

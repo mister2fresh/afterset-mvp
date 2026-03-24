@@ -1,6 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock, Eye, Loader2, Mail, Send, Sunrise, Trash2, Zap } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import {
+	CalendarDays,
+	ChevronDown,
+	ChevronUp,
+	Clock,
+	Eye,
+	Loader2,
+	Mail,
+	Plus,
+	Send,
+	Sunrise,
+	Trash2,
+	Zap,
+} from "lucide-react";
+import { type FormEvent, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +33,8 @@ import { supabase } from "@/lib/supabase";
 type EmailTemplate = {
 	id: string;
 	capture_page_id: string;
+	sequence_order: number;
+	delay_days: number;
 	subject: string;
 	body: string;
 	include_incentive_link: boolean;
@@ -29,21 +44,16 @@ type EmailTemplate = {
 	updated_at: string;
 };
 
-type TemplateForm = {
+type StepForm = {
 	subject: string;
 	body: string;
 	include_incentive_link: boolean;
 	delay_mode: "immediate" | "1_hour" | "next_morning";
+	delay_days: number;
 	is_active: boolean;
 };
 
-const EMPTY_FORM: TemplateForm = {
-	subject: "",
-	body: "",
-	include_incentive_link: false,
-	delay_mode: "immediate",
-	is_active: false,
-};
+const MAX_STEPS = 5;
 
 const DELAY_OPTIONS = [
 	{ value: "immediate" as const, label: "Immediately", icon: Zap },
@@ -51,65 +61,63 @@ const DELAY_OPTIONS = [
 	{ value: "next_morning" as const, label: "Next morning (9am)", icon: Sunrise },
 ];
 
-function formFromTemplate(t: EmailTemplate): TemplateForm {
+const EMPTY_STEP: StepForm = {
+	subject: "",
+	body: "",
+	include_incentive_link: false,
+	delay_mode: "immediate",
+	delay_days: 1,
+	is_active: false,
+};
+
+function formFromTemplate(t: EmailTemplate): StepForm {
 	return {
 		subject: t.subject,
 		body: t.body,
 		include_incentive_link: t.include_incentive_link,
 		delay_mode: t.delay_mode,
+		delay_days: t.delay_days,
 		is_active: t.is_active,
 	};
 }
 
-export function EmailTemplateDialog({
+function stepDelayLabel(step: EmailTemplate): string {
+	if (step.sequence_order === 0) {
+		return DELAY_OPTIONS.find((o) => o.value === step.delay_mode)?.label ?? "Immediately";
+	}
+	return `Day ${step.delay_days}`;
+}
+
+// --- Step Editor (rendered inline for the expanded step) ---
+
+function SequenceStepEditor({
 	pageId,
-	pageTitle,
+	order,
+	existing,
 	hasIncentive,
-	open,
-	onOpenChange,
+	onSaved,
+	onDeleted,
 }: {
 	pageId: string;
-	pageTitle: string;
+	order: number;
+	existing: EmailTemplate | undefined;
 	hasIncentive: boolean;
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
+	onSaved: () => void;
+	onDeleted: () => void;
 }) {
-	const queryClient = useQueryClient();
-	const queryKey = ["email-template", pageId];
-
-	const { data: existing, isLoading } = useQuery({
-		queryKey,
-		queryFn: () => api.get<EmailTemplate | null>(`/capture-pages/${pageId}/email-template`),
-		enabled: open,
-	});
-
-	const [form, setForm] = useState<TemplateForm>(EMPTY_FORM);
-	const [showPreview, setShowPreview] = useState(false);
+	const [form, setForm] = useState<StepForm>(existing ? formFromTemplate(existing) : EMPTY_STEP);
 	const [previewHtml, setPreviewHtml] = useState("");
-
-	useEffect(() => {
-		if (existing) setForm(formFromTemplate(existing));
-		else setForm(EMPTY_FORM);
-	}, [existing]);
+	const [showPreview, setShowPreview] = useState(false);
 
 	const saveMutation = useMutation({
-		mutationFn: (data: TemplateForm) =>
-			api.put<EmailTemplate>(`/capture-pages/${pageId}/email-template`, data),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey });
-			queryClient.invalidateQueries({ queryKey: ["email-template-status"] });
-			onOpenChange(false);
-		},
+		mutationFn: (data: StepForm) =>
+			api.put<EmailTemplate>(`/capture-pages/${pageId}/email-sequence/${order}`, data),
+		onSuccess: onSaved,
 	});
 
 	const deleteMutation = useMutation({
-		mutationFn: () => api.delete(`/capture-pages/${pageId}/email-template`),
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey });
-			queryClient.invalidateQueries({ queryKey: ["email-template-status"] });
-			setForm(EMPTY_FORM);
-			onOpenChange(false);
-		},
+		mutationFn: () => api.delete(`/capture-pages/${pageId}/email-sequence/${order}`),
+		onSuccess: onDeleted,
 	});
 
 	const previewMutation = useMutation({
@@ -117,7 +125,7 @@ export function EmailTemplateDialog({
 			const {
 				data: { session },
 			} = await supabase.auth.getSession();
-			const res = await fetch(`/api/capture-pages/${pageId}/email-template/preview`, {
+			const res = await fetch(`/api/capture-pages/${pageId}/email-sequence/${order}/preview`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -142,6 +150,213 @@ export function EmailTemplateDialog({
 		saveMutation.mutate(form);
 	}
 
+	if (showPreview) {
+		return (
+			<div className="space-y-3">
+				<p className="text-sm font-medium">Subject: {form.subject}</p>
+				<div className="overflow-hidden rounded-lg border border-border">
+					<iframe
+						title="Email preview"
+						srcDoc={previewHtml}
+						className="h-[300px] w-full bg-[#0a0e1a]"
+						sandbox=""
+					/>
+				</div>
+				<Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
+					Back to Editor
+				</Button>
+			</div>
+		);
+	}
+
+	return (
+		<form onSubmit={handleSubmit} className="space-y-4">
+			<div className="flex items-center justify-between">
+				<Label>Active</Label>
+				<ToggleSwitch
+					checked={form.is_active}
+					onChange={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label>Subject Line</Label>
+				<Input
+					placeholder='e.g. "Thanks for coming out tonight!"'
+					value={form.subject}
+					onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
+					required
+					maxLength={200}
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label>Email Body</Label>
+				<Textarea
+					placeholder="Write your message..."
+					value={form.body}
+					onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+					required
+					maxLength={5000}
+					rows={5}
+					className="resize-y"
+				/>
+				<p className="text-xs text-muted-foreground">{form.body.length}/5000</p>
+			</div>
+
+			{order === 0 ? (
+				<div className="space-y-2">
+					<Label>Send Delay</Label>
+					<div className="grid grid-cols-3 gap-2">
+						{DELAY_OPTIONS.map((opt) => {
+							const Icon = opt.icon;
+							const active = form.delay_mode === opt.value;
+							return (
+								<button
+									key={opt.value}
+									type="button"
+									onClick={() => setForm((f) => ({ ...f, delay_mode: opt.value }))}
+									className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${active ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
+								>
+									<Icon className="size-4" />
+									<span className="text-xs font-medium">{opt.label}</span>
+								</button>
+							);
+						})}
+					</div>
+				</div>
+			) : (
+				<div className="space-y-2">
+					<Label>Send after signup</Label>
+					<div className="flex items-center gap-2">
+						<Input
+							type="number"
+							min={1}
+							max={30}
+							value={form.delay_days}
+							onChange={(e) => setForm((f) => ({ ...f, delay_days: Number(e.target.value) }))}
+							className="w-20"
+						/>
+						<span className="text-sm text-muted-foreground">days (sent at 9am)</span>
+					</div>
+				</div>
+			)}
+
+			{hasIncentive && (
+				<div className="flex items-center justify-between rounded-lg border border-border p-3">
+					<div>
+						<p className="text-sm font-medium">Include download link</p>
+						<p className="text-xs text-muted-foreground">Time-limited incentive link.</p>
+					</div>
+					<ToggleSwitch
+						checked={form.include_incentive_link}
+						onChange={() =>
+							setForm((f) => ({
+								...f,
+								include_incentive_link: !f.include_incentive_link,
+							}))
+						}
+					/>
+				</div>
+			)}
+
+			<div className="flex items-center gap-2">
+				{existing && (
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						className="text-destructive hover:text-destructive"
+						onClick={() => deleteMutation.mutate()}
+						disabled={deleteMutation.isPending}
+					>
+						{deleteMutation.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
+						Delete
+					</Button>
+				)}
+				<div className="flex-1" />
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					disabled={!form.subject.trim() || !form.body.trim() || previewMutation.isPending}
+					onClick={() => previewMutation.mutate()}
+				>
+					{previewMutation.isPending ? <Loader2 className="animate-spin" /> : <Eye />}
+					Preview
+				</Button>
+				<Button
+					type="submit"
+					size="sm"
+					disabled={!form.subject.trim() || !form.body.trim() || saveMutation.isPending}
+				>
+					{saveMutation.isPending ? <Loader2 className="animate-spin" /> : <Send />}
+					Save
+				</Button>
+			</div>
+
+			{saveMutation.isError && (
+				<p className="text-sm text-destructive">{saveMutation.error.message}</p>
+			)}
+		</form>
+	);
+}
+
+// --- Toggle Switch (reused from the old dialog) ---
+
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+	return (
+		<button
+			type="button"
+			role="switch"
+			aria-checked={checked}
+			onClick={onChange}
+			className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${checked ? "bg-honey-gold" : "bg-muted"}`}
+		>
+			<span
+				className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`}
+			/>
+		</button>
+	);
+}
+
+// --- Main Sequence Dialog ---
+
+export function EmailTemplateDialog({
+	pageId,
+	pageTitle,
+	hasIncentive,
+	open,
+	onOpenChange,
+}: {
+	pageId: string;
+	pageTitle: string;
+	hasIncentive: boolean;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}) {
+	const queryClient = useQueryClient();
+	const queryKey = ["email-sequence", pageId];
+
+	const { data: sequence, isLoading } = useQuery({
+		queryKey,
+		queryFn: () => api.get<EmailTemplate[]>(`/capture-pages/${pageId}/email-sequence`),
+		enabled: open,
+	});
+
+	const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
+	const [addingNew, setAddingNew] = useState(false);
+
+	function invalidateAll() {
+		queryClient.invalidateQueries({ queryKey });
+		queryClient.invalidateQueries({ queryKey: ["email-sequence-status"] });
+	}
+
+	const steps = sequence ?? [];
+	const canAddStep = steps.length < MAX_STEPS;
+	const nextOrder = steps.length;
+	const isNewSequence = steps.length === 0;
+
 	if (isLoading) {
 		return (
 			<Dialog open={open} onOpenChange={onOpenChange}>
@@ -154,175 +369,119 @@ export function EmailTemplateDialog({
 		);
 	}
 
-	if (showPreview) {
-		return (
-			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogContent className="sm:max-w-2xl">
-					<DialogHeader>
-						<DialogTitle className="font-display">Email Preview</DialogTitle>
-						<DialogDescription>Subject: {form.subject}</DialogDescription>
-					</DialogHeader>
-					<div className="overflow-hidden rounded-lg border border-border">
-						<iframe
-							title="Email preview"
-							srcDoc={previewHtml}
-							className="h-[400px] w-full bg-[#0a0e1a]"
-							sandbox=""
-						/>
-					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowPreview(false)}>
-							Back to Editor
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
-		);
-	}
-
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-				<form onSubmit={handleSubmit}>
-					<DialogHeader>
-						<DialogTitle className="font-display flex items-center gap-2">
-							<Mail className="size-5" />
-							Follow-Up Email
-						</DialogTitle>
-						<DialogDescription>
-							Configure the email fans receive after signing up via "{pageTitle}".
-						</DialogDescription>
-					</DialogHeader>
+				<DialogHeader>
+					<DialogTitle className="font-display flex items-center gap-2">
+						<Mail className="size-5" />
+						Email Sequence
+					</DialogTitle>
+					<DialogDescription>
+						{isNewSequence
+							? `Add follow-up emails for fans who sign up via "${pageTitle}".`
+							: `${steps.length} email${steps.length === 1 ? "" : "s"} in sequence for "${pageTitle}".`}
+					</DialogDescription>
+				</DialogHeader>
 
-					<div className="mt-6 space-y-6">
-						<div className="flex items-center justify-between">
-							<Label htmlFor="is_active">Send follow-up emails</Label>
-							<button
-								type="button"
-								role="switch"
-								aria-checked={form.is_active}
-								onClick={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
-								className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${form.is_active ? "bg-honey-gold" : "bg-muted"}`}
-							>
-								<span
-									className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow transition-transform ${form.is_active ? "translate-x-5" : "translate-x-0"}`}
-								/>
-							</button>
-						</div>
-
-						<div className="space-y-2">
-							<Label htmlFor="subject">Subject Line</Label>
-							<Input
-								id="subject"
-								placeholder='e.g. "Thanks for coming out tonight!"'
-								value={form.subject}
-								onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
-								required
-								maxLength={200}
-							/>
-						</div>
-
-						<div className="space-y-2">
-							<Label htmlFor="body">Email Body</Label>
-							<Textarea
-								id="body"
-								placeholder="Write your follow-up message to fans..."
-								value={form.body}
-								onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-								required
-								maxLength={5000}
-								rows={6}
-								className="resize-y"
-							/>
-							<p className="text-xs text-muted-foreground">
-								{form.body.length}/5000 — Separate paragraphs with blank lines.
-							</p>
-						</div>
-
-						<div className="space-y-3">
-							<Label>Send Delay</Label>
-							<div className="grid grid-cols-3 gap-2">
-								{DELAY_OPTIONS.map((opt) => {
-									const Icon = opt.icon;
-									const active = form.delay_mode === opt.value;
-									return (
-										<button
-											key={opt.value}
-											type="button"
-											onClick={() => setForm((f) => ({ ...f, delay_mode: opt.value }))}
-											className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${active ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
-										>
-											<Icon className="size-4" />
-											<span className="text-xs font-medium">{opt.label}</span>
-										</button>
-									);
-								})}
-							</div>
-						</div>
-
-						{hasIncentive && (
-							<div className="flex items-center justify-between rounded-lg border border-border p-3">
-								<div>
-									<p className="text-sm font-medium">Include download link</p>
-									<p className="text-xs text-muted-foreground">
-										Attach a time-limited link to the incentive file.
-									</p>
-								</div>
+				<div className="mt-4 space-y-3">
+					{steps.map((step) => {
+						const isExpanded = expandedOrder === step.sequence_order;
+						return (
+							<div key={step.id} className="rounded-lg border border-border">
 								<button
 									type="button"
-									role="switch"
-									aria-checked={form.include_incentive_link}
-									onClick={() =>
-										setForm((f) => ({
-											...f,
-											include_incentive_link: !f.include_incentive_link,
-										}))
-									}
-									className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${form.include_incentive_link ? "bg-honey-gold" : "bg-muted"}`}
+									onClick={() => setExpandedOrder(isExpanded ? null : step.sequence_order)}
+									className="flex w-full items-center gap-3 p-3 text-left"
 								>
-									<span
-										className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow transition-transform ${form.include_incentive_link ? "translate-x-5" : "translate-x-0"}`}
-									/>
+									<div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
+										{step.sequence_order + 1}
+									</div>
+									<div className="min-w-0 flex-1">
+										<p className="truncate text-sm font-medium">{step.subject || "Untitled"}</p>
+										<p className="flex items-center gap-1 text-xs text-muted-foreground">
+											{step.sequence_order === 0 ? (
+												<Zap className="size-3" />
+											) : (
+												<CalendarDays className="size-3" />
+											)}
+											{stepDelayLabel(step)}
+										</p>
+									</div>
+									<Badge
+										variant={step.is_active ? "default" : "secondary"}
+										className="shrink-0 text-[10px]"
+									>
+										{step.is_active ? "Active" : "Draft"}
+									</Badge>
+									{isExpanded ? (
+										<ChevronUp className="size-4 text-muted-foreground" />
+									) : (
+										<ChevronDown className="size-4 text-muted-foreground" />
+									)}
 								</button>
+								{isExpanded && (
+									<div className="border-t border-border p-3">
+										<SequenceStepEditor
+											pageId={pageId}
+											order={step.sequence_order}
+											existing={step}
+											hasIncentive={hasIncentive}
+											onSaved={() => {
+												invalidateAll();
+												setExpandedOrder(null);
+											}}
+											onDeleted={() => {
+												invalidateAll();
+												setExpandedOrder(null);
+											}}
+										/>
+									</div>
+								)}
 							</div>
-						)}
-					</div>
+						);
+					})}
 
-					<DialogFooter className="mt-6 gap-2">
-						{existing && (
-							<Button
-								type="button"
-								variant="ghost"
-								className="mr-auto text-destructive hover:text-destructive"
-								onClick={() => deleteMutation.mutate()}
-								disabled={deleteMutation.isPending}
-							>
-								{deleteMutation.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
-								Delete
-							</Button>
-						)}
-						<Button
-							type="button"
-							variant="outline"
-							disabled={!form.subject.trim() || !form.body.trim() || previewMutation.isPending}
-							onClick={() => previewMutation.mutate()}
-						>
-							{previewMutation.isPending ? <Loader2 className="animate-spin" /> : <Eye />}
-							Preview
-						</Button>
-						<Button
-							type="submit"
-							disabled={!form.subject.trim() || !form.body.trim() || saveMutation.isPending}
-						>
-							{saveMutation.isPending ? <Loader2 className="animate-spin" /> : <Send />}
-							{existing ? "Save Template" : "Create Template"}
-						</Button>
-					</DialogFooter>
-
-					{saveMutation.isError && (
-						<p className="mt-2 text-sm text-destructive">{saveMutation.error.message}</p>
+					{addingNew && (
+						<div className="rounded-lg border border-honey-gold/50 p-3">
+							<p className="mb-3 text-sm font-medium">
+								Email #{nextOrder + 1}
+								{nextOrder > 0 && " (follow-up)"}
+							</p>
+							<SequenceStepEditor
+								pageId={pageId}
+								order={nextOrder}
+								existing={undefined}
+								hasIncentive={hasIncentive}
+								onSaved={() => {
+									invalidateAll();
+									setAddingNew(false);
+								}}
+								onDeleted={() => setAddingNew(false)}
+							/>
+						</div>
 					)}
-				</form>
+				</div>
+
+				<DialogFooter className="mt-4">
+					{canAddStep && !addingNew && (
+						<Button
+							variant="outline"
+							size="sm"
+							className="mr-auto"
+							onClick={() => {
+								setExpandedOrder(null);
+								setAddingNew(true);
+							}}
+						>
+							<Plus className="size-4" />
+							Add Email
+						</Button>
+					)}
+					<Button variant="outline" onClick={() => onOpenChange(false)}>
+						Done
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);
@@ -330,20 +489,26 @@ export function EmailTemplateDialog({
 
 export function EmailTemplateBadge({ pageId }: { pageId: string }) {
 	const { data } = useQuery({
-		queryKey: ["email-template-status", pageId],
+		queryKey: ["email-sequence-status", pageId],
 		queryFn: async () => {
-			const t = await api.get<EmailTemplate | null>(`/capture-pages/${pageId}/email-template`);
-			if (!t) return "none";
-			return t.is_active ? "active" : "draft";
+			const seq = await api.get<EmailTemplate[]>(`/capture-pages/${pageId}/email-sequence`);
+			if (!seq || seq.length === 0) return null;
+			const activeCount = seq.filter((s) => s.is_active).length;
+			return { total: seq.length, active: activeCount };
 		},
 	});
 
-	if (!data || data === "none") return null;
+	if (!data) return null;
+
+	const label =
+		data.active === data.total
+			? `${data.total} email${data.total === 1 ? "" : "s"} active`
+			: `${data.active}/${data.total} active`;
 
 	return (
-		<Badge variant={data === "active" ? "default" : "secondary"} className="gap-1 text-[10px]">
+		<Badge variant={data.active > 0 ? "default" : "secondary"} className="gap-1 text-[10px]">
 			<Mail className="size-2.5" />
-			{data === "active" ? "Email active" : "Email draft"}
+			{label}
 		</Badge>
 	);
 }

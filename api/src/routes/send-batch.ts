@@ -37,7 +37,7 @@ app.post("/send-batch", async (c) => {
 	// Fetch pending emails ready to send
 	let query = supabase
 		.from("pending_emails")
-		.select("id, fan_capture_id, artist_id, email, retry_count")
+		.select("id, fan_capture_id, artist_id, email, retry_count, email_template_id")
 		.eq("status", "pending")
 		.lte("send_at", new Date().toISOString())
 		.order("send_at", { ascending: true })
@@ -57,14 +57,14 @@ app.post("/send-batch", async (c) => {
 	const pendingIds = pendingRows.map((r) => r.id);
 	await supabase.from("pending_emails").update({ status: "sending" }).in("id", pendingIds);
 
-	// Collect unique artist IDs to batch-fetch templates and artist info
+	// Collect unique artist IDs to batch-fetch artist info
 	const artistIds = [...new Set(pendingRows.map((r) => r.artist_id))];
 
 	const { data: artists } = await supabase.from("artists").select("id, name").in("id", artistIds);
 
 	const artistMap = new Map((artists ?? []).map((a) => [a.id, a as { id: string; name: string }]));
 
-	// Get fan_capture_ids to find which capture_page each fan came from
+	// Get fan_capture_ids to find which capture_page each fan came from (needed for legacy rows + incentive URLs)
 	const fanCaptureIds = [...new Set(pendingRows.map((r) => r.fan_capture_id))];
 
 	const { data: captureEvents } = await supabase
@@ -76,18 +76,47 @@ app.post("/send-batch", async (c) => {
 		(captureEvents ?? []).map((e) => [e.fan_capture_id, e.capture_page_id]),
 	);
 
-	// Fetch all relevant email templates
-	const pageIds = [...new Set([...fanToPage.values()])];
+	// Fetch templates by ID for rows that have email_template_id
+	const templateIds = [
+		...new Set(
+			pendingRows.map((r) => r.email_template_id).filter((id): id is string => id != null),
+		),
+	];
 
-	const { data: templates } = await supabase
-		.from("email_templates")
-		.select("capture_page_id, subject, body, include_incentive_link, is_active")
-		.in("capture_page_id", pageIds);
+	const { data: templatesById } =
+		templateIds.length > 0
+			? await supabase
+					.from("email_templates")
+					.select("id, capture_page_id, subject, body, include_incentive_link, is_active")
+					.in("id", templateIds)
+			: { data: [] };
 
-	const templateMap = new Map((templates ?? []).map((t) => [t.capture_page_id, t]));
+	const templateById = new Map((templatesById ?? []).map((t) => [t.id, t]));
 
-	// Fetch incentive download URLs for pages that need them
-	const pagesWithIncentive = (templates ?? [])
+	// Fetch legacy templates by page for rows without email_template_id
+	const legacyPageIds = [
+		...new Set(
+			pendingRows
+				.filter((r) => r.email_template_id == null)
+				.map((r) => fanToPage.get(r.fan_capture_id))
+				.filter((id): id is string => id != null),
+		),
+	];
+
+	const { data: legacyTemplates } =
+		legacyPageIds.length > 0
+			? await supabase
+					.from("email_templates")
+					.select("id, capture_page_id, subject, body, include_incentive_link, is_active")
+					.in("capture_page_id", legacyPageIds)
+					.eq("sequence_order", 0)
+			: { data: [] };
+
+	const templateByPage = new Map((legacyTemplates ?? []).map((t) => [t.capture_page_id, t]));
+
+	// Collect all page IDs that need incentive URL checks
+	const allTemplates = [...(templatesById ?? []), ...(legacyTemplates ?? [])];
+	const pagesWithIncentive = allTemplates
 		.filter((t) => t.include_incentive_link)
 		.map((t) => t.capture_page_id);
 
@@ -115,15 +144,25 @@ app.post("/send-batch", async (c) => {
 	for (const row of pendingRows) {
 		const artist = artistMap.get(row.artist_id);
 		const pageId = fanToPage.get(row.fan_capture_id);
-		const template = pageId ? templateMap.get(pageId) : undefined;
+
+		const template = row.email_template_id
+			? templateById.get(row.email_template_id)
+			: pageId
+				? templateByPage.get(pageId)
+				: undefined;
 
 		if (!artist || !template || !template.is_active) {
 			skippedIds.push(row.id);
 			continue;
 		}
 
+		// For template-id-based rows, capture_page_id comes from the template;
+		// for legacy rows it comes from fanToPage.
+		const capturePageId = template.capture_page_id ?? pageId;
 		const incentiveUrl =
-			template.include_incentive_link && pageId ? incentiveUrlMap.get(pageId) : undefined;
+			template.include_incentive_link && capturePageId
+				? incentiveUrlMap.get(capturePageId)
+				: undefined;
 
 		const html = renderFollowUpHtml({
 			artistName: artist.name,

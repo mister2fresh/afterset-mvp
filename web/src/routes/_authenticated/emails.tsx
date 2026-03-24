@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Clock, Loader2, Mail, Sunrise, Zap } from "lucide-react";
+import { CalendarDays, Clock, Loader2, Mail, Sunrise, Zap } from "lucide-react";
 import { useState } from "react";
 import { EmailTemplateDialog } from "@/components/email-template-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -23,13 +23,13 @@ type CapturePage = {
 type EmailTemplate = {
 	id: string;
 	capture_page_id: string;
+	sequence_order: number;
+	delay_days: number;
 	subject: string;
 	body: string;
 	include_incentive_link: boolean;
 	delay_mode: "immediate" | "1_hour" | "next_morning";
 	is_active: boolean;
-	created_at: string;
-	updated_at: string;
 };
 
 const DELAY_LABELS: Record<string, { label: string; icon: typeof Zap }> = {
@@ -38,20 +38,27 @@ const DELAY_LABELS: Record<string, { label: string; icon: typeof Zap }> = {
 	next_morning: { label: "Next morning", icon: Sunrise },
 };
 
+function stepLabel(t: EmailTemplate): { label: string; icon: typeof Zap } {
+	if (t.sequence_order === 0) {
+		return DELAY_LABELS[t.delay_mode] ?? DELAY_LABELS.immediate;
+	}
+	return { label: `Day ${t.delay_days}`, icon: CalendarDays };
+}
+
 function EmailsPage() {
 	const { data: pages, isLoading: pagesLoading } = useQuery({
 		queryKey: ["capture-pages"],
 		queryFn: () => api.get<CapturePage[]>("/capture-pages"),
 	});
 
-	const { data: templates, isLoading: templatesLoading } = useQuery({
-		queryKey: ["email-templates-all"],
+	const { data: sequences, isLoading: seqLoading } = useQuery({
+		queryKey: ["email-sequences-all"],
 		queryFn: async () => {
 			if (!pages?.length) return [];
 			const results = await Promise.all(
 				pages.map(async (p) => {
-					const t = await api.get<EmailTemplate | null>(`/capture-pages/${p.id}/email-template`);
-					return { page: p, template: t };
+					const seq = await api.get<EmailTemplate[]>(`/capture-pages/${p.id}/email-sequence`);
+					return { page: p, sequence: seq };
 				}),
 			);
 			return results;
@@ -61,7 +68,7 @@ function EmailsPage() {
 
 	const [editingPageId, setEditingPageId] = useState<string | null>(null);
 
-	const isLoading = pagesLoading || templatesLoading;
+	const isLoading = pagesLoading || seqLoading;
 	const editingPage = pages?.find((p) => p.id === editingPageId);
 
 	if (isLoading) {
@@ -88,27 +95,23 @@ function EmailsPage() {
 		);
 	}
 
-	const withTemplate =
-		templates?.filter(
-			(t): t is { page: CapturePage; template: EmailTemplate } => t.template !== null,
-		) ?? [];
-	const withoutTemplate = templates?.filter((t) => !t.template) ?? [];
+	const withSequence = sequences?.filter((s) => s.sequence.length > 0) ?? [];
+	const withoutSequence = sequences?.filter((s) => s.sequence.length === 0) ?? [];
 
 	return (
 		<div className="space-y-6">
 			<p className="text-muted-foreground">
-				Set up follow-up emails that fans receive after signing up at your shows.
+				Set up email sequences that fans receive after signing up at your shows.
 			</p>
 
-			{withTemplate.length > 0 && (
+			{withSequence.length > 0 && (
 				<div className="space-y-3">
 					<h2 className="font-display text-sm font-semibold text-muted-foreground">
-						Configured ({withTemplate.length})
+						Configured ({withSequence.length})
 					</h2>
 					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						{withTemplate.map(({ page, template }) => {
-							const delay = DELAY_LABELS[template.delay_mode];
-							const DelayIcon = delay.icon;
+						{withSequence.map(({ page, sequence }) => {
+							const activeCount = sequence.filter((s) => s.is_active).length;
 							return (
 								<Card
 									key={page.id}
@@ -119,26 +122,34 @@ function EmailsPage() {
 										<div className="flex items-start justify-between gap-2">
 											<div className="min-w-0">
 												<p className="font-display truncate text-sm font-semibold">{page.title}</p>
-												<p className="truncate text-xs text-muted-foreground">{template.subject}</p>
+												<p className="text-xs text-muted-foreground">
+													{sequence.length} email{sequence.length === 1 ? "" : "s"}
+												</p>
 											</div>
 											<Badge
-												variant={template.is_active ? "default" : "secondary"}
+												variant={activeCount > 0 ? "default" : "secondary"}
 												className="shrink-0"
 											>
-												{template.is_active ? "Active" : "Draft"}
+												{activeCount === sequence.length
+													? "All active"
+													: `${activeCount}/${sequence.length} active`}
 											</Badge>
 										</div>
-										<p className="line-clamp-2 text-xs text-muted-foreground">{template.body}</p>
-										<div className="flex items-center gap-3 text-xs text-muted-foreground">
-											<span className="flex items-center gap-1">
-												<DelayIcon className="size-3" />
-												{delay.label}
-											</span>
-											{template.include_incentive_link && (
-												<span className="flex items-center gap-1">
-													<Mail className="size-3" />+ download
-												</span>
-											)}
+										<div className="space-y-1">
+											{sequence.map((t) => {
+												const info = stepLabel(t);
+												const Icon = info.icon;
+												return (
+													<div
+														key={t.id}
+														className="flex items-center gap-2 text-xs text-muted-foreground"
+													>
+														<Icon className="size-3 shrink-0" />
+														<span className="shrink-0">{info.label}</span>
+														<span className="truncate">{t.subject}</span>
+													</div>
+												);
+											})}
 										</div>
 									</CardContent>
 								</Card>
@@ -148,13 +159,13 @@ function EmailsPage() {
 				</div>
 			)}
 
-			{withoutTemplate.length > 0 && (
+			{withoutSequence.length > 0 && (
 				<div className="space-y-3">
 					<h2 className="font-display text-sm font-semibold text-muted-foreground">
-						No email set up ({withoutTemplate.length})
+						No email set up ({withoutSequence.length})
 					</h2>
 					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						{withoutTemplate.map(({ page }) => (
+						{withoutSequence.map(({ page }) => (
 							<Card
 								key={page.id}
 								className="cursor-pointer border-dashed transition-colors hover:border-honey-gold/50"

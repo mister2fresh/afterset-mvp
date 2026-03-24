@@ -40,7 +40,18 @@ type PageAnalytics = {
 	total: number;
 	methods: { method: string; count: number }[];
 	daily: { date: string; count: number }[];
-	email: { sent: number; opened: number; open_rate: number };
+	email: {
+		sent: number;
+		opened: number;
+		open_rate: number;
+		steps?: {
+			sequence_order: number;
+			subject: string;
+			sent: number;
+			opened: number;
+			open_rate: number;
+		}[];
+	};
 };
 
 const METHOD_LABELS: Record<string, string> = {
@@ -154,21 +165,44 @@ function AnalyticsPage() {
 								<CardHeader>
 									<CardTitle className="text-sm font-medium">Email Performance</CardTitle>
 								</CardHeader>
-								<CardContent className="flex items-center gap-6">
-									<div>
-										<p className="font-display text-2xl font-bold">
-											{Math.round(pageData.email.open_rate * 100)}%
-										</p>
-										<p className="text-xs text-muted-foreground">Open Rate</p>
+								<CardContent className="space-y-4">
+									<div className="flex items-center gap-6">
+										<div>
+											<p className="font-display text-2xl font-bold">
+												{Math.round(pageData.email.open_rate * 100)}%
+											</p>
+											<p className="text-xs text-muted-foreground">Open Rate</p>
+										</div>
+										<div>
+											<p className="text-lg tabular-nums">{pageData.email.sent}</p>
+											<p className="text-xs text-muted-foreground">Sent</p>
+										</div>
+										<div>
+											<p className="text-lg tabular-nums">{pageData.email.opened}</p>
+											<p className="text-xs text-muted-foreground">Opened</p>
+										</div>
 									</div>
-									<div>
-										<p className="text-lg tabular-nums">{pageData.email.sent}</p>
-										<p className="text-xs text-muted-foreground">Sent</p>
-									</div>
-									<div>
-										<p className="text-lg tabular-nums">{pageData.email.opened}</p>
-										<p className="text-xs text-muted-foreground">Opened</p>
-									</div>
+									{pageData.email.steps && pageData.email.steps.length > 1 && (
+										<div className="space-y-2 border-t border-border pt-3">
+											<p className="text-xs font-medium text-muted-foreground">
+												Per-step breakdown
+											</p>
+											{pageData.email.steps.map((step) => (
+												<div key={step.sequence_order} className="flex items-center gap-3 text-sm">
+													<span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">
+														{step.sequence_order + 1}
+													</span>
+													<span className="min-w-0 flex-1 truncate text-muted-foreground">
+														{step.subject}
+													</span>
+													<span className="shrink-0 tabular-nums">{step.sent} sent</span>
+													<span className="shrink-0 tabular-nums text-muted-foreground">
+														{step.sent > 0 ? `${Math.round(step.open_rate * 100)}%` : "—"}
+													</span>
+												</div>
+											))}
+										</div>
+									)}
 								</CardContent>
 							</Card>
 						)}

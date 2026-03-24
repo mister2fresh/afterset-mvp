@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v21 — Sprint 2 P2: email open tracking)
+**Last updated:** March 23, 2026 (v22 — Sprint 2 P2: drip campaigns)
 **Current phase:** Sprint 2 — Follow-Up & Analytics
-**Sprint:** Sprint 2 in progress — P0 + P1 complete, P2 email open tracking done
-**Next up:** Sequential email sequences (drip campaigns), then Telnyx toll-free verification (manual)
+**Sprint:** Sprint 2 in progress — P0 + P1 + P2 complete
+**Next up:** Telnyx toll-free verification (manual), then Sprint 3
 
 ---
 
@@ -631,10 +631,13 @@ Run ADR validation tasks before committing to the stack.
 
 ### P2
 
-- [ ] **Sequential email sequences (drip campaigns)**
-  - Allow multiple follow-up emails per capture page, sent on a schedule (e.g. Day 1, Day 3, Day 7)
-  - Artist configures sequence of emails with relative delays, not just a single follow-up
-  - Requires: `email_templates` table refactored from one-per-page to many-per-page with `sequence_order` and `delay_after_previous`
+- [x] **Sequential email sequences (drip campaigns)** *(done 2026-03-23)*
+  - `email_templates` refactored: dropped one-per-page constraint, added `sequence_order` + `delay_days` columns
+  - `pending_emails` linked to specific template via `email_template_id`, with `UNIQUE(fan_capture_id, email_template_id)` for resubmit dedup
+  - Worker queues all active templates at capture time; step 0 uses `delay_mode`, step 1+ sends N days later at 9am artist timezone
+  - Sequence CRUD API: `GET/PUT/DELETE /capture-pages/:id/email-sequence/:order` with monotonic delay_days validation
+  - Frontend: sequence editor dialog with collapsible steps, add/delete, per-step preview
+  - Analytics: per-step sent/opened/open_rate breakdown on page analytics
   - *Acceptance:* Artist creates a 3-email sequence; fans receive each email at the configured intervals.
 
 - [x] **Email open tracking** *(done 2026-03-23)*

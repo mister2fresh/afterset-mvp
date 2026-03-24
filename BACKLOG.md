@@ -4,7 +4,6 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 
 ## Email & Messaging
 
-- [ ] **Sequential email sequences (drip campaigns)** — multiple follow-up emails per capture page on a schedule (Day 1, Day 3, Day 7). Requires `email_templates` refactored from one-per-page to many-per-page with `sequence_order` and `delay_after_previous`.
 - [ ] **AI-powered "suggest email copy" button** — Hono API route, rate limited by tier
 - [ ] **Per-artist custom sending domains** — Resend Scale plan, triggers at ~200 artists
 - [ ] **SES migration** — cost optimization at 500K–1M emails/month

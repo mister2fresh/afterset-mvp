@@ -34,45 +34,85 @@ function cleanupRateLimits() {
 	}
 }
 
-function calculateNextMorning(timezone: string): string {
-	const now = new Date();
-	// Format current hour in artist's timezone to determine if it's already past 9am
-	const formatter = new Intl.DateTimeFormat("en-US", {
-		timeZone: timezone,
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-		hour: "2-digit",
-		hour12: false,
-	});
-	const parts = Object.fromEntries(formatter.formatToParts(now).map((p) => [p.type, p.value]));
-	const localHour = Number.parseInt(parts.hour, 10);
+function getTimezoneOffsetMs(timezone: string, date: Date): number {
+	const utcStr = date.toLocaleString("en-US", { timeZone: "UTC" });
+	const tzStr = date.toLocaleString("en-US", { timeZone: timezone });
+	return new Date(utcStr).getTime() - new Date(tzStr).getTime();
+}
 
-	// Target: 9am in artist's timezone, tomorrow (or today if before 9am)
-	const daysToAdd = localHour >= 9 ? 1 : 0;
-	const target = new Date(now);
-	target.setDate(target.getDate() + daysToAdd);
-
-	// Build a date string in the artist's timezone at 09:00, then convert to UTC
+function nineAmUtc(timezone: string, target: Date): string {
 	const dateFormatter = new Intl.DateTimeFormat("en-CA", {
 		timeZone: timezone,
 		year: "numeric",
 		month: "2-digit",
 		day: "2-digit",
 	});
-	const dateStr = dateFormatter.format(target); // YYYY-MM-DD
-	// Parse "YYYY-MM-DD 09:00" in the artist's timezone by computing the UTC offset
+	const dateStr = dateFormatter.format(target);
 	const nineAm = new Date(`${dateStr}T09:00:00`);
-	// Get the offset: difference between UTC interpretation and local interpretation
-	const utcNineAm = new Date(nineAm.getTime() + getTimezoneOffsetMs(timezone, nineAm));
-	return utcNineAm.toISOString();
+	return new Date(nineAm.getTime() + getTimezoneOffsetMs(timezone, nineAm)).toISOString();
 }
 
-function getTimezoneOffsetMs(timezone: string, date: Date): number {
-	// Calculate offset by comparing UTC and timezone-formatted date
-	const utcStr = date.toLocaleString("en-US", { timeZone: "UTC" });
-	const tzStr = date.toLocaleString("en-US", { timeZone: timezone });
-	return new Date(utcStr).getTime() - new Date(tzStr).getTime();
+function calculateNextMorning(timezone: string): string {
+	const now = new Date();
+	const formatter = new Intl.DateTimeFormat("en-US", {
+		timeZone: timezone,
+		hour: "2-digit",
+		hour12: false,
+	});
+	const localHour = Number.parseInt(formatter.format(now), 10);
+	const target = new Date(now);
+	target.setDate(target.getDate() + (localHour >= 9 ? 1 : 0));
+	return nineAmUtc(timezone, target);
+}
+
+function calculateDaysSendAt(timezone: string, days: number): string {
+	const target = new Date();
+	target.setDate(target.getDate() + days);
+	return nineAmUtc(timezone, target);
+}
+
+type SequenceTemplate = {
+	id: string;
+	delay_mode: string;
+	delay_days: number;
+	sequence_order: number;
+};
+
+function calculateSendAt(template: SequenceTemplate, timezone: string): string | undefined {
+	if (template.sequence_order === 0) {
+		if (template.delay_mode === "1_hour") {
+			return new Date(Date.now() + 60 * 60 * 1000).toISOString();
+		}
+		if (template.delay_mode === "next_morning") return calculateNextMorning(timezone);
+		return undefined; // immediate — DB defaults to now()
+	}
+	return calculateDaysSendAt(timezone, template.delay_days);
+}
+
+async function queueSequenceEmails(
+	env: Env,
+	templates: SequenceTemplate[],
+	fanCaptureId: string,
+	ctx: { artistId: string; email: string; timezone: string },
+): Promise<void> {
+	if (templates.length === 0) return;
+
+	const rows = templates.map((t) => {
+		const sendAt = calculateSendAt(t, ctx.timezone);
+		return {
+			fan_capture_id: fanCaptureId,
+			artist_id: ctx.artistId,
+			email: ctx.email,
+			email_template_id: t.id,
+			...(sendAt && { send_at: sendAt }),
+		};
+	});
+
+	await supabaseRpc(env, "pending_emails", {
+		method: "POST",
+		headers: { Prefer: "return=representation,resolution=ignore-duplicates" },
+		body: rows,
+	});
 }
 
 const ENTRY_METHODS = new Set(["d", "q", "n", "s"]);
@@ -176,27 +216,19 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	const page = pages[0];
 	const normalizedEmail = email.toLowerCase().trim();
 
-	// Look up email template + artist timezone for delay calculation
-	const templateRes = await supabaseRpc(
-		env,
-		`email_templates?capture_page_id=eq.${page.id}&is_active=eq.true&select=delay_mode`,
-		{},
-	);
-	const templateRows = templateRes.ok
-		? ((await templateRes.json()) as { delay_mode: string }[])
-		: [];
-	const delayMode = templateRows[0]?.delay_mode ?? "immediate";
+	// Fetch all active templates + artist timezone for sequence scheduling
+	const [templateRes, tzRes] = await Promise.all([
+		supabaseRpc(
+			env,
+			`email_templates?capture_page_id=eq.${page.id}&is_active=eq.true&select=id,delay_mode,delay_days,sequence_order&order=sequence_order.asc`,
+			{},
+		),
+		supabaseRpc(env, `artists?id=eq.${page.artist_id}&select=timezone`, {}),
+	]);
 
-	let sendAt: string | undefined;
-	if (delayMode === "1_hour") {
-		sendAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-	} else if (delayMode === "next_morning") {
-		// Fetch artist timezone for correct 9am calculation
-		const tzRes = await supabaseRpc(env, `artists?id=eq.${page.artist_id}&select=timezone`, {});
-		const tzRows = tzRes.ok ? ((await tzRes.json()) as { timezone: string }[]) : [];
-		const tz = tzRows[0]?.timezone ?? "America/New_York";
-		sendAt = calculateNextMorning(tz);
-	}
+	const templates = templateRes.ok ? ((await templateRes.json()) as SequenceTemplate[]) : [];
+	const tzRows = tzRes.ok ? ((await tzRes.json()) as { timezone: string }[]) : [];
+	const timezone = tzRows[0]?.timezone ?? "America/New_York";
 
 	// Upsert fan_captures — insert or update last_captured_at on conflict (artist_id, email)
 	const upsertRes = await supabaseRpc(env, "fan_captures?on_conflict=artist_id,email", {
@@ -236,15 +268,11 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 		},
 	});
 
-	// Insert pending email for follow-up (send_at based on template delay_mode)
-	await supabaseRpc(env, "pending_emails", {
-		method: "POST",
-		body: {
-			fan_capture_id: fanCaptureId,
-			artist_id: page.artist_id,
-			email: normalizedEmail,
-			...(sendAt && { send_at: sendAt }),
-		},
+	// Queue all sequence emails (one per active template)
+	await queueSequenceEmails(env, templates, fanCaptureId, {
+		artistId: page.artist_id,
+		email: normalizedEmail,
+		timezone,
 	});
 
 	return json({ ok: true });

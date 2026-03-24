@@ -76,25 +76,44 @@ app.get("/:id/analytics", async (c) => {
 		count,
 	}));
 
-	// Email open stats — fetch capture event IDs, then query pending_emails
-	const { data: captureEventIds } = await supabase
+	// Email stats — per-step breakdown
+	const { data: ceRows } = await supabase
 		.from("capture_events")
-		.select("id")
+		.select("fan_capture_id")
 		.eq("capture_page_id", pageId);
 
-	const ceIds = (captureEventIds ?? []).map((e) => e.id);
+	const fanCaptureIds = [...new Set((ceRows ?? []).map((e) => e.fan_capture_id))];
 	const { data: emailData } =
-		ceIds.length > 0
+		fanCaptureIds.length > 0
 			? await supabase
 					.from("pending_emails")
-					.select("opened_at")
+					.select("opened_at, email_template_id")
 					.eq("status", "sent")
-					.in("fan_capture_id", ceIds)
+					.in("fan_capture_id", fanCaptureIds)
 			: { data: [] };
 
 	const sentEmails = emailData ?? [];
 	const emailSent = sentEmails.length;
 	const emailOpened = sentEmails.filter((e) => e.opened_at !== null).length;
+
+	// Per-step stats
+	const { data: templates } = await supabase
+		.from("email_templates")
+		.select("id, sequence_order, subject")
+		.eq("capture_page_id", pageId)
+		.order("sequence_order", { ascending: true });
+
+	const steps = (templates ?? []).map((t) => {
+		const stepEmails = sentEmails.filter((e) => e.email_template_id === t.id);
+		const stepOpened = stepEmails.filter((e) => e.opened_at !== null).length;
+		return {
+			sequence_order: t.sequence_order,
+			subject: t.subject,
+			sent: stepEmails.length,
+			opened: stepOpened,
+			open_rate: stepEmails.length > 0 ? stepOpened / stepEmails.length : 0,
+		};
+	});
 
 	return c.json({
 		total,
@@ -104,6 +123,7 @@ app.get("/:id/analytics", async (c) => {
 			sent: emailSent,
 			opened: emailOpened,
 			open_rate: emailSent > 0 ? emailOpened / emailSent : 0,
+			steps,
 		},
 	});
 });
