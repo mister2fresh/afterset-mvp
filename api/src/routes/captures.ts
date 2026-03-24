@@ -20,11 +20,12 @@ app.get("/", async (c) => {
 			id,
 			entry_method,
 			captured_at,
+			page_title,
 			fan_captures!inner ( id, email, name ),
-			capture_pages!inner ( id, title, slug )
+			capture_pages ( id, title, slug )
 		`,
 		)
-		.eq("capture_pages.artist_id", artist.id)
+		.eq("fan_captures.artist_id", artist.id)
 		.order("captured_at", { ascending: false })
 		.limit(500);
 
@@ -52,16 +53,20 @@ app.get("/", async (c) => {
 	// Flatten the joined shape for the frontend
 	const rows = (data ?? []).map((row) => {
 		const fan = row.fan_captures as unknown as { id: string; email: string; name: string | null };
-		const page = row.capture_pages as unknown as { id: string; title: string; slug: string };
+		const page = row.capture_pages as unknown as {
+			id: string;
+			title: string;
+			slug: string;
+		} | null;
 		return {
 			id: row.id,
 			email: fan.email,
 			fan_name: fan.name,
 			entry_method: row.entry_method,
 			captured_at: row.captured_at,
-			page_id: page.id,
-			page_title: page.title,
-			page_slug: page.slug,
+			page_id: page?.id ?? null,
+			page_title: page?.title ?? row.page_title ?? "Deleted page",
+			page_slug: page?.slug ?? null,
 		};
 	});
 
@@ -109,11 +114,12 @@ app.get("/export", async (c) => {
 			`
 			entry_method,
 			captured_at,
+			page_title,
 			fan_captures!inner ( email, name ),
-			capture_pages!inner ( title, slug )
+			capture_pages ( title, slug )
 		`,
 		)
-		.eq("capture_pages.artist_id", artist.id)
+		.eq("fan_captures.artist_id", artist.id)
 		.order("captured_at", { ascending: false });
 
 	if (pageId) query = query.eq("capture_page_id", pageId);
@@ -130,10 +136,11 @@ app.get("/export", async (c) => {
 
 	for (const row of rows) {
 		const fan = row.fan_captures as unknown as { email: string; name: string | null };
-		const page = row.capture_pages as unknown as { title: string; slug: string };
+		const page = row.capture_pages as unknown as { title: string; slug: string } | null;
+		const pageTitle = page?.title ?? row.page_title ?? "Deleted page";
 		const date = new Date(row.captured_at).toISOString().slice(0, 19).replace("T", " ");
 		csvLines.push(
-			`"${fan.email}","${page.title.replace(/"/g, '""')}","${row.entry_method}","${date}"`,
+			`"${fan.email}","${pageTitle.replace(/"/g, '""')}","${row.entry_method}","${date}"`,
 		);
 	}
 

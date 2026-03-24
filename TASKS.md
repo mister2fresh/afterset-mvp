@@ -1,9 +1,9 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 24, 2026 (v24 — Sprint 3 P0: keyword management)
+**Last updated:** March 24, 2026 (v25 — safe capture page deletion)
 **Current phase:** Sprint 3 — Text-to-Join + Polish
-**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete
+**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped
 **Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1), error handling polish (P2)
 
 ---

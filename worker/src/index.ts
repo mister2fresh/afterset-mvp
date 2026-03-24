@@ -201,14 +201,14 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	// Look up capture page by slug to get artist_id and page id
 	const pageRes = await supabaseRpc(
 		env,
-		`capture_pages?slug=eq.${encodeURIComponent(slug)}&is_active=eq.true&select=id,artist_id`,
+		`capture_pages?slug=eq.${encodeURIComponent(slug)}&is_active=eq.true&select=id,artist_id,title`,
 		{},
 	);
 	if (!pageRes.ok) {
 		return json({ error: "Lookup failed" }, 502);
 	}
 
-	const pages = (await pageRes.json()) as { id: string; artist_id: string }[];
+	const pages = (await pageRes.json()) as { id: string; artist_id: string; title: string }[];
 	if (pages.length === 0) {
 		return json({ error: "Page not found" }, 404);
 	}
@@ -265,6 +265,7 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 			fan_capture_id: fanCaptureId,
 			capture_page_id: page.id,
 			entry_method: entryMethodMap[method],
+			page_title: page.title,
 		},
 	});
 

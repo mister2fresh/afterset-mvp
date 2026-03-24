@@ -209,13 +209,29 @@ app.patch("/:id", async (c) => {
 // Delete
 app.delete("/:id", async (c) => {
 	const artist = c.get("artist");
+	const pageId = c.req.param("id");
+
+	// Fetch slug before deleting for R2 cleanup
+	const { data: page } = await supabase
+		.from("capture_pages")
+		.select("slug")
+		.eq("id", pageId)
+		.eq("artist_id", artist.id)
+		.maybeSingle();
+
+	if (!page) return c.json({ error: "Not found" }, 404);
+
 	const { error } = await supabase
 		.from("capture_pages")
 		.delete()
-		.eq("id", c.req.param("id"))
+		.eq("id", pageId)
 		.eq("artist_id", artist.id);
 
 	if (error) return c.json({ error: error.message }, 500);
+
+	// Clean up R2 page HTML and QR code
+	deleteQr(page.slug).catch(() => {});
+
 	return c.body(null, 204);
 });
 

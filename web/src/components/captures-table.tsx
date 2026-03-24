@@ -18,9 +18,9 @@ export type CaptureRow = {
 	fan_name: string | null;
 	entry_method: "direct" | "qr" | "nfc" | "sms";
 	captured_at: string;
-	page_id: string;
+	page_id: string | null;
 	page_title: string;
-	page_slug: string;
+	page_slug: string | null;
 };
 
 const METHOD_LABELS: Record<string, string> = {
@@ -124,9 +124,13 @@ export function CapturesTable({
 						<TableCell className={compact ? "text-sm" : "font-medium"}>{row.email}</TableCell>
 						{showPageColumn && (
 							<TableCell className={compact ? "text-sm" : ""}>
-								<Link to="/pages" className="text-electric-blue hover:underline">
-									{row.page_title}
-								</Link>
+								{row.page_id ? (
+									<Link to="/pages" className="text-electric-blue hover:underline">
+										{row.page_title}
+									</Link>
+								) : (
+									<span className="text-muted-foreground">{row.page_title}</span>
+								)}
 							</TableCell>
 						)}
 						{!compact && (
