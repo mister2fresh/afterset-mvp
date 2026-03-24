@@ -4,6 +4,7 @@ export type SendParams = {
 	artistName: string;
 	subject: string;
 	html: string;
+	replyTo?: string;
 };
 
 export type SendResult = {

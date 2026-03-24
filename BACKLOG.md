@@ -4,7 +4,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 
 ## Email & Messaging
 
-- [ ] **Broadcast campaigns** — artist-initiated one-off emails to full fan list or segments (by capture page, date range, method). Compose with existing plain-text renderer, send now or schedule, campaign history with open rates. Ships in Emails tab alongside drip sequences. **V1 required.**
+- [x] **Broadcast campaigns** — shipped March 24, 2026. CRUD + send/schedule, segment filters, 4 preset templates, reply-to toggle, open tracking.
 - [ ] **AI-powered "suggest email copy" button** — Hono API route, rate limited by tier
 - [ ] **Per-artist custom sending domains** — Resend Scale plan, triggers at ~200 artists
 - [ ] **SES migration** — cost optimization at 500K–1M emails/month

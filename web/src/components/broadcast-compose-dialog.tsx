@@ -1,0 +1,582 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	Bus,
+	CalendarDays,
+	ChevronDown,
+	ChevronUp,
+	Loader2,
+	MapPin,
+	Music,
+	Send,
+	ShoppingBag,
+	Trash2,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/lib/api";
+
+type Broadcast = {
+	id: string;
+	artist_id: string;
+	subject: string;
+	body: string;
+	reply_to: string | null;
+	status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+	scheduled_at: string | null;
+	filter_page_ids: string[] | null;
+	filter_date_from: string | null;
+	filter_date_to: string | null;
+	filter_method: string | null;
+	recipient_count: number;
+	sent_count: number;
+	opened_count: number;
+	created_at: string;
+	updated_at: string;
+};
+
+type CapturePage = {
+	id: string;
+	title: string;
+};
+
+type RecipientCount = {
+	total: number;
+	suppressed: number;
+	reachable: number;
+};
+
+const PRESETS = [
+	{
+		name: "New Release",
+		icon: Music,
+		subject: "New music just dropped",
+		body: "Hey!\n\nI just released something new and you're the first to know.\n\n[Link to your release]\n\nThanks for being a fan — it means the world.",
+	},
+	{
+		name: "Merch Drop",
+		icon: ShoppingBag,
+		subject: "New merch available",
+		body: "Hey!\n\nJust dropped some new merch. Check it out:\n\n[Link to your store]\n\nLimited quantities — grab yours before they're gone.",
+	},
+	{
+		name: "Upcoming Show",
+		icon: MapPin,
+		subject: "I'm playing a show near you",
+		body: "Hey!\n\nI've got a show coming up and I'd love to see you there.\n\nVenue: [Venue]\nDate: [Date]\nTickets: [Ticket link]\n\nLet's make it a night to remember.",
+	},
+	{
+		name: "Tour Dates",
+		icon: Bus,
+		subject: "Tour dates announced!",
+		body: "Hey!\n\nI'm hitting the road! Here are the dates:\n\n[Your tour dates]\n\nTickets are available now. Hope to see you at a show.",
+	},
+];
+
+type BroadcastComposeDialogProps = {
+	broadcast: Broadcast | null;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+};
+
+export function BroadcastComposeDialog({
+	broadcast,
+	open,
+	onOpenChange,
+}: BroadcastComposeDialogProps) {
+	const queryClient = useQueryClient();
+	const [subject, setSubject] = useState("");
+	const [body, setBody] = useState("");
+	const [replyTo, setReplyTo] = useState<string | null>(null);
+	const [scheduledAt, setScheduledAt] = useState("");
+	const [filterPageIds, setFilterPageIds] = useState<string[]>([]);
+	const [filterDateFrom, setFilterDateFrom] = useState("");
+	const [filterDateTo, setFilterDateTo] = useState("");
+	const [filterMethod, setFilterMethod] = useState("");
+	const [showFilters, setShowFilters] = useState(false);
+	const [showPreview, setShowPreview] = useState(false);
+	const [previewHtml, setPreviewHtml] = useState("");
+	const [saving, setSaving] = useState(false);
+	const [sending, setSending] = useState(false);
+	const [sendError, setSendError] = useState("");
+	const [showConfirm, setShowConfirm] = useState(false);
+
+	const broadcastId = broadcast?.id;
+
+	// Load broadcast data into form
+	useEffect(() => {
+		if (broadcast) {
+			setSubject(broadcast.subject);
+			setBody(broadcast.body);
+			setReplyTo(broadcast.reply_to);
+			setScheduledAt(broadcast.scheduled_at?.slice(0, 16) ?? "");
+			setFilterPageIds(broadcast.filter_page_ids ?? []);
+			setFilterDateFrom(broadcast.filter_date_from?.slice(0, 10) ?? "");
+			setFilterDateTo(broadcast.filter_date_to?.slice(0, 10) ?? "");
+			setFilterMethod(broadcast.filter_method ?? "");
+			setSendError("");
+			setShowConfirm(false);
+			setShowPreview(false);
+		} else {
+			setSubject("");
+			setBody("");
+			setReplyTo(null);
+			setScheduledAt("");
+			setFilterPageIds([]);
+			setFilterDateFrom("");
+			setFilterDateTo("");
+			setFilterMethod("");
+			setSendError("");
+			setShowConfirm(false);
+			setShowPreview(false);
+		}
+	}, [broadcast]);
+
+	const { data: pages } = useQuery({
+		queryKey: ["capture-pages"],
+		queryFn: () => api.get<CapturePage[]>("/capture-pages"),
+	});
+
+	const { data: recipientCount, isLoading: countLoading } = useQuery({
+		queryKey: [
+			"broadcast-recipients",
+			broadcastId,
+			filterPageIds,
+			filterDateFrom,
+			filterDateTo,
+			filterMethod,
+		],
+		queryFn: () => api.post<RecipientCount>(`/broadcasts/${broadcastId}/recipients`, {}),
+		enabled: !!broadcastId,
+		staleTime: 10_000,
+	});
+
+	function applyPreset(preset: (typeof PRESETS)[number]) {
+		setSubject(preset.subject);
+		setBody(preset.body);
+	}
+
+	async function saveFilters() {
+		if (!broadcastId) return;
+		await api.put(`/broadcasts/${broadcastId}`, {
+			filter_page_ids: filterPageIds.length > 0 ? filterPageIds : null,
+			filter_date_from: filterDateFrom ? `${filterDateFrom}T00:00:00Z` : null,
+			filter_date_to: filterDateTo ? `${filterDateTo}T23:59:59Z` : null,
+			filter_method: filterMethod || null,
+		});
+		queryClient.invalidateQueries({ queryKey: ["broadcast-recipients", broadcastId] });
+	}
+
+	async function handleSave() {
+		if (!broadcastId) return;
+		setSaving(true);
+		try {
+			await api.put(`/broadcasts/${broadcastId}`, {
+				subject,
+				body,
+				reply_to: replyTo,
+				scheduled_at: scheduledAt ? `${scheduledAt}:00Z` : null,
+				filter_page_ids: filterPageIds.length > 0 ? filterPageIds : null,
+				filter_date_from: filterDateFrom ? `${filterDateFrom}T00:00:00Z` : null,
+				filter_date_to: filterDateTo ? `${filterDateTo}T23:59:59Z` : null,
+				filter_method: filterMethod || null,
+			});
+			queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+		} finally {
+			setSaving(false);
+		}
+	}
+
+	async function handlePreview() {
+		if (!broadcastId || !subject || !body) return;
+		const html = await api.post<string>(`/broadcasts/${broadcastId}/preview`, {
+			subject,
+			body,
+		});
+		setPreviewHtml(typeof html === "string" ? html : "");
+		setShowPreview(true);
+	}
+
+	async function handleSend() {
+		if (!broadcastId) return;
+		setSending(true);
+		setSendError("");
+		try {
+			// Save first
+			await handleSave();
+			await api.post(`/broadcasts/${broadcastId}/send`, {});
+			queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+			onOpenChange(false);
+		} catch (err) {
+			setSendError(err instanceof Error ? err.message : "Send failed");
+		} finally {
+			setSending(false);
+			setShowConfirm(false);
+		}
+	}
+
+	function togglePageFilter(pageId: string) {
+		setFilterPageIds((prev) =>
+			prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId],
+		);
+	}
+
+	const isDraft = !broadcast || broadcast.status === "draft";
+	const isScheduled = !!scheduledAt;
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+				<DialogHeader>
+					<DialogTitle>{broadcast ? "Edit Broadcast" : "New Broadcast"}</DialogTitle>
+				</DialogHeader>
+
+				{showPreview ? (
+					<div className="space-y-3">
+						<div className="flex items-center justify-between">
+							<p className="text-sm font-medium">Preview</p>
+							<Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
+								Back to editor
+							</Button>
+						</div>
+						<iframe
+							srcDoc={previewHtml}
+							className="h-[500px] w-full rounded-lg border"
+							title="Email preview"
+							sandbox=""
+						/>
+					</div>
+				) : (
+					<div className="space-y-5">
+						{/* Presets */}
+						{isDraft && !subject && !body && (
+							<div className="space-y-2">
+								<Label className="text-xs text-muted-foreground">Start from a template</Label>
+								<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+									{PRESETS.map((p) => {
+										const Icon = p.icon;
+										return (
+											<button
+												key={p.name}
+												type="button"
+												onClick={() => applyPreset(p)}
+												className="flex flex-col items-center gap-1.5 rounded-lg border border-border p-3 text-xs transition-colors hover:border-honey-gold/50 hover:bg-muted"
+											>
+												<Icon className="size-5 text-muted-foreground" />
+												{p.name}
+											</button>
+										);
+									})}
+								</div>
+							</div>
+						)}
+
+						{/* Subject */}
+						<div className="space-y-1.5">
+							<Label htmlFor="broadcast-subject">Subject</Label>
+							<Input
+								id="broadcast-subject"
+								value={subject}
+								onChange={(e) => setSubject(e.target.value)}
+								maxLength={200}
+								placeholder="Email subject line"
+								disabled={!isDraft}
+							/>
+						</div>
+
+						{/* Body */}
+						<div className="space-y-1.5">
+							<div className="flex items-center justify-between">
+								<Label htmlFor="broadcast-body">Message</Label>
+								<span className="text-xs text-muted-foreground">{body.length}/5000</span>
+							</div>
+							<Textarea
+								id="broadcast-body"
+								value={body}
+								onChange={(e) => setBody(e.target.value)}
+								maxLength={5000}
+								rows={8}
+								placeholder="Write your message..."
+								disabled={!isDraft}
+							/>
+						</div>
+
+						{/* Reply-to */}
+						<div className="space-y-1.5">
+							<Label>Reply-to</Label>
+							<div className="flex gap-2">
+								<Button
+									variant={replyTo === null ? "default" : "outline"}
+									size="sm"
+									onClick={() => setReplyTo(null)}
+									disabled={!isDraft}
+								>
+									No-reply
+								</Button>
+								<Button
+									variant={replyTo !== null ? "default" : "outline"}
+									size="sm"
+									onClick={() => setReplyTo("")}
+									disabled={!isDraft}
+								>
+									My email
+								</Button>
+							</div>
+						</div>
+
+						{/* Filters */}
+						<div className="space-y-2">
+							<button
+								type="button"
+								className="flex items-center gap-1.5 text-sm font-medium"
+								onClick={() => setShowFilters(!showFilters)}
+							>
+								{showFilters ? (
+									<ChevronUp className="size-4" />
+								) : (
+									<ChevronDown className="size-4" />
+								)}
+								Filter recipients
+								{recipientCount && (
+									<Badge variant="secondary" className="ml-1">
+										{countLoading ? "..." : `${recipientCount.reachable} fans`}
+									</Badge>
+								)}
+							</button>
+
+							{showFilters && (
+								<Card>
+									<CardContent className="space-y-3 p-3">
+										{/* Page filter */}
+										{pages && pages.length > 0 && (
+											<div className="space-y-1.5">
+												<Label className="text-xs">Capture pages</Label>
+												<div className="flex flex-wrap gap-1.5">
+													{pages.map((page) => (
+														<button
+															key={page.id}
+															type="button"
+															onClick={() => {
+																togglePageFilter(page.id);
+																// Debounced save happens on blur or explicit save
+															}}
+															className={`rounded-md border px-2 py-1 text-xs transition-colors ${
+																filterPageIds.includes(page.id)
+																	? "border-honey-gold bg-honey-gold/10 text-honey-gold"
+																	: "border-border text-muted-foreground hover:border-honey-gold/50"
+															}`}
+															disabled={!isDraft}
+														>
+															{page.title}
+														</button>
+													))}
+												</div>
+											</div>
+										)}
+
+										{/* Date range */}
+										<div className="grid grid-cols-2 gap-2">
+											<div className="space-y-1">
+												<Label className="text-xs">Captured after</Label>
+												<Input
+													type="date"
+													value={filterDateFrom}
+													onChange={(e) => setFilterDateFrom(e.target.value)}
+													disabled={!isDraft}
+												/>
+											</div>
+											<div className="space-y-1">
+												<Label className="text-xs">Captured before</Label>
+												<Input
+													type="date"
+													value={filterDateTo}
+													onChange={(e) => setFilterDateTo(e.target.value)}
+													disabled={!isDraft}
+												/>
+											</div>
+										</div>
+
+										{/* Entry method */}
+										<div className="space-y-1">
+											<Label className="text-xs">Entry method</Label>
+											<select
+												value={filterMethod}
+												onChange={(e) => setFilterMethod(e.target.value)}
+												className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+												disabled={!isDraft}
+											>
+												<option value="">All methods</option>
+												<option value="qr">QR code</option>
+												<option value="sms">SMS</option>
+												<option value="direct">Direct link</option>
+												<option value="nfc">NFC</option>
+											</select>
+										</div>
+
+										<Button variant="outline" size="sm" onClick={saveFilters} disabled={!isDraft}>
+											Update count
+										</Button>
+									</CardContent>
+								</Card>
+							)}
+						</div>
+
+						{/* Schedule */}
+						{isDraft && (
+							<div className="space-y-1.5">
+								<Label className="text-xs">Schedule (optional)</Label>
+								<div className="flex items-center gap-2">
+									<CalendarDays className="size-4 text-muted-foreground" />
+									<Input
+										type="datetime-local"
+										value={scheduledAt}
+										onChange={(e) => setScheduledAt(e.target.value)}
+										className="max-w-[240px]"
+									/>
+									{scheduledAt && (
+										<Button variant="ghost" size="sm" onClick={() => setScheduledAt("")}>
+											Clear
+										</Button>
+									)}
+								</div>
+							</div>
+						)}
+
+						{sendError && <p className="text-sm text-red-400">{sendError}</p>}
+					</div>
+				)}
+
+				{!showPreview && (
+					<DialogFooter className="flex-col gap-2 sm:flex-row">
+						{isDraft && (
+							<>
+								<Button variant="outline" onClick={handlePreview} disabled={!subject || !body}>
+									Preview
+								</Button>
+								<Button variant="outline" onClick={handleSave} disabled={saving}>
+									{saving ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
+									Save Draft
+								</Button>
+								{showConfirm ? (
+									<div className="flex items-center gap-2">
+										<span className="text-sm text-muted-foreground">
+											Send to {recipientCount?.reachable ?? "?"} fans?
+										</span>
+										<Button onClick={handleSend} disabled={sending}>
+											{sending ? (
+												<Loader2 className="mr-1.5 size-4 animate-spin" />
+											) : (
+												<Send className="mr-1.5 size-4" />
+											)}
+											Confirm
+										</Button>
+										<Button variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>
+											Cancel
+										</Button>
+									</div>
+								) : (
+									<Button onClick={() => setShowConfirm(true)} disabled={!subject || !body}>
+										<Send className="mr-1.5 size-4" />
+										{isScheduled ? "Schedule" : "Send Now"}
+									</Button>
+								)}
+							</>
+						)}
+					</DialogFooter>
+				)}
+			</DialogContent>
+		</Dialog>
+	);
+}
+
+type BroadcastCardProps = {
+	broadcast: Broadcast;
+	onClick: () => void;
+};
+
+export function BroadcastCard({ broadcast, onClick }: BroadcastCardProps) {
+	const openRate =
+		broadcast.sent_count > 0
+			? Math.round((broadcast.opened_count / broadcast.sent_count) * 100)
+			: 0;
+
+	const statusColors: Record<string, string> = {
+		draft: "secondary",
+		scheduled: "default",
+		sending: "default",
+		sent: "default",
+		failed: "secondary",
+	};
+
+	return (
+		<Card
+			className={`transition-colors ${broadcast.status === "draft" ? "cursor-pointer hover:border-honey-gold/50" : ""}`}
+			onClick={broadcast.status === "draft" ? onClick : undefined}
+		>
+			<CardContent className="space-y-2 p-4">
+				<div className="flex items-start justify-between gap-2">
+					<div className="min-w-0">
+						<p className="font-display truncate text-sm font-semibold">
+							{broadcast.subject || "Untitled broadcast"}
+						</p>
+						<p className="text-xs text-muted-foreground">
+							{new Date(broadcast.created_at).toLocaleDateString()}
+						</p>
+					</div>
+					<Badge variant={statusColors[broadcast.status] === "default" ? "default" : "secondary"}>
+						{broadcast.status}
+					</Badge>
+				</div>
+
+				{broadcast.status !== "draft" && (
+					<div className="flex gap-4 text-xs text-muted-foreground">
+						<span>{broadcast.recipient_count} recipients</span>
+						<span>{broadcast.sent_count} sent</span>
+						<span>
+							{broadcast.opened_count} opened ({openRate}%)
+						</span>
+					</div>
+				)}
+
+				{broadcast.scheduled_at && broadcast.status === "scheduled" && (
+					<div className="flex items-center gap-1 text-xs text-muted-foreground">
+						<CalendarDays className="size-3" />
+						Scheduled for {new Date(broadcast.scheduled_at).toLocaleString()}
+					</div>
+				)}
+			</CardContent>
+		</Card>
+	);
+}
+
+type DeleteBroadcastButtonProps = {
+	broadcastId: string;
+	onDeleted: () => void;
+};
+
+export function DeleteBroadcastButton({ broadcastId, onDeleted }: DeleteBroadcastButtonProps) {
+	const queryClient = useQueryClient();
+
+	async function handleDelete() {
+		await api.delete(`/broadcasts/${broadcastId}`);
+		queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+		onDeleted();
+	}
+
+	return (
+		<Button variant="ghost" size="icon" onClick={handleDelete}>
+			<Trash2 className="size-4 text-muted-foreground" />
+		</Button>
+	);
+}

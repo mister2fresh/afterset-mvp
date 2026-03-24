@@ -51,6 +51,7 @@ export class ResendEmailService implements EmailService {
 			subject: params.subject,
 			html: params.html + buildFooter(getAddress()),
 			headers: buildHeaders(token),
+			...(params.replyTo && { reply_to: [params.replyTo] }),
 		});
 
 		if (error || !data) throw new Error(`Resend error: ${error?.message ?? "No data returned"}`);
@@ -77,6 +78,7 @@ export class ResendEmailService implements EmailService {
 				subject: p.subject,
 				html: p.html + buildFooter(getAddress()),
 				headers: buildHeaders(token),
+				...(p.replyTo && { reply_to: [p.replyTo] }),
 			};
 		});
 

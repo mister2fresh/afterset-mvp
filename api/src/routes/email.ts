@@ -84,11 +84,26 @@ async function handleWebhookEvent(event: WebhookEventPayload): Promise<void> {
 }
 
 async function handleEmailOpened(emailId: string): Promise<void> {
-	await supabase
+	const { data } = await supabase
 		.from("pending_emails")
 		.update({ opened_at: new Date().toISOString() })
 		.eq("provider_message_id", emailId)
-		.is("opened_at", null);
+		.is("opened_at", null)
+		.select("broadcast_id")
+		.maybeSingle();
+
+	if (data?.broadcast_id) {
+		const { count } = await supabase
+			.from("pending_emails")
+			.select("id", { count: "exact", head: true })
+			.eq("broadcast_id", data.broadcast_id)
+			.not("opened_at", "is", null);
+
+		await supabase
+			.from("broadcasts")
+			.update({ opened_count: count ?? 0 })
+			.eq("id", data.broadcast_id);
+	}
 }
 
 async function handleBounceOrComplaint(

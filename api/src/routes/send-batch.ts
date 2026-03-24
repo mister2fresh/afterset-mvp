@@ -37,7 +37,7 @@ app.post("/send-batch", async (c) => {
 	// Fetch pending emails ready to send
 	let query = supabase
 		.from("pending_emails")
-		.select("id, fan_capture_id, artist_id, email, retry_count, email_template_id")
+		.select("id, fan_capture_id, artist_id, email, retry_count, email_template_id, broadcast_id")
 		.eq("status", "pending")
 		.lte("send_at", new Date().toISOString())
 		.order("send_at", { ascending: true })
@@ -93,11 +93,11 @@ app.post("/send-batch", async (c) => {
 
 	const templateById = new Map((templatesById ?? []).map((t) => [t.id, t]));
 
-	// Fetch legacy templates by page for rows without email_template_id
+	// Fetch legacy templates by page for rows without email_template_id or broadcast_id
 	const legacyPageIds = [
 		...new Set(
 			pendingRows
-				.filter((r) => r.email_template_id == null)
+				.filter((r) => r.email_template_id == null && r.broadcast_id == null)
 				.map((r) => fanToPage.get(r.fan_capture_id))
 				.filter((id): id is string => id != null),
 		),
@@ -137,14 +137,52 @@ app.post("/send-batch", async (c) => {
 		}
 	}
 
+	// Fetch broadcasts for rows that have broadcast_id
+	const broadcastIds = [
+		...new Set(pendingRows.map((r) => r.broadcast_id).filter((id): id is string => id != null)),
+	];
+
+	const { data: broadcastsData } =
+		broadcastIds.length > 0
+			? await supabase
+					.from("broadcasts")
+					.select("id, subject, body, reply_to")
+					.in("id", broadcastIds)
+			: { data: [] };
+
+	const broadcastMap = new Map((broadcastsData ?? []).map((b) => [b.id, b]));
+
 	// Build send params for each pending email
 	const sendable: { pendingId: string; params: SendParams }[] = [];
 	const skippedIds: string[] = [];
 
 	for (const row of pendingRows) {
 		const artist = artistMap.get(row.artist_id);
-		const pageId = fanToPage.get(row.fan_capture_id);
 
+		// Broadcast emails — resolve from broadcasts table
+		if (row.broadcast_id) {
+			const broadcast = broadcastMap.get(row.broadcast_id);
+			if (!artist || !broadcast) {
+				skippedIds.push(row.id);
+				continue;
+			}
+			const html = renderFollowUpHtml({ artistName: artist.name, body: broadcast.body });
+			sendable.push({
+				pendingId: row.id,
+				params: {
+					to: row.email,
+					artistId: row.artist_id,
+					artistName: artist.name,
+					subject: broadcast.subject,
+					html,
+					replyTo: broadcast.reply_to ?? undefined,
+				},
+			});
+			continue;
+		}
+
+		// Sequence/legacy emails — resolve from templates
+		const pageId = fanToPage.get(row.fan_capture_id);
 		const template = row.email_template_id
 			? templateById.get(row.email_template_id)
 			: pageId
@@ -156,8 +194,6 @@ app.post("/send-batch", async (c) => {
 			continue;
 		}
 
-		// For template-id-based rows, capture_page_id comes from the template;
-		// for legacy rows it comes from fanToPage.
 		const capturePageId = template.capture_page_id ?? pageId;
 		const incentiveUrl =
 			template.include_incentive_link && capturePageId
@@ -239,6 +275,37 @@ app.post("/send-batch", async (c) => {
 		await supabase.rpc("increment_retry_count", { pending_ids: ids });
 
 		console.error("[send-batch] Batch send failed:", err);
+	}
+
+	// Update broadcast sent_count for any broadcasts in this batch
+	if (broadcastIds.length > 0) {
+		for (const bId of broadcastIds) {
+			const { count } = await supabase
+				.from("pending_emails")
+				.select("id", { count: "exact", head: true })
+				.eq("broadcast_id", bId)
+				.eq("status", "sent");
+
+			await supabase
+				.from("broadcasts")
+				.update({ sent_count: count ?? 0 })
+				.eq("id", bId);
+
+			// If all pending emails for this broadcast are done, mark broadcast as sent
+			const { count: pendingCount } = await supabase
+				.from("pending_emails")
+				.select("id", { count: "exact", head: true })
+				.eq("broadcast_id", bId)
+				.in("status", ["pending", "sending"]);
+
+			if ((pendingCount ?? 0) === 0) {
+				await supabase
+					.from("broadcasts")
+					.update({ status: "sent" })
+					.eq("id", bId)
+					.in("status", ["sending", "scheduled"]);
+			}
+		}
 	}
 
 	const elapsed = Math.round(performance.now() - start);
