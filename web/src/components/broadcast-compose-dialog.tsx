@@ -4,28 +4,33 @@ import {
 	CalendarDays,
 	ChevronDown,
 	ChevronUp,
+	Eye,
 	Loader2,
 	MapPin,
+	MoreVertical,
 	Music,
+	Pencil,
 	Send,
 	ShoppingBag,
 	Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 type Broadcast = {
 	id: string;
@@ -193,6 +198,9 @@ export function BroadcastComposeDialog({
 				filter_method: filterMethod || null,
 			});
 			queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+			toast.success("Draft saved");
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : "Failed to save");
 		} finally {
 			setSaving(false);
 		}
@@ -200,11 +208,21 @@ export function BroadcastComposeDialog({
 
 	async function handlePreview() {
 		if (!broadcastId || !subject || !body) return;
-		const html = await api.post<string>(`/broadcasts/${broadcastId}/preview`, {
-			subject,
-			body,
+		const {
+			data: { session },
+		} = await supabase.auth.getSession();
+		if (!session) return;
+
+		const res = await fetch(`/api/broadcasts/${broadcastId}/preview`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${session.access_token}`,
+			},
+			body: JSON.stringify({ subject, body }),
 		});
-		setPreviewHtml(typeof html === "string" ? html : "");
+		if (!res.ok) return;
+		setPreviewHtml(await res.text());
 		setShowPreview(true);
 	}
 
@@ -230,6 +248,13 @@ export function BroadcastComposeDialog({
 		setFilterPageIds((prev) =>
 			prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId],
 		);
+	}
+
+	async function handleDelete() {
+		if (!broadcastId) return;
+		await api.delete(`/broadcasts/${broadcastId}`);
+		queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+		onOpenChange(false);
 	}
 
 	const isDraft = !broadcast || broadcast.status === "draft";
@@ -260,18 +285,19 @@ export function BroadcastComposeDialog({
 				) : (
 					<div className="space-y-5">
 						{/* Presets */}
-						{isDraft && !subject && !body && (
+						{isDraft && (
 							<div className="space-y-2">
 								<Label className="text-xs text-muted-foreground">Start from a template</Label>
 								<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
 									{PRESETS.map((p) => {
 										const Icon = p.icon;
+										const isActive = subject === p.subject && body === p.body;
 										return (
 											<button
 												key={p.name}
 												type="button"
 												onClick={() => applyPreset(p)}
-												className="flex flex-col items-center gap-1.5 rounded-lg border border-border p-3 text-xs transition-colors hover:border-honey-gold/50 hover:bg-muted"
+												className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs transition-colors hover:border-honey-gold/50 hover:bg-muted ${isActive ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border"}`}
 											>
 												<Icon className="size-5 text-muted-foreground" />
 												{p.name}
@@ -457,23 +483,37 @@ export function BroadcastComposeDialog({
 					</div>
 				)}
 
-				{!showPreview && (
-					<DialogFooter className="flex-col gap-2 sm:flex-row">
-						{isDraft && (
-							<>
-								<Button variant="outline" onClick={handlePreview} disabled={!subject || !body}>
+				{!showPreview && isDraft && (
+					<div className="space-y-3">
+						<div className="flex flex-wrap items-center justify-between gap-2">
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={handleDelete}
+								className="text-red-400 hover:text-red-300"
+							>
+								<Trash2 className="mr-1.5 size-4" />
+								Delete
+							</Button>
+							<div className="flex flex-wrap items-center gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handlePreview}
+									disabled={!subject || !body}
+								>
 									Preview
 								</Button>
-								<Button variant="outline" onClick={handleSave} disabled={saving}>
+								<Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
 									{saving ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
 									Save Draft
 								</Button>
 								{showConfirm ? (
-									<div className="flex items-center gap-2">
+									<>
 										<span className="text-sm text-muted-foreground">
 											Send to {recipientCount?.reachable ?? "?"} fans?
 										</span>
-										<Button onClick={handleSend} disabled={sending}>
+										<Button size="sm" onClick={handleSend} disabled={sending}>
 											{sending ? (
 												<Loader2 className="mr-1.5 size-4 animate-spin" />
 											) : (
@@ -484,16 +524,20 @@ export function BroadcastComposeDialog({
 										<Button variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>
 											Cancel
 										</Button>
-									</div>
+									</>
 								) : (
-									<Button onClick={() => setShowConfirm(true)} disabled={!subject || !body}>
+									<Button
+										size="sm"
+										onClick={() => setShowConfirm(true)}
+										disabled={!subject || !body}
+									>
 										<Send className="mr-1.5 size-4" />
 										{isScheduled ? "Schedule" : "Send Now"}
 									</Button>
 								)}
-							</>
-						)}
-					</DialogFooter>
+							</div>
+						</div>
+					</div>
 				)}
 			</DialogContent>
 		</Dialog>
@@ -502,28 +546,24 @@ export function BroadcastComposeDialog({
 
 type BroadcastCardProps = {
 	broadcast: Broadcast;
-	onClick: () => void;
+	onEdit: () => void;
+	onPreview: () => void;
+	onDelete: () => void;
 };
 
-export function BroadcastCard({ broadcast, onClick }: BroadcastCardProps) {
+export function BroadcastCard({ broadcast, onEdit, onPreview, onDelete }: BroadcastCardProps) {
 	const openRate =
 		broadcast.sent_count > 0
 			? Math.round((broadcast.opened_count / broadcast.sent_count) * 100)
 			: 0;
 
-	const statusColors: Record<string, string> = {
-		draft: "secondary",
-		scheduled: "default",
-		sending: "default",
-		sent: "default",
-		failed: "secondary",
-	};
+	const statusVariant =
+		broadcast.status === "draft" || broadcast.status === "failed"
+			? ("secondary" as const)
+			: ("default" as const);
 
 	return (
-		<Card
-			className={`transition-colors ${broadcast.status === "draft" ? "cursor-pointer hover:border-honey-gold/50" : ""}`}
-			onClick={broadcast.status === "draft" ? onClick : undefined}
-		>
+		<Card className="transition-colors hover:border-honey-gold/50">
 			<CardContent className="space-y-2 p-4">
 				<div className="flex items-start justify-between gap-2">
 					<div className="min-w-0">
@@ -534,9 +574,34 @@ export function BroadcastCard({ broadcast, onClick }: BroadcastCardProps) {
 							{new Date(broadcast.created_at).toLocaleDateString()}
 						</p>
 					</div>
-					<Badge variant={statusColors[broadcast.status] === "default" ? "default" : "secondary"}>
-						{broadcast.status}
-					</Badge>
+					<div className="flex shrink-0 items-center gap-1">
+						<Badge variant={statusVariant}>{broadcast.status}</Badge>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button variant="ghost" size="icon" className="size-7">
+									<MoreVertical className="size-4" />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								{broadcast.status === "draft" && (
+									<DropdownMenuItem onClick={onEdit}>
+										<Pencil />
+										Edit
+									</DropdownMenuItem>
+								)}
+								<DropdownMenuItem onClick={onPreview}>
+									<Eye />
+									Preview
+								</DropdownMenuItem>
+								{broadcast.status === "draft" && (
+									<DropdownMenuItem className="text-destructive" onClick={onDelete}>
+										<Trash2 />
+										Delete
+									</DropdownMenuItem>
+								)}
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
 				</div>
 
 				{broadcast.status !== "draft" && (
@@ -557,26 +622,5 @@ export function BroadcastCard({ broadcast, onClick }: BroadcastCardProps) {
 				)}
 			</CardContent>
 		</Card>
-	);
-}
-
-type DeleteBroadcastButtonProps = {
-	broadcastId: string;
-	onDeleted: () => void;
-};
-
-export function DeleteBroadcastButton({ broadcastId, onDeleted }: DeleteBroadcastButtonProps) {
-	const queryClient = useQueryClient();
-
-	async function handleDelete() {
-		await api.delete(`/broadcasts/${broadcastId}`);
-		queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
-		onDeleted();
-	}
-
-	return (
-		<Button variant="ghost" size="icon" onClick={handleDelete}>
-			<Trash2 className="size-4 text-muted-foreground" />
-		</Button>
 	);
 }

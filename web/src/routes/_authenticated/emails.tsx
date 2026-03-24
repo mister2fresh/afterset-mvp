@@ -124,6 +124,17 @@ function EmailsPage() {
 		setComposeOpen(true);
 	}
 
+	async function handlePreviewBroadcast(broadcast: Broadcast) {
+		if (!broadcast.subject || !broadcast.body) return;
+		setEditingBroadcast(broadcast);
+		setComposeOpen(true);
+	}
+
+	async function handleDeleteBroadcast(broadcast: Broadcast) {
+		await api.delete(`/broadcasts/${broadcast.id}`);
+		queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+	}
+
 	if (isLoading) {
 		return (
 			<div className="flex items-center justify-center py-16">
@@ -163,7 +174,13 @@ function EmailsPage() {
 				{broadcasts && broadcasts.length > 0 ? (
 					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 						{broadcasts.map((b) => (
-							<BroadcastCard key={b.id} broadcast={b} onClick={() => handleEditBroadcast(b)} />
+							<BroadcastCard
+								key={b.id}
+								broadcast={b}
+								onEdit={() => handleEditBroadcast(b)}
+								onPreview={() => handlePreviewBroadcast(b)}
+								onDelete={() => handleDeleteBroadcast(b)}
+							/>
 						))}
 					</div>
 				) : (
