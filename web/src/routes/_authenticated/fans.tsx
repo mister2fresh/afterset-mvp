@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Download, Loader2, Search, Users, X } from "lucide-react";
+import { toast } from "sonner";
 import { type CaptureRow, CapturesTable } from "@/components/captures-table";
+import { QueryError } from "@/components/query-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -64,7 +66,7 @@ function usePages() {
 function FansPage() {
 	const filters = Route.useSearch();
 	const navigate = useNavigate();
-	const { data: rows, isLoading } = useCaptures(filters);
+	const { data: rows, isLoading, isError, refetch } = useCaptures(filters);
 	const { data: pages } = usePages();
 
 	const hasFilters =
@@ -89,14 +91,18 @@ function FansPage() {
 	}
 
 	async function exportCsv() {
-		const qs = buildQueryString(filters);
-		const blob = await api.getBlob(`/captures/export${qs}`);
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = "fans.csv";
-		a.click();
-		URL.revokeObjectURL(url);
+		try {
+			const qs = buildQueryString(filters);
+			const blob = await api.getBlob(`/captures/export${qs}`);
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = "fans.csv";
+			a.click();
+			URL.revokeObjectURL(url);
+		} catch {
+			toast.error("Failed to export CSV");
+		}
 	}
 
 	return (
@@ -239,7 +245,9 @@ function FansPage() {
 			)}
 
 			{/* Content */}
-			{isLoading ? (
+			{isError ? (
+				<QueryError onRetry={() => refetch()} />
+			) : isLoading ? (
 				<div className="flex items-center justify-center py-16">
 					<Loader2 className="size-6 animate-spin text-muted-foreground" />
 				</div>

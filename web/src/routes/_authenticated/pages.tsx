@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from "react";
 import { EmailTemplateBadge, EmailTemplateDialog } from "@/components/email-template-dialog";
 import { KeywordDialog } from "@/components/keyword-dialog";
 import { type CapturePage, fileTypeIcon, PageForm } from "@/components/page-form";
+import { QueryError } from "@/components/query-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,7 +73,7 @@ function formatPhone(phone: string): string {
 }
 
 function PagesPage() {
-	const { data: pages, isLoading } = useCapturePages();
+	const { data: pages, isLoading, isError, refetch } = useCapturePages();
 	const { data: counts } = useCaptureCounts();
 	const { data: keywords } = useKeywords();
 	const [createOpen, setCreateOpen] = useState(false);
@@ -84,6 +85,10 @@ function PagesPage() {
 				<Loader2 className="size-6 animate-spin text-muted-foreground" />
 			</div>
 		);
+	}
+
+	if (isError) {
+		return <QueryError onRetry={() => refetch()} />;
 	}
 
 	const hasPages = pages && pages.length > 0;
@@ -144,11 +149,15 @@ function useQrPreview(pageId: string) {
 	const [url, setUrl] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
-		const blob = await api.getBlob(`/capture-pages/${pageId}/qr.png`);
-		setUrl((prev) => {
-			if (prev) URL.revokeObjectURL(prev);
-			return URL.createObjectURL(blob);
-		});
+		try {
+			const blob = await api.getBlob(`/capture-pages/${pageId}/qr.png`);
+			setUrl((prev) => {
+				if (prev) URL.revokeObjectURL(prev);
+				return URL.createObjectURL(blob);
+			});
+		} catch {
+			// QR preview is non-critical — fail silently, download button still works
+		}
 	}, [pageId]);
 
 	useEffect(() => {
@@ -164,13 +173,18 @@ function useQrPreview(pageId: string) {
 }
 
 async function downloadQr(pageId: string, slug: string) {
-	const blob = await api.getBlob(`/capture-pages/${pageId}/qr.png?download=1`);
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = `${slug}-qr.png`;
-	a.click();
-	URL.revokeObjectURL(url);
+	try {
+		const blob = await api.getBlob(`/capture-pages/${pageId}/qr.png?download=1`);
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `${slug}-qr.png`;
+		a.click();
+		URL.revokeObjectURL(url);
+	} catch {
+		const { toast } = await import("sonner");
+		toast.error("Failed to download QR code");
+	}
 }
 
 function PageCard({
@@ -232,9 +246,13 @@ function PageCard({
 							<Download />
 							Download QR
 						</DropdownMenuItem>
-						<DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate()}>
+						<DropdownMenuItem
+							className="text-destructive"
+							disabled={deleteMutation.isPending}
+							onClick={() => deleteMutation.mutate()}
+						>
 							<Trash2 />
-							Delete
+							{deleteMutation.isPending ? "Deleting..." : "Delete"}
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>

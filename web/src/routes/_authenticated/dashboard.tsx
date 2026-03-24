@@ -11,6 +11,7 @@ import {
 	YAxis,
 } from "recharts";
 import { type CaptureRow, CapturesTable } from "@/components/captures-table";
+import { QueryError } from "@/components/query-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
@@ -36,7 +37,12 @@ type OverviewData = {
 };
 
 function DashboardPage() {
-	const { data: overview, isLoading } = useQuery({
+	const {
+		data: overview,
+		isLoading,
+		isError,
+		refetch,
+	} = useQuery({
 		queryKey: ["analytics-overview"],
 		queryFn: () => api.get<OverviewData>("/analytics"),
 	});
@@ -52,6 +58,10 @@ function DashboardPage() {
 				<Loader2 className="size-6 animate-spin text-muted-foreground" />
 			</div>
 		);
+	}
+
+	if (isError) {
+		return <QueryError onRetry={() => refetch()} />;
 	}
 
 	const hasData = overview && overview.total_fans > 0;

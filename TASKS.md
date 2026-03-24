@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 24, 2026 (v25 — safe capture page deletion)
+**Last updated:** March 24, 2026 (v26 — error handling polish)
 **Current phase:** Sprint 3 — Text-to-Join + Polish
-**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped
-**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1), error handling polish (P2)
+**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped
+**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1), broadcast campaigns (BACKLOG V1)
 
 ---
 
@@ -725,10 +725,12 @@ Run ADR validation tasks before committing to the stack.
 
 ### P2
 
-- [ ] **Error handling & edge case polish**
-  - Loading states on all async actions
-  - Error states with clear messaging
-  - Offline/poor-signal behavior on capture pages (test localStorage retry at a real venue)
+- [x] **Error handling & edge case polish** *(done 2026-03-24)*
+  - Global toast notification system (sonner) for all mutation errors via MutationCache
+  - Query error states with retry on all pages (dashboard, pages, fans, emails, analytics)
+  - Silent failure fixes: CSV export, QR download, QR preview
+  - Double-click prevention on page delete
+  - *Remaining:* Offline/poor-signal behavior on capture pages (test localStorage retry at a real venue)
   - *Acceptance:* No blank screens, no silent failures. Every error has a user-facing message.
 
 - [ ] **Invite waitlist users to beta**

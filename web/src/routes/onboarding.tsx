@@ -105,13 +105,18 @@ function OnboardingPage() {
 
 	async function handleDownloadQr() {
 		if (!createdPage) return;
-		const blob = await api.getBlob(`/capture-pages/${createdPage.id}/qr.png?download=1`);
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = `${createdPage.slug}-qr.png`;
-		a.click();
-		URL.revokeObjectURL(url);
+		try {
+			const blob = await api.getBlob(`/capture-pages/${createdPage.id}/qr.png?download=1`);
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `${createdPage.slug}-qr.png`;
+			a.click();
+			URL.revokeObjectURL(url);
+		} catch {
+			const { toast } = await import("sonner");
+			toast.error("Failed to download QR code");
+		}
 	}
 
 	return (

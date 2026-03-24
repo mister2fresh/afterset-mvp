@@ -14,6 +14,7 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
+import { QueryError } from "@/components/query-error";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 
@@ -71,7 +72,12 @@ const METHOD_COLORS: Record<string, string> = {
 function AnalyticsPage() {
 	const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
 
-	const { data: overview, isLoading: overviewLoading } = useQuery({
+	const {
+		data: overview,
+		isLoading: overviewLoading,
+		isError,
+		refetch,
+	} = useQuery({
 		queryKey: ["analytics-overview"],
 		queryFn: () => api.get<OverviewData>("/analytics"),
 	});
@@ -88,6 +94,10 @@ function AnalyticsPage() {
 				<Loader2 className="size-6 animate-spin text-muted-foreground" />
 			</div>
 		);
+	}
+
+	if (isError) {
+		return <QueryError onRetry={() => refetch()} />;
 	}
 
 	if (!overview || overview.total_fans === 0) {

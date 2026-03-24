@@ -1,8 +1,10 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { toast } from "sonner";
 import "./index.css";
+import { Toaster } from "@/components/ui/sonner";
 import { getUser, initAuth } from "./lib/auth";
 import { routeTree } from "./routeTree.gen";
 
@@ -15,6 +17,11 @@ const queryClient = new QueryClient({
 			retry: 1,
 		},
 	},
+	mutationCache: new MutationCache({
+		onError: (error) => {
+			toast.error(error.message || "Something went wrong");
+		},
+	}),
 });
 
 const router = createRouter({
@@ -39,6 +46,7 @@ createRoot(root).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
 			<RouterProvider router={router} />
+			<Toaster position="bottom-right" />
 		</QueryClientProvider>
 	</StrictMode>,
 );

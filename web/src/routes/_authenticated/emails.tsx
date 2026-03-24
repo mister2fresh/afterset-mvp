@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, Clock, Loader2, Mail, Sunrise, Zap } from "lucide-react";
 import { useState } from "react";
 import { EmailTemplateDialog } from "@/components/email-template-dialog";
+import { QueryError } from "@/components/query-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,7 +47,12 @@ function stepLabel(t: EmailTemplate): { label: string; icon: typeof Zap } {
 }
 
 function EmailsPage() {
-	const { data: pages, isLoading: pagesLoading } = useQuery({
+	const {
+		data: pages,
+		isLoading: pagesLoading,
+		isError,
+		refetch,
+	} = useQuery({
 		queryKey: ["capture-pages"],
 		queryFn: () => api.get<CapturePage[]>("/capture-pages"),
 	});
@@ -77,6 +83,10 @@ function EmailsPage() {
 				<Loader2 className="size-6 animate-spin text-muted-foreground" />
 			</div>
 		);
+	}
+
+	if (isError) {
+		return <QueryError onRetry={() => refetch()} />;
 	}
 
 	if (!pages?.length) {
