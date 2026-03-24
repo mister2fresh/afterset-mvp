@@ -53,7 +53,9 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **Background jobs:** Supabase pg_cron for delayed follow-up emails
 - **SMS:** Telnyx (Twilio is fallback), GSM-7 encoding only in auto-replies
 - **Email:** Resend via `EmailService` abstraction — suppression checks, RFC 8058 unsubscribe, CAN-SPAM footer, webhook handler for bounces/complaints
-- **Email templates:** CRUD at `/api/capture-pages/:id/email-template` (GET/PUT/DELETE + preview POST), delay modes (immediate/1_hour/next_morning), optional incentive download link
+- **Email templates:** CRUD at `/api/capture-pages/:id/email-template` (GET/PUT/DELETE + preview POST), delay modes (immediate/1_hour/next_morning), optional incentive download link. GET returns `null` (not 404) when no template exists.
+- **Captures API:** `GET /api/captures` supports query params: `page_id`, `method`, `date_from`, `date_to`, `search` (email ilike). `GET /api/captures/export` returns CSV with same filters.
+- **Analytics API:** `GET /api/analytics` returns `total_fans`, `total_pages`, `this_week`, `pages[]` (ranked), `daily[]` (last 30 days)
 
 ## Commands
 

@@ -1,67 +1,250 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Loader2, Users, X } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Download, Loader2, Search, Users, X } from "lucide-react";
 import { type CaptureRow, CapturesTable } from "@/components/captures-table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+
+type CapturePage = {
+	id: string;
+	title: string;
+	slug: string;
+};
 
 type FansSearch = {
 	page_id?: string;
 	page_title?: string;
+	method?: string;
+	date_from?: string;
+	date_to?: string;
+	search?: string;
 };
 
 export const Route = createFileRoute("/_authenticated/fans")({
-	validateSearch: (search: Record<string, unknown>): FansSearch => ({
-		page_id: typeof search.page_id === "string" ? search.page_id : undefined,
-		page_title: typeof search.page_title === "string" ? search.page_title : undefined,
+	validateSearch: (s: Record<string, unknown>): FansSearch => ({
+		page_id: typeof s.page_id === "string" ? s.page_id : undefined,
+		page_title: typeof s.page_title === "string" ? s.page_title : undefined,
+		method: typeof s.method === "string" ? s.method : undefined,
+		date_from: typeof s.date_from === "string" ? s.date_from : undefined,
+		date_to: typeof s.date_to === "string" ? s.date_to : undefined,
+		search: typeof s.search === "string" ? s.search : undefined,
 	}),
 	component: FansPage,
 });
 
-function useCaptures(pageId?: string) {
-	const params = pageId ? `?page_id=${pageId}` : "";
+function buildQueryString(filters: FansSearch): string {
+	const params = new URLSearchParams();
+	if (filters.page_id) params.set("page_id", filters.page_id);
+	if (filters.method) params.set("method", filters.method);
+	if (filters.date_from) params.set("date_from", filters.date_from);
+	if (filters.date_to) params.set("date_to", filters.date_to);
+	if (filters.search) params.set("search", filters.search);
+	const qs = params.toString();
+	return qs ? `?${qs}` : "";
+}
+
+function useCaptures(filters: FansSearch) {
+	const qs = buildQueryString(filters);
 	return useQuery({
-		queryKey: ["captures", pageId ?? "all"],
-		queryFn: () => api.get<CaptureRow[]>(`/captures${params}`),
+		queryKey: ["captures", filters],
+		queryFn: () => api.get<CaptureRow[]>(`/captures${qs}`),
+	});
+}
+
+function usePages() {
+	return useQuery({
+		queryKey: ["capture-pages"],
+		queryFn: () => api.get<CapturePage[]>("/capture-pages"),
 	});
 }
 
 function FansPage() {
-	const { page_id, page_title } = Route.useSearch();
+	const filters = Route.useSearch();
 	const navigate = useNavigate();
-	const { data: rows, isLoading } = useCaptures(page_id);
+	const { data: rows, isLoading } = useCaptures(filters);
+	const { data: pages } = usePages();
 
-	if (isLoading) {
-		return (
-			<div className="flex items-center justify-center py-16">
-				<Loader2 className="size-6 animate-spin text-muted-foreground" />
-			</div>
-		);
+	const hasFilters =
+		filters.page_id || filters.method || filters.date_from || filters.date_to || filters.search;
+
+	function updateFilter(update: Partial<FansSearch>) {
+		navigate({
+			to: "/fans",
+			search: (prev: FansSearch) => {
+				const next = { ...prev, ...update };
+				// Remove undefined/empty values
+				for (const key of Object.keys(next) as (keyof FansSearch)[]) {
+					if (!next[key]) delete next[key];
+				}
+				return next;
+			},
+		});
 	}
 
-	const hasRows = rows && rows.length > 0;
+	function clearFilters() {
+		navigate({ to: "/fans", search: {} });
+	}
+
+	async function exportCsv() {
+		const qs = buildQueryString(filters);
+		const blob = await api.getBlob(`/captures/export${qs}`);
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = "fans.csv";
+		a.click();
+		URL.revokeObjectURL(url);
+	}
 
 	return (
 		<div className="space-y-4">
-			{page_id && (
-				<div className="flex items-center gap-2">
-					<span className="text-sm text-muted-foreground">Filtered by page:</span>
-					<Badge variant="secondary" className="gap-1">
-						{page_title ?? "..."}
-						<button
-							type="button"
-							onClick={() => navigate({ to: "/fans", search: {} })}
-							className="ml-0.5 rounded-full hover:bg-muted"
-						>
-							<X className="size-3" />
-						</button>
-					</Badge>
+			{/* Filter bar */}
+			<div className="flex flex-wrap items-end gap-3">
+				{/* Email search */}
+				<div className="relative w-full sm:w-56">
+					<Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+					<Input
+						placeholder="Search email..."
+						className="pl-8"
+						value={filters.search ?? ""}
+						onChange={(e) => updateFilter({ search: e.target.value || undefined })}
+					/>
+				</div>
+
+				{/* Page filter */}
+				<select
+					className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+					value={filters.page_id ?? ""}
+					onChange={(e) =>
+						updateFilter({
+							page_id: e.target.value || undefined,
+							page_title: pages?.find((p) => p.id === e.target.value)?.title,
+						})
+					}
+				>
+					<option value="">All pages</option>
+					{(pages ?? []).map((p) => (
+						<option key={p.id} value={p.id}>
+							{p.title}
+						</option>
+					))}
+				</select>
+
+				{/* Method filter */}
+				<select
+					className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+					value={filters.method ?? ""}
+					onChange={(e) => updateFilter({ method: e.target.value || undefined })}
+				>
+					<option value="">All methods</option>
+					<option value="qr">QR Code</option>
+					<option value="direct">Direct Link</option>
+					<option value="sms">SMS</option>
+					<option value="nfc">NFC</option>
+				</select>
+
+				{/* Date range */}
+				<Input
+					type="date"
+					className="h-9 w-36"
+					value={filters.date_from ?? ""}
+					onChange={(e) => updateFilter({ date_from: e.target.value || undefined })}
+					placeholder="From"
+				/>
+				<Input
+					type="date"
+					className="h-9 w-36"
+					value={filters.date_to ?? ""}
+					onChange={(e) => updateFilter({ date_to: e.target.value || undefined })}
+					placeholder="To"
+				/>
+
+				{/* Actions */}
+				{hasFilters && (
+					<Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+						<X className="size-3.5" />
+						Clear
+					</Button>
+				)}
+
+				<div className="ml-auto">
+					<Button variant="outline" size="sm" onClick={exportCsv} disabled={!rows?.length}>
+						<Download className="size-3.5" />
+						Export CSV
+					</Button>
+				</div>
+			</div>
+
+			{/* Active filter badges */}
+			{hasFilters && (
+				<div className="flex flex-wrap items-center gap-2">
+					<span className="text-xs text-muted-foreground">Filters:</span>
+					{filters.page_id && (
+						<Badge variant="secondary" className="gap-1">
+							Page: {filters.page_title ?? "..."}
+							<button
+								type="button"
+								onClick={() => updateFilter({ page_id: undefined, page_title: undefined })}
+								className="ml-0.5 rounded-full hover:bg-muted"
+							>
+								<X className="size-3" />
+							</button>
+						</Badge>
+					)}
+					{filters.method && (
+						<Badge variant="secondary" className="gap-1">
+							Method: {filters.method}
+							<button
+								type="button"
+								onClick={() => updateFilter({ method: undefined })}
+								className="ml-0.5 rounded-full hover:bg-muted"
+							>
+								<X className="size-3" />
+							</button>
+						</Badge>
+					)}
+					{filters.search && (
+						<Badge variant="secondary" className="gap-1">
+							Search: {filters.search}
+							<button
+								type="button"
+								onClick={() => updateFilter({ search: undefined })}
+								className="ml-0.5 rounded-full hover:bg-muted"
+							>
+								<X className="size-3" />
+							</button>
+						</Badge>
+					)}
+					{(filters.date_from || filters.date_to) && (
+						<Badge variant="secondary" className="gap-1">
+							{filters.date_from ?? "..."} — {filters.date_to ?? "..."}
+							<button
+								type="button"
+								onClick={() => updateFilter({ date_from: undefined, date_to: undefined })}
+								className="ml-0.5 rounded-full hover:bg-muted"
+							>
+								<X className="size-3" />
+							</button>
+						</Badge>
+					)}
+					{rows && (
+						<span className="text-xs text-muted-foreground">
+							{rows.length} result{rows.length !== 1 ? "s" : ""}
+						</span>
+					)}
 				</div>
 			)}
 
-			{hasRows ? (
-				<CapturesTable rows={rows} showPageColumn={!page_id} />
+			{/* Content */}
+			{isLoading ? (
+				<div className="flex items-center justify-center py-16">
+					<Loader2 className="size-6 animate-spin text-muted-foreground" />
+				</div>
+			) : rows && rows.length > 0 ? (
+				<CapturesTable rows={rows} showPageColumn={!filters.page_id} />
 			) : (
 				<Card>
 					<CardContent className="flex flex-col items-center justify-center py-16">
@@ -69,15 +252,19 @@ function FansPage() {
 							<Users className="size-8 text-muted-foreground" />
 						</div>
 						<h3 className="font-display text-lg font-semibold">
-							{page_id ? "No captures for this page" : "No fans yet"}
+							{hasFilters ? "No matching fans" : "No fans yet"}
 						</h3>
 						<p className="mt-1 max-w-sm text-center text-sm text-muted-foreground">
-							{page_id ? (
+							{hasFilters ? (
 								<>
-									No one has submitted their email through this page yet.{" "}
-									<Link to="/fans" search={{}} className="text-electric-blue hover:underline">
-										View all fans
-									</Link>
+									No fans match your current filters.{" "}
+									<button
+										type="button"
+										onClick={clearFilters}
+										className="text-electric-blue hover:underline"
+									>
+										Clear filters
+									</button>
 								</>
 							) : (
 								"When fans submit their email through your capture pages, they'll appear here."

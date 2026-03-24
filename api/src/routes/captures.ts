@@ -4,12 +4,15 @@ import type { AuthEnv } from "../middleware/auth.js";
 
 const app = new Hono<AuthEnv>();
 
-// List captures with optional page filter
+// List captures with optional filters
 app.get("/", async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.query("page_id");
+	const method = c.req.query("method");
+	const dateFrom = c.req.query("date_from");
+	const dateTo = c.req.query("date_to");
+	const search = c.req.query("search");
 
-	// Query capture_events joined with fan_captures and capture_pages
 	let query = supabase
 		.from("capture_events")
 		.select(
@@ -27,6 +30,19 @@ app.get("/", async (c) => {
 
 	if (pageId) {
 		query = query.eq("capture_page_id", pageId);
+	}
+	if (method) {
+		query = query.eq("entry_method", method);
+	}
+	if (dateFrom) {
+		query = query.gte("captured_at", dateFrom);
+	}
+	if (dateTo) {
+		// Include the full end day
+		query = query.lte("captured_at", `${dateTo}T23:59:59.999Z`);
+	}
+	if (search) {
+		query = query.ilike("fan_captures.email", `%${search}%`);
 	}
 
 	const { data, error } = await query;
@@ -76,6 +92,59 @@ app.get("/counts", async (c) => {
 	}
 
 	return c.json(counts);
+});
+
+// CSV export of captures (same filters as list)
+app.get("/export", async (c) => {
+	const artist = c.get("artist");
+	const pageId = c.req.query("page_id");
+	const method = c.req.query("method");
+	const dateFrom = c.req.query("date_from");
+	const dateTo = c.req.query("date_to");
+	const search = c.req.query("search");
+
+	let query = supabase
+		.from("capture_events")
+		.select(
+			`
+			entry_method,
+			captured_at,
+			fan_captures!inner ( email, name ),
+			capture_pages!inner ( title, slug )
+		`,
+		)
+		.eq("capture_pages.artist_id", artist.id)
+		.order("captured_at", { ascending: false });
+
+	if (pageId) query = query.eq("capture_page_id", pageId);
+	if (method) query = query.eq("entry_method", method);
+	if (dateFrom) query = query.gte("captured_at", dateFrom);
+	if (dateTo) query = query.lte("captured_at", `${dateTo}T23:59:59.999Z`);
+	if (search) query = query.ilike("fan_captures.email", `%${search}%`);
+
+	const { data, error } = await query;
+	if (error) return c.json({ error: error.message }, 500);
+
+	const rows = data ?? [];
+	const csvLines = ["Email,Page,Method,Date"];
+
+	for (const row of rows) {
+		const fan = row.fan_captures as unknown as { email: string; name: string | null };
+		const page = row.capture_pages as unknown as { title: string; slug: string };
+		const date = new Date(row.captured_at).toISOString().slice(0, 19).replace("T", " ");
+		csvLines.push(
+			`"${fan.email}","${page.title.replace(/"/g, '""')}","${row.entry_method}","${date}"`,
+		);
+	}
+
+	const csv = csvLines.join("\n");
+
+	return new Response(csv, {
+		headers: {
+			"Content-Type": "text/csv; charset=utf-8",
+			"Content-Disposition": 'attachment; filename="fans.csv"',
+		},
+	});
 });
 
 export default app;

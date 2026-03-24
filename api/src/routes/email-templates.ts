@@ -27,7 +27,7 @@ app.get("/:id/email-template", async (c) => {
 		.maybeSingle();
 
 	if (error) return c.json({ error: error.message }, 500);
-	if (!data) return c.json({ error: "No template" }, 404);
+	if (!data) return c.json(null, 200);
 	return c.json(data);
 });
 

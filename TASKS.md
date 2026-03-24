@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v19 — Supabase Pro + SMTP + token refresh fix)
+**Last updated:** March 23, 2026 (v20 — Sprint 2 P1: dashboard overview, fan filtering, CSV export)
 **Current phase:** Sprint 2 — Follow-Up & Analytics
-**Sprint:** Sprint 2 in progress — P0 complete
-**Next up:** Dashboard overview, fan list with filtering, CSV export
+**Sprint:** Sprint 2 in progress — P0 + P1 (dashboard, fan list, CSV) complete
+**Next up:** Telnyx toll-free verification submission (manual), then P2 stretch goals
 
 ---
 
@@ -597,29 +597,36 @@ Run ADR validation tasks before committing to the stack.
 
 ### P1
 
-- [ ] **Dashboard overview**
-  - Total fan count
-  - Recent captures (last 7 days)
-  - Top-performing pages
-  - Growth over time
+- [x] **Dashboard overview** *(done 2026-03-23)*
+  - Live stat cards (Total Fans, Capture Pages, This Week) wired to `/api/analytics`
+  - Growth-over-time area chart (last 30 days, Recharts)
+  - Top 5 performing pages with progress bars
+  - Recent captures table (last 10, compact view)
+  - Empty state with "Get Started" CTA when no fans yet
   - *Acceptance:* Artist's home dashboard shows at-a-glance metrics.
 
-- [ ] **Fan list with filtering**
-  - Filter by: capture page, date range, capture method
-  - Search by email
-  - TanStack Table with column sorting
+- [x] **Fan list with filtering** *(done 2026-03-23)*
+  - Filter by: capture page (dropdown), date range (date inputs), capture method (dropdown)
+  - Search by email (real-time text input)
+  - Active filter badges with individual clear buttons
+  - Result count displayed when filters active
+  - API supports all filter params: `page_id`, `method`, `date_from`, `date_to`, `search`
   - *Acceptance:* Artist can filter their fan list to find fans from a specific gig or date.
 
-- [ ] **CSV export**
-  - Export filtered or full fan list as CSV
-  - Includes: email, capture date, source page, capture method
+- [x] **CSV export** *(done 2026-03-23)*
+  - `GET /captures/export` endpoint returns CSV with same filter support as list endpoint
+  - Export button on fan list page, respects current filters
+  - Columns: Email, Page, Method, Date
   - *Acceptance:* Downloaded CSV opens correctly in Excel/Sheets with all fields.
 
 - [ ] **Submit Telnyx toll-free verification (EARLY — Sprint 3 critical path)**
-  - Create Telnyx account, provision toll-free number (833 or 844 prefix)
-  - Enable SMS capability ($0.10/month add-on)
-  - Submit toll-free verification immediately — 3–15 business day approval window
-  - This runs in parallel with Sprint 2 dev work. Zero cost. Removes Sprint 3 timing risk.
+  - [ ] Create account at telnyx.com — sign up, verify email
+  - [ ] Add payment method (credit card required before provisioning numbers)
+  - [ ] Buy a toll-free number — Numbers → Search, filter by toll-free (833 or 844 prefix, ~$1/month)
+  - [ ] Enable SMS on the number — in the number's settings, add SMS capability ($0.10/month add-on)
+  - [ ] Create a Messaging Profile — this is where the webhook URL goes later (`https://api.afterset.net/webhooks/sms`)
+  - [ ] Submit toll-free verification — provide: business name, use case ("fan engagement — fans text a keyword to receive a link to an artist's capture page"), estimated monthly volume, sample message content
+  - 3–15 business day approval window. Runs in parallel with Sprint 2 dev work. Removes Sprint 3 timing risk.
   - *Acceptance:* Verification submitted. Number provisioned. Approval pending.
 
 ### P2

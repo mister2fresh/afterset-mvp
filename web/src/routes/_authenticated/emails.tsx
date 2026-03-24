@@ -50,12 +50,8 @@ function EmailsPage() {
 			if (!pages?.length) return [];
 			const results = await Promise.all(
 				pages.map(async (p) => {
-					try {
-						const t = await api.get<EmailTemplate>(`/capture-pages/${p.id}/email-template`);
-						return { page: p, template: t };
-					} catch {
-						return { page: p, template: null };
-					}
+					const t = await api.get<EmailTemplate | null>(`/capture-pages/${p.id}/email-template`);
+					return { page: p, template: t };
 				}),
 			);
 			return results;

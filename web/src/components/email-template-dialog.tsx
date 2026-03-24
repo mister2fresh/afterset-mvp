@@ -79,13 +79,7 @@ export function EmailTemplateDialog({
 
 	const { data: existing, isLoading } = useQuery({
 		queryKey,
-		queryFn: async () => {
-			try {
-				return await api.get<EmailTemplate>(`/capture-pages/${pageId}/email-template`);
-			} catch {
-				return null;
-			}
-		},
+		queryFn: () => api.get<EmailTemplate | null>(`/capture-pages/${pageId}/email-template`),
 		enabled: open,
 	});
 
@@ -338,12 +332,9 @@ export function EmailTemplateBadge({ pageId }: { pageId: string }) {
 	const { data } = useQuery({
 		queryKey: ["email-template-status", pageId],
 		queryFn: async () => {
-			try {
-				const t = await api.get<EmailTemplate>(`/capture-pages/${pageId}/email-template`);
-				return t.is_active ? "active" : "draft";
-			} catch {
-				return "none";
-			}
+			const t = await api.get<EmailTemplate | null>(`/capture-pages/${pageId}/email-template`);
+			if (!t) return "none";
+			return t.is_active ? "active" : "draft";
 		},
 	});
 

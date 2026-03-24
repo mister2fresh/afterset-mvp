@@ -43,9 +43,11 @@ type SortDir = "asc" | "desc";
 export function CapturesTable({
 	rows,
 	showPageColumn = true,
+	compact = false,
 }: {
 	rows: CaptureRow[];
 	showPageColumn?: boolean;
+	compact?: boolean;
 }) {
 	const [sortKey, setSortKey] = useState<SortKey>("captured_at");
 	const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -73,54 +75,70 @@ export function CapturesTable({
 			<TableHeader>
 				<TableRow>
 					<TableHead>
-						<SortButton
-							active={sortKey === "email"}
-							dir={sortDir}
-							onClick={() => toggleSort("email")}
-						>
-							Email
-						</SortButton>
+						{compact ? (
+							"Email"
+						) : (
+							<SortButton
+								active={sortKey === "email"}
+								dir={sortDir}
+								onClick={() => toggleSort("email")}
+							>
+								Email
+							</SortButton>
+						)}
 					</TableHead>
 					{showPageColumn && (
 						<TableHead>
-							<SortButton
-								active={sortKey === "page_title"}
-								dir={sortDir}
-								onClick={() => toggleSort("page_title")}
-							>
-								Page
-							</SortButton>
+							{compact ? (
+								"Page"
+							) : (
+								<SortButton
+									active={sortKey === "page_title"}
+									dir={sortDir}
+									onClick={() => toggleSort("page_title")}
+								>
+									Page
+								</SortButton>
+							)}
 						</TableHead>
 					)}
-					<TableHead>Method</TableHead>
+					{!compact && <TableHead>Method</TableHead>}
 					<TableHead>
-						<SortButton
-							active={sortKey === "captured_at"}
-							dir={sortDir}
-							onClick={() => toggleSort("captured_at")}
-						>
-							Date
-						</SortButton>
+						{compact ? (
+							"Date"
+						) : (
+							<SortButton
+								active={sortKey === "captured_at"}
+								dir={sortDir}
+								onClick={() => toggleSort("captured_at")}
+							>
+								Date
+							</SortButton>
+						)}
 					</TableHead>
 				</TableRow>
 			</TableHeader>
 			<TableBody>
 				{sorted.map((row) => (
 					<TableRow key={row.id}>
-						<TableCell className="font-medium">{row.email}</TableCell>
+						<TableCell className={compact ? "text-sm" : "font-medium"}>{row.email}</TableCell>
 						{showPageColumn && (
-							<TableCell>
+							<TableCell className={compact ? "text-sm" : ""}>
 								<Link to="/pages" className="text-electric-blue hover:underline">
 									{row.page_title}
 								</Link>
 							</TableCell>
 						)}
-						<TableCell>
-							<Badge variant={METHOD_VARIANTS[row.entry_method] ?? "secondary"}>
-								{METHOD_LABELS[row.entry_method] ?? row.entry_method}
-							</Badge>
+						{!compact && (
+							<TableCell>
+								<Badge variant={METHOD_VARIANTS[row.entry_method] ?? "secondary"}>
+									{METHOD_LABELS[row.entry_method] ?? row.entry_method}
+								</Badge>
+							</TableCell>
+						)}
+						<TableCell className="text-muted-foreground">
+							{compact ? formatDateShort(row.captured_at) : formatDate(row.captured_at)}
 						</TableCell>
-						<TableCell className="text-muted-foreground">{formatDate(row.captured_at)}</TableCell>
 					</TableRow>
 				))}
 			</TableBody>
@@ -159,4 +177,9 @@ function formatDate(iso: string): string {
 		hour: "numeric",
 		minute: "2-digit",
 	});
+}
+
+function formatDateShort(iso: string): string {
+	const d = new Date(iso);
+	return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

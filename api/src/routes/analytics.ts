@@ -90,7 +90,13 @@ app.get("/", async (c) => {
 
 	const pageIds = (pages ?? []).map((p) => p.id);
 	if (pageIds.length === 0) {
-		return c.json({ total_fans: 0, total_pages: 0, this_week: 0, pages: [] });
+		return c.json({
+			total_fans: 0,
+			total_pages: 0,
+			this_week: 0,
+			pages: [],
+			daily: [],
+		});
 	}
 
 	const { data: events } = await supabase
@@ -123,11 +129,33 @@ app.get("/", async (c) => {
 		}))
 		.sort((a, b) => b.captures - a.captures);
 
+	// Daily time series (last 30 days) for growth chart
+	const dailyCounts = new Map<string, number>();
+	const thirtyDaysAgo = new Date();
+	thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+	thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+	for (let i = 0; i < 30; i++) {
+		const d = new Date(thirtyDaysAgo);
+		d.setDate(d.getDate() + i);
+		dailyCounts.set(d.toISOString().slice(0, 10), 0);
+	}
+
+	for (const row of rows) {
+		const date = row.captured_at.slice(0, 10);
+		if (dailyCounts.has(date)) {
+			dailyCounts.set(date, dailyCounts.get(date)! + 1);
+		}
+	}
+
+	const daily = [...dailyCounts.entries()].map(([date, count]) => ({ date, count }));
+
 	return c.json({
 		total_fans: rows.length,
 		total_pages: pageIds.length,
 		this_week: thisWeek,
 		pages: pageStats,
+		daily,
 	});
 });
 

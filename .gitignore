@@ -6,3 +6,4 @@ dist
 *.tsbuildinfo
 .wrangler
 .routeTree.gen.ts
+.claude
