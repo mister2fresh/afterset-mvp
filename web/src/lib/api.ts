@@ -1,16 +1,30 @@
 import { supabase } from "./supabase";
 
-async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function getAccessToken(): Promise<string> {
 	const {
 		data: { session },
 	} = await supabase.auth.getSession();
 	if (!session) throw new Error("Not authenticated");
 
+	// If token expires within 60s, force a refresh
+	const expiresAt = session.expires_at ?? 0;
+	if (expiresAt - Date.now() / 1000 < 60) {
+		const { data } = await supabase.auth.refreshSession();
+		if (!data.session) throw new Error("Not authenticated");
+		return data.session.access_token;
+	}
+
+	return session.access_token;
+}
+
+async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> {
+	const token = await getAccessToken();
+
 	const res = await fetch(`/api${path}`, {
 		...options,
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${session.access_token}`,
+			Authorization: `Bearer ${token}`,
 			...options.headers,
 		},
 	});
@@ -52,13 +66,10 @@ export async function uploadToSignedUrl(
 }
 
 async function fetchApiBlob(path: string): Promise<Blob> {
-	const {
-		data: { session },
-	} = await supabase.auth.getSession();
-	if (!session) throw new Error("Not authenticated");
+	const token = await getAccessToken();
 
 	const res = await fetch(`/api${path}`, {
-		headers: { Authorization: `Bearer ${session.access_token}` },
+		headers: { Authorization: `Bearer ${token}` },
 	});
 
 	if (!res.ok) throw new Error(`API error ${res.status}`);

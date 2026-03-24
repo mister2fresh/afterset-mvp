@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v18 — Follow-up email template editor)
+**Last updated:** March 23, 2026 (v19 — Supabase Pro + SMTP + token refresh fix)
 **Current phase:** Sprint 2 — Follow-Up & Analytics
-**Sprint:** Sprint 2 in progress
-**Next up:** Delayed email trigger via pg_cron, per-page analytics
+**Sprint:** Sprint 2 in progress — P0 complete
+**Next up:** Dashboard overview, fan list with filtering, CSV export
 
 ---
 
@@ -345,16 +345,12 @@ Full stack: Vite + React + Hono + Cloudflare Pages + Railway (per ADR-004).
   - Defined as Tailwind v4 `@theme` vars in `web/src/index.css`
 - [x] Create `CLAUDE.md` for the app repo *(completed 2026-03-22)*
   - Project structure, commands, design tokens, formatting conventions, MCP rules
-- [~] **Configure Supabase project** ⛔ *In progress: creating free plan for dev*
-  - [ ] Create Supabase **Free** project for development
-  - [ ] Provide to Claude: project URL + anon key + service role key (Settings → API)
-  - [ ] Upgrade to Supabase **Pro** before launch — required for:
-    - pg_cron + pg_net (Sprint 2 delayed emails)
-    - Custom SMTP via Resend (Sprint 2 — free tier limited to 2 emails/hr)
-    - Higher connection/compute limits for production traffic
-  - [ ] Configure custom SMTP with Resend credentials *(Pro only, defer to Sprint 2)*
-  - [ ] Set up `send.afterset.net` domain in Resend: SPF, DKIM, DMARC records *(defer to Sprint 2)*
-  - [ ] Register Google Postmaster Tools for `send.afterset.net` *(defer to Sprint 2)*
+- [x] **Configure Supabase project** *(completed 2026-03-23)*
+  - [x] Create Supabase project and configure `.env` files with URL + anon key + service role key
+  - [x] Upgrade to Supabase **Pro** *(completed 2026-03-23)*
+  - [x] Configure custom SMTP with Resend credentials *(completed 2026-03-23 — magic link sends from noreply@send.afterset.net)*
+  - [x] Set up `send.afterset.net` domain in Resend: SPF, DKIM, DMARC records *(completed)*
+  - [x] Register Google Postmaster Tools for `send.afterset.net` *(completed 2026-03-23)*
 - [~] **Configure Cloudflare** *In progress*
   - [x] Add `afterset.net` to Cloudflare (Free plan), import iCloud email DNS records (MX, SPF, DKIM, apple-domain)
   - [x] Set up R2 bucket `afterset-capture-pages` — 4 test pages already uploaded
@@ -583,7 +579,7 @@ Run ADR validation tasks before committing to the stack.
   - Live email preview in sandboxed iframe
   - *Acceptance:* Artist creates and previews a follow-up email template tied to a capture page. Incentive download link works and expires after 7 days.
 
-- [ ] **Delayed email trigger via pg_cron**
+- [x] **Delayed email trigger via pg_cron** *(done 2026-03-23)*
   - Configurable delay per capture page: immediate, 1 hour, next morning (9am in artist's timezone)
   - **Artist timezone stored in profile and used in `send_at` calculation** — `NOW()` is UTC, naive date math sends "next morning" emails at 1am Pacific
   - pg_cron polls `pending_emails` every 60 seconds: `WHERE send_at <= NOW() AND status = 'pending' LIMIT 50`
@@ -593,7 +589,7 @@ Run ADR validation tasks before committing to the stack.
   - **Log latency on the email send endpoint** — catch intermittent Railway slowness that pg_net timeouts might mask
   - *Acceptance:* Fan captured at 9pm Pacific, email arrives at 9am Pacific next morning (if configured). Failed sends retry. Latency logged.
 
-- [ ] **Per-page analytics (dashboard)**
+- [x] **Per-page analytics (dashboard)** *(done 2026-03-23)*
   - Captures per page/gig
   - Capture method breakdown (QR vs. direct link — text-to-join added in Sprint 3)
   - Time-series chart of captures (Recharts)
