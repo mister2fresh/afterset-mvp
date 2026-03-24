@@ -23,7 +23,10 @@ ALTER TABLE capture_events
 
 -- Fix RLS: route through fan_captures → artists instead of capture_pages
 -- This handles NULL capture_page_id naturally
-CREATE OR REPLACE POLICY "capture_events_select_own" ON capture_events
+-- DROP + CREATE runs inside the migration transaction — no gap visible to other sessions
+DROP POLICY "capture_events_select_own" ON capture_events;
+
+CREATE POLICY "capture_events_select_own" ON capture_events
 	FOR SELECT USING (
 		fan_capture_id IN (
 			SELECT fc.id FROM fan_captures fc
