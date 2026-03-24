@@ -24,12 +24,30 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getUser, signOut } from "@/lib/auth";
+import { api } from "@/lib/api";
+import { clearUser, getUser, signOut } from "@/lib/auth";
 
 export const Route = createFileRoute("/_authenticated")({
-	beforeLoad: ({ context }) => {
+	beforeLoad: async ({ context }) => {
 		if (!context.auth.getUser()) {
 			throw redirect({ to: "/login" });
+		}
+
+		let settings: { onboarding_completed: boolean };
+		try {
+			settings = await context.queryClient.fetchQuery({
+				queryKey: ["settings"],
+				queryFn: () => api.get<{ onboarding_completed: boolean }>("/settings"),
+				staleTime: 1000 * 60 * 5,
+			});
+		} catch {
+			clearUser();
+			context.queryClient.removeQueries({ queryKey: ["settings"] });
+			throw redirect({ to: "/login" });
+		}
+
+		if (!settings.onboarding_completed) {
+			throw redirect({ to: "/onboarding" });
 		}
 	},
 	component: AuthenticatedLayout,

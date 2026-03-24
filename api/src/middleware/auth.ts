@@ -6,6 +6,7 @@ export type Artist = {
 	auth_id: string;
 	email: string;
 	name: string;
+	onboarding_completed: boolean;
 };
 
 export type AuthEnv = { Variables: { artist: Artist } };
@@ -28,7 +29,7 @@ export const auth = createMiddleware<AuthEnv>(async (c, next) => {
 
 	const { data: artist } = await supabase
 		.from("artists")
-		.select("id, auth_id, email, name")
+		.select("id, auth_id, email, name, onboarding_completed")
 		.eq("auth_id", user.id)
 		.single();
 
@@ -44,7 +45,7 @@ export const auth = createMiddleware<AuthEnv>(async (c, next) => {
 			email: user.email ?? "",
 			name: user.email?.split("@")[0] ?? "",
 		})
-		.select("id, auth_id, email, name")
+		.select("id, auth_id, email, name, onboarding_completed")
 		.single();
 
 	if (insertErr || !created) {

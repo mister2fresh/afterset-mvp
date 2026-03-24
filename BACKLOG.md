@@ -20,6 +20,10 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 
 - [ ] **NFC tap-to-capture** (v1.2)
 
+## Onboarding
+
+- [ ] **Add email setup step to onboarding wizard** — after page creation, guide artist through configuring their first follow-up email before the success screen
+
 ## Dashboard & Analytics
 
 - [ ] **Gig calendar with auto-generated capture pages** (Layer 2)

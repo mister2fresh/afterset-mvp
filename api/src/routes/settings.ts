@@ -11,7 +11,7 @@ app.get("/", async (c) => {
 
 	const { data, error } = await supabase
 		.from("artists")
-		.select("id, name, email, timezone")
+		.select("id, name, email, timezone, onboarding_completed")
 		.eq("id", artist.id)
 		.single();
 
@@ -22,6 +22,7 @@ app.get("/", async (c) => {
 const updateSchema = z.object({
 	name: z.string().min(1).max(100).optional(),
 	timezone: z.string().min(1).max(50).optional(),
+	onboarding_completed: z.boolean().optional(),
 });
 
 // PATCH /settings — update artist profile
@@ -35,7 +36,7 @@ app.patch("/", async (c) => {
 		.from("artists")
 		.update(parsed.data)
 		.eq("id", artist.id)
-		.select("id, name, email, timezone")
+		.select("id, name, email, timezone, onboarding_completed")
 		.single();
 
 	if (error) return c.json({ error: error.message }, 500);

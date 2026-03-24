@@ -7,7 +7,7 @@ Fan-capture SaaS for gigging musicians.
 ```
 web/                      # Vite + React SPA (artist dashboard)
   src/routes/             # TanStack Router file-based routes
-  src/components/         # Shared components (captures-table, email-template-dialog)
+  src/components/         # Shared components (captures-table, email-template-dialog, page-form)
   src/lib/                # Shared utilities (supabase client, api client, auth)
 api/                      # Hono API server (Node.js)
   src/routes/             # Hono route modules (capture-pages, email-templates, captures, email, etc.)
@@ -49,7 +49,7 @@ pnpm-workspace.yaml       # pnpm workspace definition
 
 - **Frontend:** Vite + React 19, TanStack Router (file-based) + TanStack Query, Tailwind CSS v4, Recharts
 - **Backend:** Hono on Node.js, Supabase client (`service_role` for fan writes, RLS for artist dashboard)
-- **Auth:** Supabase Auth (magic link + OAuth), client-side via `supabase.auth.getSession()`, route protection via TanStack Router `beforeLoad`
+- **Auth:** Supabase Auth (magic link + OAuth), client-side via `supabase.auth.getSession()`, route protection via TanStack Router `beforeLoad`. New artists redirected to `/onboarding` until `onboarding_completed` is true (checked in `_authenticated` layout's `beforeLoad` via settings API).
 - **Background jobs:** Supabase pg_cron for delayed follow-up emails
 - **SMS:** Telnyx (Twilio is fallback), GSM-7 encoding only in auto-replies
 - **Email:** Resend via `EmailService` abstraction — suppression checks, RFC 8058 unsubscribe, CAN-SPAM footer, webhook handler for bounces/complaints/opens (open tracking via `email.opened` webhook, stored as `opened_at` on `pending_emails`)

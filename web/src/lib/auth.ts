@@ -28,6 +28,10 @@ export function getUser(): AuthUser | null {
 	return currentUser;
 }
 
+export function clearUser(): void {
+	currentUser = null;
+}
+
 export async function signInWithMagicLink(email: string): Promise<void> {
 	const { error } = await supabase.auth.signInWithOtp({
 		email,

@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 23, 2026 (v22 — Sprint 2 P2: drip campaigns)
-**Current phase:** Sprint 2 — Follow-Up & Analytics
-**Sprint:** Sprint 2 in progress — P0 + P1 + P2 complete
-**Next up:** Telnyx toll-free verification (manual), then Sprint 3
+**Last updated:** March 24, 2026 (v23 — Sprint 3 P1: onboarding flow)
+**Current phase:** Sprint 3 — Text-to-Join + Polish
+**Sprint:** Sprint 3 in progress — P1 onboarding complete
+**Next up:** Telnyx toll-free verification (manual), keyword management (P0), error handling polish (P2)
 
 ---
 
@@ -701,14 +701,15 @@ Run ADR validation tasks before committing to the stack.
 
 ### P1
 
-- [ ] **Capture method attribution**
+- [x] **Capture method attribution** *(already implemented in Sprint 2)*
   - Fan captures tagged with method: QR (`?v=q`), text-to-join (`?v=s`), direct link (`?v=d`)
   - Analytics updated to reflect all three methods
   - *Acceptance:* Analytics breakdown shows all capture methods accurately.
 
-- [ ] **Onboarding flow**
-  - Guided setup for new artists: create first page → generate QR → configure follow-up email
-  - Progressive disclosure — don't overwhelm
+- [x] **Onboarding flow** *(done 2026-03-24)*
+  - 3-step full-screen wizard: profile (name + timezone) → create first page (full PageForm) → success (QR download + live preview)
+  - `onboarding_completed` boolean on artists table; auth layout redirects to `/onboarding` if false
+  - PageForm extracted to shared component (`web/src/components/page-form.tsx`) used by both onboarding and pages route
   - *Acceptance:* New artist completes onboarding and has a working capture page within 5 minutes.
 
 - [ ] **Pricing / billing integration (Stripe)** *(blocked by: Business Phase B — ToS + Privacy Policy must be published)*
