@@ -7,7 +7,7 @@ Fan-capture SaaS for gigging musicians.
 ```
 web/                      # Vite + React SPA (artist dashboard)
   src/routes/             # TanStack Router file-based routes
-  src/components/         # Shared components (captures-table, email-template-dialog, page-form)
+  src/components/         # Shared components (captures-table, email-template-dialog, keyword-dialog, page-form)
   src/lib/                # Shared utilities (supabase client, api client, auth)
 api/                      # Hono API server (Node.js)
   src/routes/             # Hono route modules (capture-pages, email-templates, captures, email, etc.)
@@ -54,6 +54,7 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **SMS:** Telnyx (Twilio is fallback), GSM-7 encoding only in auto-replies
 - **Email:** Resend via `EmailService` abstraction — suppression checks, RFC 8058 unsubscribe, CAN-SPAM footer, webhook handler for bounces/complaints/opens (open tracking via `email.opened` webhook, stored as `opened_at` on `pending_emails`)
 - **Email sequences (drip campaigns):** Multiple templates per capture page via `sequence_order` (0–4, max 5 steps). Sequence CRUD at `/api/capture-pages/:id/email-sequence` (GET returns array) and `/api/capture-pages/:id/email-sequence/:order` (PUT/DELETE + preview POST). Step 0 uses `delay_mode` (immediate/1_hour/next_morning), steps 1+ use `delay_days` (sent at 9am artist timezone). Legacy singular endpoints (`/email-template`) still work targeting step 0. `pending_emails.email_template_id` links each queued email to its template; `UNIQUE(fan_capture_id, email_template_id)` prevents resubmit duplicates.
+- **SMS keywords:** `sms_keywords` table (separate from `capture_pages`) with `UNIQUE(keyword, phone_number)` for namespace isolation. CRUD at `/api/capture-pages/:id/keyword` (GET/PUT/DELETE) and `/api/capture-pages/:id/keyword/check` (POST, returns availability + suggestions). Batch fetch via `GET /api/capture-pages/keywords`. Keywords stored uppercase, 2–20 chars alphanumeric, reserved words (STOP/HELP/etc.) blocked at API level. Phone number from `TELNYX_PHONE_NUMBER` env var (placeholder until toll-free verification completes).
 - **Captures API:** `GET /api/captures` supports query params: `page_id`, `method`, `date_from`, `date_to`, `search` (email ilike). `GET /api/captures/export` returns CSV with same filters.
 - **Analytics API:** `GET /api/analytics` returns `total_fans`, `total_pages`, `this_week`, `pages[]` (ranked, with `emails_sent`/`emails_opened`/`open_rate`), `daily[]` (last 30 days). Per-page: `GET /api/capture-pages/:id/analytics` includes `email: { sent, opened, open_rate, steps[] }` with per-step breakdown.
 

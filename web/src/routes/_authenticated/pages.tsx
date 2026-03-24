@@ -5,6 +5,7 @@ import {
 	ExternalLink,
 	Loader2,
 	Mail,
+	MessageSquare,
 	MoreVertical,
 	Pencil,
 	Plus,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { EmailTemplateBadge, EmailTemplateDialog } from "@/components/email-template-dialog";
+import { KeywordDialog } from "@/components/keyword-dialog";
 import { type CapturePage, fileTypeIcon, PageForm } from "@/components/page-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,9 +54,27 @@ function useCaptureCounts() {
 	});
 }
 
+type KeywordEntry = { keyword: string; phone_number: string };
+
+function useKeywords() {
+	return useQuery({
+		queryKey: ["keywords"],
+		queryFn: () => api.get<Record<string, KeywordEntry>>("/capture-pages/keywords"),
+	});
+}
+
+function formatPhone(phone: string): string {
+	const digits = phone.replace(/\D/g, "");
+	if (digits.length === 11 && digits[0] === "1") {
+		return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+	}
+	return phone;
+}
+
 function PagesPage() {
 	const { data: pages, isLoading } = useCapturePages();
 	const { data: counts } = useCaptureCounts();
+	const { data: keywords } = useKeywords();
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editingPage, setEditingPage] = useState<CapturePage | null>(null);
 
@@ -82,6 +102,7 @@ function PagesPage() {
 							key={page.id}
 							page={page}
 							captureCount={counts?.[page.id] ?? 0}
+							keyword={keywords?.[page.id] ?? null}
 							onEdit={() => setEditingPage(page)}
 						/>
 					))}
@@ -155,15 +176,18 @@ async function downloadQr(pageId: string, slug: string) {
 function PageCard({
 	page,
 	captureCount,
+	keyword,
 	onEdit,
 }: {
 	page: CapturePage;
 	captureCount: number;
+	keyword: KeywordEntry | null;
 	onEdit: () => void;
 }) {
 	const queryClient = useQueryClient();
 	const qrUrl = useQrPreview(page.id);
 	const [emailOpen, setEmailOpen] = useState(false);
+	const [keywordOpen, setKeywordOpen] = useState(false);
 
 	const deleteMutation = useMutation({
 		mutationFn: () => api.delete(`/capture-pages/${page.id}`),
@@ -200,6 +224,10 @@ function PageCard({
 							<Mail />
 							Follow-Up Email
 						</DropdownMenuItem>
+						<DropdownMenuItem onClick={() => setKeywordOpen(true)}>
+							<MessageSquare />
+							Text-to-Join Keyword
+						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => downloadQr(page.id, page.slug)}>
 							<Download />
 							Download QR
@@ -217,6 +245,13 @@ function PageCard({
 				hasIncentive={!!page.incentive_file_name}
 				open={emailOpen}
 				onOpenChange={setEmailOpen}
+			/>
+			<KeywordDialog
+				pageId={page.id}
+				pageTitle={page.title}
+				currentKeyword={keyword?.keyword ?? null}
+				open={keywordOpen}
+				onOpenChange={setKeywordOpen}
 			/>
 			<CardContent className="space-y-3">
 				{qrUrl && (
@@ -236,6 +271,28 @@ function PageCard({
 							Download QR
 						</Button>
 					</div>
+				)}
+				{keyword ? (
+					<button
+						type="button"
+						onClick={() => setKeywordOpen(true)}
+						className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-left text-xs transition-colors hover:border-honey-gold/50"
+					>
+						<MessageSquare className="size-3.5 shrink-0 text-honey-gold" />
+						<span>
+							Text <span className="font-mono font-bold">{keyword.keyword}</span> to{" "}
+							{formatPhone(keyword.phone_number)}
+						</span>
+					</button>
+				) : (
+					<button
+						type="button"
+						onClick={() => setKeywordOpen(true)}
+						className="flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-honey-gold"
+					>
+						<MessageSquare className="size-3.5" />
+						Set up text-to-join
+					</button>
 				)}
 				{page.value_exchange_text && (
 					<p className="text-sm text-muted-foreground line-clamp-2">{page.value_exchange_text}</p>

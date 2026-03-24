@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 24, 2026 (v23 — Sprint 3 P1: onboarding flow)
+**Last updated:** March 24, 2026 (v24 — Sprint 3 P0: keyword management)
 **Current phase:** Sprint 3 — Text-to-Join + Polish
-**Sprint:** Sprint 3 in progress — P1 onboarding complete
-**Next up:** Telnyx toll-free verification (manual), keyword management (P0), error handling polish (P2)
+**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete
+**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1), error handling polish (P2)
 
 ---
 
@@ -681,7 +681,7 @@ Run ADR validation tasks before committing to the stack.
     - Consent is artist-specific — opt-in for Artist A cannot be used for Artist B
   - *Acceptance:* Fan texts keyword, receives link within 5 seconds, opens capture page, submits email — full flow works. All TCPA requirements verified (see compliance sign-off below).
 
-- [ ] **Keyword management (dashboard)**
+- [x] **Keyword management (dashboard)** *(done 2026-03-24)*
   - Artist claims keyword per capture page (typically stage name or band abbreviation)
   - Case-insensitive (stored uppercase), 2–20 chars, alphanumeric only
   - Reserved keywords blocked (STOP, HELP, END, CANCEL, QUIT, UNSUBSCRIBE, START, INFO, YES, NO)
@@ -775,7 +775,6 @@ These are not scheduled. Pull from here once Sprints 1–3 ship.
 
 - [ ] Kit / Mailchimp CSV export + direct integration (v1.1)
 - [ ] NFC tap-to-capture (v1.2)
-- [ ] Multi-email sequences — 2–3 email drip (v1.5)
 - [ ] Gig calendar with auto-generated capture pages (Layer 2)
 - [ ] Financial tracking alongside fan data (Layer 3)
 - [ ] AI-powered "suggest email copy" button (Hono API route, rate limited by tier)

@@ -12,6 +12,7 @@ import emailTemplates from "./routes/email-templates.js";
 import incentive from "./routes/incentive.js";
 import sendBatch from "./routes/send-batch.js";
 import settings from "./routes/settings.js";
+import smsKeywords from "./routes/sms-keywords.js";
 
 const app = new Hono();
 
@@ -57,6 +58,7 @@ app.route("/api/capture-pages", capturePages);
 app.route("/api/capture-pages", incentive);
 app.route("/api/capture-pages", build);
 app.route("/api/capture-pages", emailTemplates);
+app.route("/api/capture-pages", smsKeywords);
 app.route("/api/capture-pages", analytics);
 
 app.use("/api/analytics", auth);
