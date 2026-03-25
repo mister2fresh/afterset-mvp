@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 24, 2026 (v30 — broadcast save/schedule UX fixes)
-**Current phase:** Sprint 3 — Text-to-Join + Polish
-**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped, broadcast campaigns shipped, onboarding email step shipped, high-impact UI polish shipped, broadcast archive shipped, medium/low UI polish shipped, broadcast UX fixes shipped
-**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1)
+**Last updated:** March 25, 2026 (v33 — Sprint 4 mobile UX: bottom nav + dialog optimization shipped)
+**Current phase:** Sprint 4 — Mobile-First + PWA
+**Sprint:** Sprint 4 in progress — bottom tab navigation shipped, mobile-optimized dialogs shipped
+**Next up:** Card view for captures table (P0), touch target audit (P0), responsive typography pass (P0)
 
 ---
 
@@ -718,6 +718,12 @@ Run ADR validation tasks before committing to the stack.
   - Stripe Checkout for upgrades
   - *Acceptance:* Free user hits limit, sees upgrade prompt. Payment works. Pro features unlock.
 
+- [ ] **Manual QA — full feature clickthrough** *(checklist: `QA-CHECKLIST.md`)*
+  - 12-section end-to-end test covering: auth, onboarding, dashboard, capture pages, email sequences, broadcasts, fans, analytics, settings, fan-facing capture page, cross-cutting (nav, responsive, errors, loading), QR code flow
+  - Excludes SMS inbound (not yet live)
+  - Bug log table at bottom of checklist for tracking issues
+  - *Acceptance:* All checkboxes pass. Bugs logged and triaged.
+
 - [ ] **Landing page update**
   - Swap waitlist CTA for signup/login CTA
   - Update copy to reflect live product
@@ -811,7 +817,7 @@ These are not scheduled. Pull from here once Sprints 1–3 ship.
 - [ ] AI-powered "suggest email copy" button (Hono API route, rate limited by tier)
 - [ ] Custom domains for capture pages (CF4SaaS at 200+ artists)
 - [ ] Team / band member accounts (Band tier)
-- [ ] Mobile native app consideration
+- [x] Mobile native app consideration — see Sprint 4 below
 - [ ] MCP task server — build when file-based tracking outgrows itself
 - [ ] Per-artist custom sending domains (Resend Scale at ~200 artists)
 - [ ] SES migration for cost optimization (at 500K–1M emails/month)
@@ -820,6 +826,36 @@ These are not scheduled. Pull from here once Sprints 1–3 ship.
 - [ ] Link-based incentives — artist pastes a URL (mint page, exclusive video, playlist) instead of uploading a file
 - [ ] Discount code incentives — artist enters a code + optional storefront URL, delivered to fan after capture
 - [ ] NFT / crypto incentives — claim links, token gates, allowlist spots (Sound.xyz, Catalog, Mint Songs integration)
+
+---
+
+## Sprint 4 — Mobile-First + PWA
+
+**Goal:** Make the dashboard mobile-optimized and installable as a PWA, with a path to App Store / Play Store via Capacitor.
+
+### Phase 1 — Mobile UX (P0)
+
+- [x] **Bottom tab navigation** — Replace hamburger sidebar with persistent 5-tab bottom bar on mobile (Overview, Pages, Emails, Fans, Analytics). Settings moves to profile avatar in header. Sidebar remains on desktop. ✅ 2026-03-25
+- [ ] **Card view for captures table** — On mobile (<768px), render captures/fans as stacked cards instead of horizontal-scroll table.
+- [ ] **Touch target audit** — Ensure all buttons, links, and interactive elements are ≥44px tap targets.
+- [x] **Mobile-optimized dialogs** — Full-screen sheets on mobile instead of centered dialogs (page form, email template editor, broadcast composer). ✅ 2026-03-25
+- [ ] **Responsive typography pass** — Verify text sizing, truncation, and readability on 320px–428px viewports.
+
+### Phase 2 — PWA Setup (P0)
+
+- [ ] **Web app manifest** — `manifest.json` with app name, icons (192/512px), `display: standalone`, theme color `#0a0e1a`, background color `#0a0e1a`.
+- [ ] **Service worker via vite-plugin-pwa** — Cache app shell + static assets for offline access. Runtime caching for API responses (stale-while-revalidate for dashboard data).
+- [ ] **Apple PWA meta tags** — `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, splash screen images.
+- [ ] **App icons** — Generate full icon set (favicon, apple-touch-icon, PWA icons) from Afterset logo.
+- [ ] **Install prompt** — Custom "Add to Home Screen" banner for first-time mobile visitors.
+
+### Phase 3 — App Store Distribution (P2, when ready)
+
+- [ ] **Add Capacitor** — `@capacitor/core` + `@capacitor/ios` + `@capacitor/android` to wrap PWA in native WebView.
+- [ ] **Push notifications** — `@capacitor/push-notifications` for new fan capture alerts, broadcast send confirmations.
+- [ ] **Native splash screen** — Capacitor splash screen plugin with Afterset branding.
+- [ ] **Apple Developer Account** — $99/yr, submit to App Store.
+- [ ] **Google Play Console** — $25 one-time, submit to Play Store.
 
 ---
 

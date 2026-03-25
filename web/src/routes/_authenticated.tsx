@@ -5,6 +5,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
@@ -24,6 +25,7 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { api } from "@/lib/api";
 import { clearUser, getUser, signOut } from "@/lib/auth";
 
@@ -53,22 +55,98 @@ export const Route = createFileRoute("/_authenticated")({
 	component: AuthenticatedLayout,
 });
 
-const navItems = [
+const tabItems = [
 	{ to: "/dashboard", label: "Overview", icon: LayoutDashboard },
-	{ to: "/pages", label: "Capture Pages", icon: QrCode },
+	{ to: "/pages", label: "Pages", icon: QrCode },
 	{ to: "/emails", label: "Emails", icon: Mail },
 	{ to: "/fans", label: "Fans", icon: Users },
 	{ to: "/analytics", label: "Analytics", icon: BarChart3 },
+] as const;
+
+const sidebarItems = [
+	...tabItems.map((item) => ({
+		...item,
+		label: item.to === "/pages" ? "Capture Pages" : item.label,
+	})),
 	{ to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
 function AuthenticatedLayout() {
 	const user = getUser();
 	const matchRoute = useMatchRoute();
+	const isMobile = useIsMobile();
 	const initials = user?.email?.slice(0, 2).toUpperCase() ?? "?";
 
 	async function handleSignOut() {
 		await signOut();
+	}
+
+	const currentLabel =
+		sidebarItems.find((item) => matchRoute({ to: item.to }))?.label ?? "Dashboard";
+
+	if (isMobile) {
+		return (
+			<div className="fixed inset-0 flex flex-col bg-background">
+				<header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+					<Link to="/dashboard">
+						<span className="font-display text-lg font-bold text-honey-gold">Afterset</span>
+					</Link>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<button
+								type="button"
+								className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							>
+								<Avatar className="size-8">
+									<AvatarFallback className="bg-honey-gold/20 text-honey-gold text-xs">
+										{initials}
+									</AvatarFallback>
+								</Avatar>
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" className="w-56">
+							<div className="px-2 py-1.5 text-sm text-muted-foreground truncate">
+								{user?.email}
+							</div>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem asChild>
+								<Link to="/settings">
+									<Settings />
+									<span>Settings</span>
+								</Link>
+							</DropdownMenuItem>
+							<DropdownMenuItem onClick={handleSignOut}>
+								<LogOut />
+								<span>Sign out</span>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</header>
+				<main className="min-h-0 flex-1 overflow-auto p-4">
+					<Outlet />
+				</main>
+				<nav className="shrink-0 border-t bg-sidebar">
+					<div className="flex h-14 items-center justify-around">
+						{tabItems.map((item) => {
+							const active = !!matchRoute({ to: item.to });
+							return (
+								<Link
+									key={item.to}
+									to={item.to}
+									className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] transition-colors ${
+										active ? "text-honey-gold" : "text-muted-foreground"
+									}`}
+								>
+									<item.icon className="size-5" />
+									<span>{item.label}</span>
+								</Link>
+							);
+						})}
+					</div>
+					<div className="h-[env(safe-area-inset-bottom)]" />
+				</nav>
+			</div>
+		);
 	}
 
 	return (
@@ -85,7 +163,7 @@ function AuthenticatedLayout() {
 							<SidebarGroupLabel>Menu</SidebarGroupLabel>
 							<SidebarGroupContent>
 								<SidebarMenu>
-									{navItems.map((item) => {
+									{sidebarItems.map((item) => {
 										const active = !!matchRoute({ to: item.to });
 										return (
 											<SidebarMenuItem key={item.to}>
@@ -138,9 +216,7 @@ function AuthenticatedLayout() {
 					<header className="flex h-14 items-center gap-2 border-b px-4">
 						<SidebarTrigger />
 						<Separator orientation="vertical" className="h-5" />
-						<h1 className="font-display text-sm font-semibold">
-							{navItems.find((item) => matchRoute({ to: item.to }))?.label ?? "Dashboard"}
-						</h1>
+						<h1 className="font-display text-sm font-semibold">{currentLabel}</h1>
 					</header>
 					<main className="flex-1 overflow-auto p-6">
 						<Outlet />

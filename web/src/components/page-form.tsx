@@ -487,7 +487,7 @@ export function PageForm({
 			<div className="space-y-4">
 				<Label>Theme</Label>
 				<CapturePagePreview form={form} />
-				<div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+				<div className="grid grid-cols-3 gap-2 sm:grid-cols-7">
 					{THEME_PRESETS.map((preset) => {
 						const isActive =
 							form.accent_color === preset.accent_color &&
@@ -695,7 +695,7 @@ export function PageForm({
 						<div key={p.key} className="flex items-center gap-2">
 							<Label
 								htmlFor={`stream-${p.key}`}
-								className="w-28 shrink-0 text-xs text-muted-foreground"
+								className="w-20 shrink-0 text-xs text-muted-foreground sm:w-28"
 							>
 								{p.label}
 							</Label>
@@ -731,7 +731,7 @@ export function PageForm({
 						<div key={p.key} className="flex items-center gap-2">
 							<Label
 								htmlFor={`social-${p.key}`}
-								className="w-28 shrink-0 text-xs text-muted-foreground"
+								className="w-20 shrink-0 text-xs text-muted-foreground sm:w-28"
 							>
 								{p.label}
 							</Label>

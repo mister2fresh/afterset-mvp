@@ -210,7 +210,7 @@ function SequenceStepEditor({
 			{order === 0 ? (
 				<div className="space-y-2">
 					<Label>Send Delay</Label>
-					<div className="grid grid-cols-3 gap-2">
+					<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
 						{DELAY_OPTIONS.map((opt) => {
 							const Icon = opt.icon;
 							const active = form.delay_mode === opt.value;
@@ -219,7 +219,7 @@ function SequenceStepEditor({
 									key={opt.value}
 									type="button"
 									onClick={() => setForm((f) => ({ ...f, delay_mode: opt.value }))}
-									className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${active ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
+									className={`flex items-center gap-2 rounded-lg border p-3 transition-colors sm:flex-col sm:items-center sm:gap-1.5 ${active ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
 								>
 									<Icon className="size-4" />
 									<span className="text-xs font-medium">{opt.label}</span>
@@ -263,7 +263,7 @@ function SequenceStepEditor({
 				</div>
 			)}
 
-			<div className="flex items-center gap-2">
+			<div className="flex flex-wrap items-center gap-2">
 				{existing && (
 					<Button
 						type="button"
@@ -374,7 +374,7 @@ export function EmailTemplateDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[85vh] overflow-y-auto scroll-shadows sm:max-w-lg">
+			<DialogContent className="sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle className="font-display flex items-center gap-2">
 						<Mail className="size-5" />

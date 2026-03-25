@@ -44,6 +44,8 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **Domain is `afterset.net`** (not .com) — email subdomain is `send.afterset.net`
 - **One email template per capture page** — stored in `email_templates` table, editable from page card dropdown or dedicated Emails tab
 - **Email templates are plain text** — rendered to HTML at send/preview time via `renderFollowUpHtml()`, no React Email dependency
+- **Mobile-first dashboard layout:** Below 768px (`useIsMobile()`), the sidebar is replaced with a fixed bottom tab bar (5 tabs) + header with avatar dropdown (Settings + Sign out). Desktop sidebar unchanged. Layout uses `fixed inset-0` to prevent nav scrolling.
+- **Dialogs are full-screen on mobile:** Base `DialogContent` fills viewport on `<640px`, centered with max-height on `sm:` and up. Individual dialogs set `sm:max-w-*` for desktop sizing only.
 
 ## Tech stack details
 

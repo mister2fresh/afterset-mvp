@@ -384,7 +384,7 @@ function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps)
 			: undefined;
 
 	const dialogContent = (
-		<DialogContent className="max-h-[85vh] overflow-y-auto scroll-shadows sm:max-w-lg">
+		<DialogContent className="sm:max-w-lg">
 			<DialogHeader>
 				<DialogTitle className="font-display">
 					{isCreate ? "Create Capture Page" : "Edit Capture Page"}

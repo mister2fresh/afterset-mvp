@@ -342,7 +342,7 @@ export function BroadcastComposeDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto scroll-shadows">
+			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>
 						{isDraft ? (broadcast ? "Edit Broadcast" : "New Broadcast") : "View Broadcast"}
@@ -568,7 +568,7 @@ export function BroadcastComposeDialog({
 										<PopoverTrigger asChild>
 											<Button
 												variant="outline"
-												className="w-[260px] justify-start text-left font-normal"
+												className="w-full justify-start text-left font-normal sm:w-[260px]"
 												data-empty={!scheduledAt}
 											>
 												<CalendarDays className="mr-2 size-4" />
@@ -631,47 +631,49 @@ export function BroadcastComposeDialog({
 
 				{!showPreview && isDraft && (
 					<div className="space-y-3">
-						<div className="flex flex-wrap items-center justify-between gap-2">
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={handleDelete}
-								className="text-red-400 hover:text-red-300"
-							>
-								<Trash2 className="mr-1.5 size-4" />
-								Delete
-							</Button>
-							<div className="flex flex-wrap items-center gap-2">
+						{showConfirm ? (
+							<div className="space-y-2 rounded-lg border border-honey-gold/30 bg-honey-gold/5 p-3">
+								<p className="text-sm text-muted-foreground">
+									Send to {recipientCount?.reachable ?? "?"} fans?
+								</p>
+								<div className="flex gap-2">
+									<Button size="sm" onClick={handleSend} disabled={sending} className="flex-1">
+										{sending ? (
+											<Loader2 className="mr-1.5 size-4 animate-spin" />
+										) : (
+											<Send className="mr-1.5 size-4" />
+										)}
+										Confirm
+									</Button>
+									<Button variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>
+										Cancel
+									</Button>
+								</div>
+							</div>
+						) : (
+							<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 								<Button
-									variant="outline"
+									variant="ghost"
 									size="sm"
-									onClick={handlePreview}
-									disabled={!subject || !body}
+									onClick={handleDelete}
+									className="w-fit text-red-400 hover:text-red-300"
 								>
-									Preview
+									<Trash2 className="mr-1.5 size-4" />
+									Delete
 								</Button>
-								<Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
-									{saving ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
-									Save Draft
-								</Button>
-								{showConfirm ? (
-									<>
-										<span className="text-sm text-muted-foreground">
-											Send to {recipientCount?.reachable ?? "?"} fans?
-										</span>
-										<Button size="sm" onClick={handleSend} disabled={sending}>
-											{sending ? (
-												<Loader2 className="mr-1.5 size-4 animate-spin" />
-											) : (
-												<Send className="mr-1.5 size-4" />
-											)}
-											Confirm
-										</Button>
-										<Button variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>
-											Cancel
-										</Button>
-									</>
-								) : (
+								<div className="flex gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handlePreview}
+										disabled={!subject || !body}
+									>
+										Preview
+									</Button>
+									<Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
+										{saving ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
+										Save Draft
+									</Button>
 									<Button
 										size="sm"
 										onClick={() => setShowConfirm(true)}
@@ -680,9 +682,9 @@ export function BroadcastComposeDialog({
 										<Send className="mr-1.5 size-4" />
 										{isScheduled ? "Schedule" : "Send Now"}
 									</Button>
-								)}
+								</div>
 							</div>
-						</div>
+						)}
 					</div>
 				)}
 			</DialogContent>
