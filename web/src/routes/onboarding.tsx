@@ -524,10 +524,11 @@ function EmailStep({
 					Preview
 				</Button>
 				<div className="flex-1" />
-				<Button type="button" variant="ghost" size="sm" onClick={onSkip}>
-					Skip
-				</Button>
-				<Button type="submit" size="sm" disabled={!canSubmit || saveMutation.isPending}>
+				<Button
+					type="submit"
+					className="w-full sm:w-auto"
+					disabled={!canSubmit || saveMutation.isPending}
+				>
 					{saveMutation.isPending ? (
 						<Loader2 className="size-4 animate-spin" />
 					) : (
@@ -536,6 +537,14 @@ function EmailStep({
 					Save & Continue
 				</Button>
 			</div>
+
+			<button
+				type="button"
+				onClick={onSkip}
+				className="mt-2 w-full text-center text-xs text-muted-foreground hover:text-foreground"
+			>
+				Skip for now — you can set this up later from the Emails tab
+			</button>
 
 			{saveMutation.isError && (
 				<p className="text-center text-sm text-red-400">{saveMutation.error?.message}</p>

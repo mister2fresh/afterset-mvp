@@ -21,16 +21,22 @@ const broadcastSchema = z.object({
 	filter_method: z.enum(["qr", "nfc", "sms", "direct"]).nullable().optional(),
 });
 
-// GET /broadcasts — list all for artist
+// GET /broadcasts — list all for artist (excludes archived by default)
 app.get("/", async (c) => {
 	const artist = c.get("artist");
+	const includeArchived = c.req.query("archived") === "true";
 
-	const { data, error } = await supabase
+	let query = supabase
 		.from("broadcasts")
 		.select("*")
 		.eq("artist_id", artist.id)
 		.order("created_at", { ascending: false });
 
+	if (!includeArchived) {
+		query = query.is("archived_at", null);
+	}
+
+	const { data, error } = await query;
 	if (error) return c.json({ error: error.message }, 500);
 	return c.json(data ?? []);
 });
@@ -119,6 +125,51 @@ app.delete("/:id", async (c) => {
 	const { error } = await supabase.from("broadcasts").delete().eq("id", id);
 	if (error) return c.json({ error: error.message }, 500);
 	return c.body(null, 204);
+});
+
+// POST /broadcasts/:id/archive — archive a sent/failed broadcast
+app.post("/:id/archive", async (c) => {
+	const artist = c.get("artist");
+	const id = c.req.param("id");
+
+	const { data: existing } = await supabase
+		.from("broadcasts")
+		.select("status")
+		.eq("id", id)
+		.eq("artist_id", artist.id)
+		.single();
+
+	if (!existing) return c.json({ error: "Broadcast not found" }, 404);
+	if (existing.status === "draft") {
+		return c.json({ error: "Delete drafts instead of archiving" }, 400);
+	}
+
+	const { data, error } = await supabase
+		.from("broadcasts")
+		.update({ archived_at: new Date().toISOString() })
+		.eq("id", id)
+		.select()
+		.single();
+
+	if (error) return c.json({ error: error.message }, 500);
+	return c.json(data);
+});
+
+// POST /broadcasts/:id/unarchive — restore an archived broadcast
+app.post("/:id/unarchive", async (c) => {
+	const artist = c.get("artist");
+	const id = c.req.param("id");
+
+	const { data, error } = await supabase
+		.from("broadcasts")
+		.update({ archived_at: null })
+		.eq("id", id)
+		.eq("artist_id", artist.id)
+		.select()
+		.single();
+
+	if (error) return c.json({ error: error.message }, 500);
+	return c.json(data);
 });
 
 // POST /broadcasts/:id/preview — render HTML

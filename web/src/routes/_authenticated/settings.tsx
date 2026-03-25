@@ -140,13 +140,14 @@ function SettingsPage() {
 									Controls when "next morning" follow-up emails are sent (9 AM in your timezone).
 								</p>
 								{showDetected && (
-									<button
+									<Button
 										type="button"
+										variant="outline"
+										size="sm"
 										onClick={() => setTimezone(detectedTz)}
-										className="text-xs text-electric-blue hover:underline"
 									>
-										Detected: {detectedTz.replace(/_/g, " ")} — click to use
-									</button>
+										Use detected timezone: {detectedTz.replace(/_/g, " ")}
+									</Button>
 								)}
 							</div>
 

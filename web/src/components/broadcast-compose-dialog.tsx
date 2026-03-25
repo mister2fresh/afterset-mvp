@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	Archive,
 	Bus,
 	CalendarDays,
 	ChevronDown,
 	ChevronUp,
 	Eye,
+	Info,
 	Loader2,
 	MapPin,
 	MoreVertical,
@@ -47,6 +49,7 @@ type Broadcast = {
 	recipient_count: number;
 	sent_count: number;
 	opened_count: number;
+	archived_at: string | null;
 	created_at: string;
 	updated_at: string;
 };
@@ -264,8 +267,20 @@ export function BroadcastComposeDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
 				<DialogHeader>
-					<DialogTitle>{broadcast ? "Edit Broadcast" : "New Broadcast"}</DialogTitle>
+					<DialogTitle>
+						{isDraft ? (broadcast ? "Edit Broadcast" : "New Broadcast") : "View Broadcast"}
+					</DialogTitle>
 				</DialogHeader>
+
+				{!isDraft && (
+					<div className="flex items-start gap-2 rounded-lg border border-electric-blue/20 bg-electric-blue/5 px-3 py-2.5">
+						<Info className="mt-0.5 size-4 shrink-0 text-electric-blue" />
+						<p className="text-sm text-muted-foreground">
+							This broadcast has been {broadcast?.status === "scheduled" ? "scheduled" : "sent"}. To
+							make changes, create a new broadcast.
+						</p>
+					</div>
+				)}
 
 				{showPreview ? (
 					<div className="space-y-3">
@@ -549,9 +564,16 @@ type BroadcastCardProps = {
 	onEdit: () => void;
 	onPreview: () => void;
 	onDelete: () => void;
+	onArchive: () => void;
 };
 
-export function BroadcastCard({ broadcast, onEdit, onPreview, onDelete }: BroadcastCardProps) {
+export function BroadcastCard({
+	broadcast,
+	onEdit,
+	onPreview,
+	onDelete,
+	onArchive,
+}: BroadcastCardProps) {
 	const openRate =
 		broadcast.sent_count > 0
 			? Math.round((broadcast.opened_count / broadcast.sent_count) * 100)
@@ -597,6 +619,12 @@ export function BroadcastCard({ broadcast, onEdit, onPreview, onDelete }: Broadc
 									<DropdownMenuItem className="text-destructive" onClick={onDelete}>
 										<Trash2 />
 										Delete
+									</DropdownMenuItem>
+								)}
+								{broadcast.status !== "draft" && (
+									<DropdownMenuItem onClick={onArchive}>
+										<Archive />
+										{broadcast.archived_at ? "Unarchive" : "Archive"}
 									</DropdownMenuItem>
 								)}
 							</DropdownMenuContent>

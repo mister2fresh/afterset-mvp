@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { Loader2, Mail } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { signInWithMagicLink } from "../lib/auth";
 
@@ -16,6 +17,8 @@ function LoginPage() {
 	const [submitted, setSubmitted] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
+	const [resending, setResending] = useState(false);
+	const [resent, setResent] = useState(false);
 
 	async function handleSubmit(e: FormEvent) {
 		e.preventDefault();
@@ -31,25 +34,63 @@ function LoginPage() {
 		}
 	}
 
+	async function handleResend() {
+		setResending(true);
+		try {
+			await signInWithMagicLink(email);
+		} catch {
+			// Silently fail — user can try again
+		} finally {
+			setResending(false);
+			setResent(true);
+		}
+	}
+
 	if (submitted) {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
 				<div className="mx-auto w-full max-w-sm text-center">
+					<div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-honey-gold/10">
+						<Mail className="size-6 text-honey-gold" />
+					</div>
 					<h1 className="font-display text-3xl font-bold text-honey-gold">Check your email</h1>
 					<p className="mt-4 text-gray-400">
 						We sent a magic link to <span className="text-white">{email}</span>. Click it to sign
 						in.
 					</p>
-					<button
-						type="button"
-						onClick={() => {
-							setSubmitted(false);
-							setError(null);
-						}}
-						className="mt-6 text-sm text-electric-blue hover:underline"
-					>
-						Use a different email
-					</button>
+					<p className="mt-2 text-sm text-gray-500">
+						Usually arrives within a minute. Check your spam folder if you don't see it.
+					</p>
+					<div className="mt-6 flex flex-col items-center gap-3">
+						<button
+							type="button"
+							onClick={handleResend}
+							disabled={resending || resent}
+							className="text-sm text-electric-blue hover:underline disabled:text-gray-500 disabled:no-underline"
+						>
+							{resending ? (
+								<span className="inline-flex items-center gap-1.5">
+									<Loader2 className="size-3 animate-spin" />
+									Sending...
+								</span>
+							) : resent ? (
+								"Link resent"
+							) : (
+								"Resend magic link"
+							)}
+						</button>
+						<button
+							type="button"
+							onClick={() => {
+								setSubmitted(false);
+								setResent(false);
+								setError(null);
+							}}
+							className="text-sm text-gray-500 hover:text-gray-400"
+						>
+							Use a different email
+						</button>
+					</div>
 				</div>
 			</div>
 		);

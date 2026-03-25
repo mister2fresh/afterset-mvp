@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 24, 2026 (v27 — broadcast campaigns)
+**Last updated:** March 24, 2026 (v28 — UI polish + broadcast archive)
 **Current phase:** Sprint 3 — Text-to-Join + Polish
-**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped, broadcast campaigns shipped, onboarding email step shipped
-**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1)
+**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped, broadcast campaigns shipped, onboarding email step shipped, high-impact UI polish shipped, broadcast archive shipped
+**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1), medium/low-impact UI polish
 
 ---
 
@@ -732,6 +732,33 @@ Run ADR validation tasks before committing to the stack.
   - Double-click prevention on page delete
   - *Remaining:* Offline/poor-signal behavior on capture pages (test localStorage retry at a real venue)
   - *Acceptance:* No blank screens, no silent failures. Every error has a user-facing message.
+
+- [x] **High-impact UI polish** *(done 2026-03-24)*
+  - Login: spam folder hint, resend magic link button, expiry note
+  - Broadcasts: info banner explaining why fields are disabled on non-draft broadcasts
+  - Onboarding: email skip button demoted to subtle text link with guidance
+  - Settings: timezone auto-detect promoted from tiny link to proper button
+  - *Acceptance:* No user confusion on these flows.
+
+- [x] **Broadcast archive** *(done 2026-03-24)*
+  - `archived_at` column on broadcasts table (soft delete)
+  - Archive/unarchive API endpoints (`POST /broadcasts/:id/archive`, `/unarchive`)
+  - GET /broadcasts excludes archived by default (`?archived=true` to include)
+  - "Show archived" toggle in Emails tab UI
+  - Archived cards shown at reduced opacity with "Unarchive" option
+  - *Acceptance:* Sent broadcasts can be cleaned up without losing stats.
+
+- [ ] **Medium/low-impact UI polish**
+  - Empty states: guide users on what to do next (dashboard, analytics, fans)
+  - Email sequence steps: visually distinguish step 0 (immediate) from delayed steps
+  - Broadcast filters: auto-update recipient count on filter change
+  - Character counts: show inline with labels (45/200 format)
+  - Keyword availability: loading spinner during debounce
+  - Dialog scroll shadows for long content
+  - Broadcast stats: label open rate, explain recipients vs sent
+  - Analytics loading: contextual message instead of bare spinner
+  - Theme preset buttons: larger swatches or mini previews
+  - Nav active state: stronger contrast
 
 - [ ] **Invite waitlist users to beta**
   - Email waitlist via Kit with beta access instructions

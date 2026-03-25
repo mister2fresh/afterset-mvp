@@ -1,6 +1,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { CalendarDays, Clock, Loader2, Mail, Plus, Send, Sunrise, Zap } from "lucide-react";
+import {
+	Archive,
+	CalendarDays,
+	Clock,
+	Loader2,
+	Mail,
+	Plus,
+	Send,
+	Sunrise,
+	Zap,
+} from "lucide-react";
 import { useState } from "react";
 import { BroadcastCard, BroadcastComposeDialog } from "@/components/broadcast-compose-dialog";
 import { EmailTemplateDialog } from "@/components/email-template-dialog";
@@ -50,6 +60,7 @@ type Broadcast = {
 	recipient_count: number;
 	sent_count: number;
 	opened_count: number;
+	archived_at: string | null;
 	created_at: string;
 	updated_at: string;
 };
@@ -100,6 +111,14 @@ function EmailsPage() {
 		queryFn: () => api.get<Broadcast[]>("/broadcasts"),
 	});
 
+	const [showArchived, setShowArchived] = useState(false);
+
+	const { data: archivedBroadcasts } = useQuery({
+		queryKey: ["broadcasts", "archived"],
+		queryFn: () => api.get<Broadcast[]>("/broadcasts?archived=true"),
+		enabled: showArchived,
+	});
+
 	const [editingPageId, setEditingPageId] = useState<string | null>(null);
 	const [editingBroadcast, setEditingBroadcast] = useState<Broadcast | null>(null);
 	const [composeOpen, setComposeOpen] = useState(false);
@@ -132,6 +151,16 @@ function EmailsPage() {
 
 	async function handleDeleteBroadcast(broadcast: Broadcast) {
 		await api.delete(`/broadcasts/${broadcast.id}`);
+		queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+	}
+
+	async function handleArchiveBroadcast(broadcast: Broadcast) {
+		await api.post(`/broadcasts/${broadcast.id}/archive`, {});
+		queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+	}
+
+	async function handleUnarchiveBroadcast(broadcast: Broadcast) {
+		await api.post(`/broadcasts/${broadcast.id}/unarchive`, {});
 		queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
 	}
 
@@ -180,6 +209,7 @@ function EmailsPage() {
 								onEdit={() => handleEditBroadcast(b)}
 								onPreview={() => handlePreviewBroadcast(b)}
 								onDelete={() => handleDeleteBroadcast(b)}
+								onArchive={() => handleArchiveBroadcast(b)}
 							/>
 						))}
 					</div>
@@ -194,6 +224,40 @@ function EmailsPage() {
 							</p>
 						</CardContent>
 					</Card>
+				)}
+
+				{/* Archived toggle */}
+				<button
+					type="button"
+					onClick={() => setShowArchived(!showArchived)}
+					className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+				>
+					<Archive className="size-3" />
+					{showArchived ? "Hide archived" : "Show archived"}
+				</button>
+
+				{showArchived && archivedBroadcasts && (
+					<div className="space-y-2">
+						{archivedBroadcasts.filter((b) => b.archived_at).length > 0 ? (
+							<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+								{archivedBroadcasts
+									.filter((b) => b.archived_at)
+									.map((b) => (
+										<div key={b.id} className="opacity-60">
+											<BroadcastCard
+												broadcast={b}
+												onEdit={() => {}}
+												onPreview={() => handlePreviewBroadcast(b)}
+												onDelete={() => {}}
+												onArchive={() => handleUnarchiveBroadcast(b)}
+											/>
+										</div>
+									))}
+							</div>
+						) : (
+							<p className="text-xs text-muted-foreground">No archived broadcasts.</p>
+						)}
+					</div>
 				)}
 			</div>
 
