@@ -1,9 +1,9 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 24, 2026 (v29 — medium/low UI polish + capture page UX)
+**Last updated:** March 24, 2026 (v30 — broadcast save/schedule UX fixes)
 **Current phase:** Sprint 3 — Text-to-Join + Polish
-**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped, broadcast campaigns shipped, onboarding email step shipped, high-impact UI polish shipped, broadcast archive shipped, medium/low UI polish shipped
+**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped, broadcast campaigns shipped, onboarding email step shipped, high-impact UI polish shipped, broadcast archive shipped, medium/low UI polish shipped, broadcast UX fixes shipped
 **Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1)
 
 ---

@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format, setHours, setMinutes } from "date-fns";
 import {
 	Archive,
 	Bus,
@@ -15,13 +16,21 @@ import {
 	Send,
 	ShoppingBag,
 	Trash2,
+	X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -30,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
@@ -107,7 +117,7 @@ export function BroadcastComposeDialog({
 	const [subject, setSubject] = useState("");
 	const [body, setBody] = useState("");
 	const [replyTo, setReplyTo] = useState<string | null>(null);
-	const [scheduledAt, setScheduledAt] = useState("");
+	const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
 	const [filterPageIds, setFilterPageIds] = useState<string[]>([]);
 	const [filterDateFrom, setFilterDateFrom] = useState("");
 	const [filterDateTo, setFilterDateTo] = useState("");
@@ -128,7 +138,7 @@ export function BroadcastComposeDialog({
 			setSubject(broadcast.subject);
 			setBody(broadcast.body);
 			setReplyTo(broadcast.reply_to);
-			setScheduledAt(broadcast.scheduled_at?.slice(0, 16) ?? "");
+			setScheduledAt(broadcast.scheduled_at ? new Date(broadcast.scheduled_at) : null);
 			setFilterPageIds(broadcast.filter_page_ids ?? []);
 			setFilterDateFrom(broadcast.filter_date_from?.slice(0, 10) ?? "");
 			setFilterDateTo(broadcast.filter_date_to?.slice(0, 10) ?? "");
@@ -140,7 +150,7 @@ export function BroadcastComposeDialog({
 			setSubject("");
 			setBody("");
 			setReplyTo(null);
-			setScheduledAt("");
+			setScheduledAt(null);
 			setFilterPageIds([]);
 			setFilterDateFrom("");
 			setFilterDateTo("");
@@ -175,27 +185,54 @@ export function BroadcastComposeDialog({
 		setBody(preset.body);
 	}
 
+	// Keep a ref to the latest field values so the debounced save always reads current state
+	const fieldsRef = useRef({
+		subject,
+		body,
+		replyTo,
+		scheduledAt,
+		filterPageIds,
+		filterDateFrom,
+		filterDateTo,
+		filterMethod,
+	});
+	fieldsRef.current = {
+		subject,
+		body,
+		replyTo,
+		scheduledAt,
+		filterPageIds,
+		filterDateFrom,
+		filterDateTo,
+		filterMethod,
+	};
+
+	async function saveCurrentFields(showToast = false) {
+		if (!broadcastId) return;
+		const f = fieldsRef.current;
+		try {
+			await api.put(`/broadcasts/${broadcastId}`, {
+				subject: f.subject,
+				body: f.body,
+				reply_to: f.replyTo,
+				scheduled_at: f.scheduledAt ? f.scheduledAt.toISOString() : null,
+				filter_page_ids: f.filterPageIds.length > 0 ? f.filterPageIds : null,
+				filter_date_from: f.filterDateFrom ? `${f.filterDateFrom}T00:00:00Z` : null,
+				filter_date_to: f.filterDateTo ? `${f.filterDateTo}T23:59:59Z` : null,
+				filter_method: f.filterMethod || null,
+			});
+			if (showToast) toast.success("Draft saved");
+		} catch (err) {
+			if (showToast) toast.error(err instanceof Error ? err.message : "Failed to save");
+		}
+	}
+
 	async function handleSave() {
 		if (!broadcastId) return;
 		setSaving(true);
-		try {
-			await api.put(`/broadcasts/${broadcastId}`, {
-				subject,
-				body,
-				reply_to: replyTo,
-				scheduled_at: scheduledAt ? `${scheduledAt}:00Z` : null,
-				filter_page_ids: filterPageIds.length > 0 ? filterPageIds : null,
-				filter_date_from: filterDateFrom ? `${filterDateFrom}T00:00:00Z` : null,
-				filter_date_to: filterDateTo ? `${filterDateTo}T23:59:59Z` : null,
-				filter_method: filterMethod || null,
-			});
-			queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
-			toast.success("Draft saved");
-		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Failed to save");
-		} finally {
-			setSaving(false);
-		}
+		await saveCurrentFields(true);
+		queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+		setSaving(false);
 	}
 
 	async function handlePreview() {
@@ -223,8 +260,7 @@ export function BroadcastComposeDialog({
 		setSending(true);
 		setSendError("");
 		try {
-			// Save first
-			await handleSave();
+			await saveCurrentFields();
 			await api.post(`/broadcasts/${broadcastId}/send`, {});
 			queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
 			onOpenChange(false);
@@ -238,35 +274,34 @@ export function BroadcastComposeDialog({
 
 	const isDraft = !broadcast || broadcast.status === "draft";
 
-	// Auto-save filters on change (debounced)
-	const filterSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-	const filterInitialized = useRef(false);
+	// Auto-save all draft fields (debounced) — uses ref so the effect only re-fires on value changes
+	const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+	const autoSaveInitialized = useRef(false);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: saveCurrentFields reads from ref, doesn't need to be a dep
 	useEffect(() => {
-		// Skip the first run (initial load from broadcast)
-		if (!filterInitialized.current) {
-			filterInitialized.current = true;
+		if (!autoSaveInitialized.current) {
+			autoSaveInitialized.current = true;
 			return;
 		}
 		if (!broadcastId || !isDraft) return;
-		if (filterSaveTimer.current) clearTimeout(filterSaveTimer.current);
-		filterSaveTimer.current = setTimeout(async () => {
-			await api.put(`/broadcasts/${broadcastId}`, {
-				filter_page_ids: filterPageIds.length > 0 ? filterPageIds : null,
-				filter_date_from: filterDateFrom ? `${filterDateFrom}T00:00:00Z` : null,
-				filter_date_to: filterDateTo ? `${filterDateTo}T23:59:59Z` : null,
-				filter_method: filterMethod || null,
-			});
+		if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+		autoSaveTimer.current = setTimeout(async () => {
+			await saveCurrentFields();
 			queryClient.invalidateQueries({
 				queryKey: ["broadcast-recipients", broadcastId],
 			});
-		}, 500);
+		}, 800);
 		return () => {
-			if (filterSaveTimer.current) clearTimeout(filterSaveTimer.current);
+			if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
 		};
 	}, [
 		broadcastId,
 		isDraft,
+		subject,
+		body,
+		replyTo,
+		scheduledAt,
 		filterPageIds,
 		filterDateFrom,
 		filterDateTo,
@@ -277,8 +312,18 @@ export function BroadcastComposeDialog({
 	// Reset initialized flag when dialog opens with new broadcast
 	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when broadcastId changes
 	useEffect(() => {
-		filterInitialized.current = false;
+		autoSaveInitialized.current = false;
 	}, [broadcastId]);
+
+	// Save on dialog close
+	function handleOpenChange(nextOpen: boolean) {
+		if (!nextOpen && broadcastId && isDraft) {
+			if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+			saveCurrentFields();
+			queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+		}
+		onOpenChange(nextOpen);
+	}
 
 	function togglePageFilter(pageId: string) {
 		setFilterPageIds((prev) =>
@@ -296,12 +341,15 @@ export function BroadcastComposeDialog({
 	const isScheduled = !!scheduledAt;
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto scroll-shadows">
 				<DialogHeader>
 					<DialogTitle>
 						{isDraft ? (broadcast ? "Edit Broadcast" : "New Broadcast") : "View Broadcast"}
 					</DialogTitle>
+					<DialogDescription className="sr-only">
+						Compose and send a broadcast email to your fans
+					</DialogDescription>
 				</DialogHeader>
 
 				{!isDraft && (
@@ -516,16 +564,61 @@ export function BroadcastComposeDialog({
 							<div className="space-y-1.5">
 								<Label className="text-xs">Schedule (optional)</Label>
 								<div className="flex items-center gap-2">
-									<CalendarDays className="size-4 text-muted-foreground" />
-									<Input
-										type="datetime-local"
-										value={scheduledAt}
-										onChange={(e) => setScheduledAt(e.target.value)}
-										className="max-w-[240px]"
-									/>
+									<Popover>
+										<PopoverTrigger asChild>
+											<Button
+												variant="outline"
+												className="w-[260px] justify-start text-left font-normal"
+												data-empty={!scheduledAt}
+											>
+												<CalendarDays className="mr-2 size-4" />
+												{scheduledAt ? (
+													format(scheduledAt, "MMM d, yyyy 'at' h:mm a")
+												) : (
+													<span className="text-muted-foreground">Pick date & time</span>
+												)}
+											</Button>
+										</PopoverTrigger>
+										<PopoverContent className="w-auto p-0" align="start">
+											<Calendar
+												mode="single"
+												selected={scheduledAt ?? undefined}
+												onSelect={(date) => {
+													if (!date) return setScheduledAt(null);
+													const hours = scheduledAt?.getHours() ?? 9;
+													const mins = scheduledAt?.getMinutes() ?? 0;
+													setScheduledAt(setMinutes(setHours(date, hours), mins));
+												}}
+												disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+												className="border-b"
+											/>
+											<div className="flex items-center gap-2 px-4 py-3">
+												<Label className="text-xs">Time</Label>
+												<Input
+													type="time"
+													value={
+														scheduledAt
+															? `${String(scheduledAt.getHours()).padStart(2, "0")}:${String(scheduledAt.getMinutes()).padStart(2, "0")}`
+															: "09:00"
+													}
+													onChange={(e) => {
+														const [h, m] = e.target.value.split(":").map(Number);
+														const base = scheduledAt ?? new Date();
+														setScheduledAt(setMinutes(setHours(base, h), m));
+													}}
+													className="w-[120px]"
+												/>
+											</div>
+										</PopoverContent>
+									</Popover>
 									{scheduledAt && (
-										<Button variant="ghost" size="sm" onClick={() => setScheduledAt("")}>
-											Clear
+										<Button
+											variant="ghost"
+											size="icon"
+											className="size-8"
+											onClick={() => setScheduledAt(null)}
+										>
+											<X className="size-4" />
 										</Button>
 									)}
 								</div>
