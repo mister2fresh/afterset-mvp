@@ -468,14 +468,11 @@ export function EmailTemplateDialog({
 							/>
 						</div>
 					)}
-				</div>
-
-				<DialogFooter className="mt-4">
 					{canAddStep && !addingNew && (
 						<Button
 							variant="outline"
 							size="sm"
-							className="mr-auto"
+							className="w-full border-dashed"
 							onClick={() => {
 								setExpandedOrder(null);
 								setAddingNew(true);
@@ -485,6 +482,9 @@ export function EmailTemplateDialog({
 							Add Email
 						</Button>
 					)}
+				</div>
+
+				<DialogFooter className="mt-4">
 					<Button variant="outline" onClick={() => onOpenChange(false)}>
 						Done
 					</Button>

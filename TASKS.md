@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 25, 2026 (v33 — Sprint 4 mobile UX: bottom nav + dialog optimization shipped)
+**Last updated:** March 25, 2026 (v34 — mobile card view for captures + email sequence UX fix)
 **Current phase:** Sprint 4 — Mobile-First + PWA
-**Sprint:** Sprint 4 in progress — bottom tab navigation shipped, mobile-optimized dialogs shipped
-**Next up:** Card view for captures table (P0), touch target audit (P0), responsive typography pass (P0)
+**Sprint:** Sprint 4 in progress — bottom nav, mobile dialogs, and captures card view shipped
+**Next up:** Touch target audit (P0), responsive typography pass (P0), PWA manifest (P0)
 
 ---
 
@@ -836,7 +836,7 @@ These are not scheduled. Pull from here once Sprints 1–3 ship.
 ### Phase 1 — Mobile UX (P0)
 
 - [x] **Bottom tab navigation** — Replace hamburger sidebar with persistent 5-tab bottom bar on mobile (Overview, Pages, Emails, Fans, Analytics). Settings moves to profile avatar in header. Sidebar remains on desktop. ✅ 2026-03-25
-- [ ] **Card view for captures table** — On mobile (<768px), render captures/fans as stacked cards instead of horizontal-scroll table.
+- [x] **Card view for captures table** — On mobile (<768px), render captures/fans as stacked cards instead of horizontal-scroll table. ✅ 2026-03-25
 - [ ] **Touch target audit** — Ensure all buttons, links, and interactive elements are ≥44px tap targets.
 - [x] **Mobile-optimized dialogs** — Full-screen sheets on mobile instead of centered dialogs (page form, email template editor, broadcast composer). ✅ 2026-03-25
 - [ ] **Responsive typography pass** — Verify text sizing, truncation, and readability on 320px–428px viewports.

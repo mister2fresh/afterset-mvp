@@ -70,83 +70,201 @@ export function CapturesTable({
 		});
 	}, [rows, sortKey, sortDir]);
 
+	if (compact) {
+		return <CompactTable rows={sorted} showPageColumn={showPageColumn} />;
+	}
+
 	return (
-		<Table>
-			<TableHeader>
-				<TableRow>
-					<TableHead>
-						{compact ? (
-							"Email"
-						) : (
-							<SortButton
-								active={sortKey === "email"}
-								dir={sortDir}
-								onClick={() => toggleSort("email")}
-							>
-								Email
-							</SortButton>
-						)}
-					</TableHead>
-					{showPageColumn && (
-						<TableHead>
-							{compact ? (
-								"Page"
-							) : (
-								<SortButton
-									active={sortKey === "page_title"}
-									dir={sortDir}
-									onClick={() => toggleSort("page_title")}
-								>
-									Page
-								</SortButton>
-							)}
-						</TableHead>
-					)}
-					{!compact && <TableHead>Method</TableHead>}
-					<TableHead>
-						{compact ? (
-							"Date"
-						) : (
-							<SortButton
-								active={sortKey === "captured_at"}
-								dir={sortDir}
-								onClick={() => toggleSort("captured_at")}
-							>
-								Date
-							</SortButton>
-						)}
-					</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
+		<>
+			{/* Mobile: card view */}
+			<div className="space-y-2 md:hidden">
+				<SortBar sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
 				{sorted.map((row) => (
-					<TableRow key={row.id}>
-						<TableCell className={compact ? "text-sm" : "font-medium"}>{row.email}</TableCell>
-						{showPageColumn && (
-							<TableCell className={compact ? "text-sm" : ""}>
-								{row.page_id ? (
-									<Link to="/pages" className="text-electric-blue hover:underline">
-										{row.page_title}
-									</Link>
-								) : (
-									<span className="text-muted-foreground">{row.page_title}</span>
-								)}
-							</TableCell>
-						)}
-						{!compact && (
-							<TableCell>
-								<Badge variant={METHOD_VARIANTS[row.entry_method] ?? "secondary"}>
-									{METHOD_LABELS[row.entry_method] ?? row.entry_method}
-								</Badge>
-							</TableCell>
-						)}
-						<TableCell className="text-muted-foreground">
-							{compact ? formatDateShort(row.captured_at) : formatDate(row.captured_at)}
-						</TableCell>
-					</TableRow>
+					<CaptureCard key={row.id} row={row} showPage={showPageColumn} />
 				))}
-			</TableBody>
-		</Table>
+			</div>
+
+			{/* Desktop: table view */}
+			<div className="hidden md:block">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>
+								<SortButton
+									active={sortKey === "email"}
+									dir={sortDir}
+									onClick={() => toggleSort("email")}
+								>
+									Email
+								</SortButton>
+							</TableHead>
+							{showPageColumn && (
+								<TableHead>
+									<SortButton
+										active={sortKey === "page_title"}
+										dir={sortDir}
+										onClick={() => toggleSort("page_title")}
+									>
+										Page
+									</SortButton>
+								</TableHead>
+							)}
+							<TableHead>Method</TableHead>
+							<TableHead>
+								<SortButton
+									active={sortKey === "captured_at"}
+									dir={sortDir}
+									onClick={() => toggleSort("captured_at")}
+								>
+									Date
+								</SortButton>
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{sorted.map((row) => (
+							<TableRow key={row.id}>
+								<TableCell className="font-medium">{row.email}</TableCell>
+								{showPageColumn && (
+									<TableCell>
+										<PageLink row={row} />
+									</TableCell>
+								)}
+								<TableCell>
+									<MethodBadge method={row.entry_method} />
+								</TableCell>
+								<TableCell className="text-muted-foreground">
+									{formatDate(row.captured_at)}
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</div>
+		</>
+	);
+}
+
+function CaptureCard({ row, showPage }: { row: CaptureRow; showPage: boolean }) {
+	return (
+		<div className="rounded-lg border border-border p-3">
+			<div className="flex items-start justify-between gap-2">
+				<p className="min-w-0 truncate text-sm font-medium">{row.email}</p>
+				<MethodBadge method={row.entry_method} />
+			</div>
+			<div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+				<span>{formatDate(row.captured_at)}</span>
+				{showPage && (
+					<>
+						<span>·</span>
+						<PageLink row={row} className="truncate" />
+					</>
+				)}
+			</div>
+		</div>
+	);
+}
+
+function SortBar({
+	sortKey,
+	sortDir,
+	onToggle,
+}: {
+	sortKey: SortKey;
+	sortDir: SortDir;
+	onToggle: (key: SortKey) => void;
+}) {
+	const options: { key: SortKey; label: string }[] = [
+		{ key: "captured_at", label: "Date" },
+		{ key: "email", label: "Email" },
+		{ key: "page_title", label: "Page" },
+	];
+	return (
+		<div className="flex items-center gap-1">
+			<span className="mr-1 text-xs text-muted-foreground">Sort:</span>
+			{options.map((opt) => {
+				const active = sortKey === opt.key;
+				return (
+					<button
+						key={opt.key}
+						type="button"
+						onClick={() => onToggle(opt.key)}
+						className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${active ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+					>
+						{opt.label}
+						{active && (sortDir === "asc" ? " ↑" : " ↓")}
+					</button>
+				);
+			})}
+		</div>
+	);
+}
+
+function CompactTable({ rows, showPageColumn }: { rows: CaptureRow[]; showPageColumn: boolean }) {
+	return (
+		<>
+			{/* Mobile: compact cards */}
+			<div className="space-y-2 md:hidden">
+				{rows.map((row) => (
+					<div
+						key={row.id}
+						className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
+					>
+						<p className="min-w-0 truncate text-sm">{row.email}</p>
+						<span className="shrink-0 text-xs text-muted-foreground">
+							{formatDateShort(row.captured_at)}
+						</span>
+					</div>
+				))}
+			</div>
+
+			{/* Desktop: compact table */}
+			<div className="hidden md:block">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Email</TableHead>
+							{showPageColumn && <TableHead>Page</TableHead>}
+							<TableHead>Date</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{rows.map((row) => (
+							<TableRow key={row.id}>
+								<TableCell className="text-sm">{row.email}</TableCell>
+								{showPageColumn && (
+									<TableCell className="text-sm">
+										<PageLink row={row} />
+									</TableCell>
+								)}
+								<TableCell className="text-muted-foreground">
+									{formatDateShort(row.captured_at)}
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</div>
+		</>
+	);
+}
+
+function PageLink({ row, className }: { row: CaptureRow; className?: string }) {
+	if (row.page_id) {
+		return (
+			<Link to="/pages" className={`text-electric-blue hover:underline ${className ?? ""}`}>
+				{row.page_title}
+			</Link>
+		);
+	}
+	return <span className={`text-muted-foreground ${className ?? ""}`}>{row.page_title}</span>;
+}
+
+function MethodBadge({ method }: { method: string }) {
+	return (
+		<Badge variant={METHOD_VARIANTS[method] ?? "secondary"} className="text-[10px]">
+			{METHOD_LABELS[method] ?? method}
+		</Badge>
 	);
 }
 
