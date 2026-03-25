@@ -102,7 +102,7 @@ app.post("/", async (c) => {
 			artist_id: artist.id,
 			title,
 			slug,
-			value_exchange_text: value_exchange_text ?? null,
+			value_exchange_text: value_exchange_text ?? "",
 			streaming_links: streaming_links ?? {},
 			social_links: social_links ?? {},
 			accent_color: accent_color ?? "#E8C547",
