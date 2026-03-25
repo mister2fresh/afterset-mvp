@@ -494,7 +494,7 @@ export function EmailTemplateDialog({
 	);
 }
 
-export function EmailTemplateBadge({ pageId }: { pageId: string }) {
+export function EmailTemplateBadge({ pageId, onClick }: { pageId: string; onClick?: () => void }) {
 	const { data } = useQuery({
 		queryKey: ["email-sequence-status", pageId],
 		queryFn: async () => {
@@ -511,6 +511,20 @@ export function EmailTemplateBadge({ pageId }: { pageId: string }) {
 		data.active === data.total
 			? `${data.total} email${data.total === 1 ? "" : "s"} active`
 			: `${data.active}/${data.total} active`;
+
+	if (onClick) {
+		return (
+			<button type="button" onClick={onClick}>
+				<Badge
+					variant={data.active > 0 ? "default" : "secondary"}
+					className="gap-1 text-[10px] cursor-pointer hover:opacity-80 transition-opacity"
+				>
+					<Mail className="size-2.5" />
+					{label}
+				</Badge>
+			</button>
+		);
+	}
 
 	return (
 		<Badge variant={data.active > 0 ? "default" : "secondary"} className="gap-1 text-[10px]">

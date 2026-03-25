@@ -339,7 +339,7 @@ function PageCard({
 						<Badge variant={page.is_active ? "default" : "secondary"}>
 							{page.is_active ? "Active" : "Inactive"}
 						</Badge>
-						<EmailTemplateBadge pageId={page.id} />
+						<EmailTemplateBadge pageId={page.id} onClick={() => setEmailOpen(true)} />
 					</div>
 					<div className="flex items-center gap-2">
 						<div className="flex gap-0.5">
