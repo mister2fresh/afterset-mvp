@@ -202,17 +202,69 @@ function PageCard({
 	const qrUrl = useQrPreview(page.id);
 	const [emailOpen, setEmailOpen] = useState(false);
 	const [keywordOpen, setKeywordOpen] = useState(false);
+	const [editingTitle, setEditingTitle] = useState(false);
+	const [titleDraft, setTitleDraft] = useState(page.title);
 
 	const deleteMutation = useMutation({
 		mutationFn: () => api.delete(`/capture-pages/${page.id}`),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["capture-pages"] }),
 	});
 
+	const titleMutation = useMutation({
+		mutationFn: (title: string) => api.patch(`/capture-pages/${page.id}`, { title }),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["capture-pages"] });
+			setEditingTitle(false);
+			const { toast } = await import("sonner");
+			toast.success("Page title updated");
+		},
+	});
+
+	function saveTitle() {
+		const trimmed = titleDraft.trim();
+		if (!trimmed || trimmed === page.title) {
+			setTitleDraft(page.title);
+			setEditingTitle(false);
+			return;
+		}
+		titleMutation.mutate(trimmed);
+	}
+
 	return (
 		<Card>
 			<CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-				<div className="space-y-1">
-					<CardTitle className="truncate font-display text-base">{page.title}</CardTitle>
+				<div className="min-w-0 flex-1 space-y-1">
+					{editingTitle ? (
+						<div className="flex items-center gap-1">
+							<input
+								ref={(el) => el?.focus()}
+								value={titleDraft}
+								onChange={(e) => setTitleDraft(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") saveTitle();
+									if (e.key === "Escape") {
+										setTitleDraft(page.title);
+										setEditingTitle(false);
+									}
+								}}
+								onBlur={saveTitle}
+								maxLength={100}
+								className="h-7 w-full min-w-0 rounded border border-input bg-transparent px-1.5 font-display text-base outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50"
+							/>
+						</div>
+					) : (
+						<button
+							type="button"
+							onClick={() => {
+								setTitleDraft(page.title);
+								setEditingTitle(true);
+							}}
+							className="group flex max-w-full items-center gap-1.5"
+						>
+							<CardTitle className="truncate font-display text-base">{page.title}</CardTitle>
+							<Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+						</button>
+					)}
 					<a
 						href={`https://afterset.net/c/${page.slug}`}
 						target="_blank"
