@@ -36,7 +36,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Capture method effectiveness** — conversion rates per method (QR scans vs completions, SMS clicks vs completions)
 - [ ] **Geography breakdown** — approximate city from IP at Worker level; map or top-cities list
 - [ ] **Device breakdown** — mobile vs desktop from User-Agent; informs signage placement decisions
-- [ ] **Gig calendar with auto-generated capture pages** (Layer 2)
+- [ ] **Gig calendar with title history** — log of past show titles per page; helps artists recall when/where they played (Layer 2)
 - [ ] **Financial tracking alongside fan data** (Layer 3)
 
 ## Platform

@@ -1,7 +1,7 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 25, 2026 (v37 — inline page title editing on page cards)
+**Last updated:** March 25, 2026 (v38 — slug education UX, inline keyword field, single-page model docs)
 **Current phase:** Sprint 4 — Mobile-First + PWA
 **Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) next
 **Next up:** PWA manifest (P0), service worker (P0), Apple PWA meta tags (P0)

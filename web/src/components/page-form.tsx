@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+	AlertCircle,
+	Check,
 	ChevronDown,
 	ChevronUp,
 	FileAudio,
@@ -7,11 +9,13 @@ import {
 	FileText,
 	FileVideo,
 	Loader2,
+	MessageSquare,
 	Package,
+	Trash2,
 	Upload,
 	X,
 } from "lucide-react";
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -243,6 +247,14 @@ export function fileTypeIcon(contentType: string) {
 	return Package;
 }
 
+function slugify(text: string): string {
+	return text
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.slice(0, 40);
+}
+
 function stripEmpty(obj: Record<string, string>): Record<string, string> | undefined {
 	const filtered = Object.fromEntries(Object.entries(obj).filter(([, v]) => v.trim() !== ""));
 	return Object.keys(filtered).length > 0 ? filtered : undefined;
@@ -416,9 +428,17 @@ export function IncentiveFileDisplay({
 	);
 }
 
+type KeywordCheckResult = {
+	available: boolean;
+	reserved?: boolean;
+	current?: boolean;
+	suggestions?: string[];
+};
+
 type PageFormProps = {
 	mode: "create" | "edit";
 	page?: CapturePage;
+	currentKeyword?: string | null;
 	defaultLinks?: {
 		streaming_links: Record<string, string>;
 		social_links: Record<string, string>;
@@ -464,6 +484,7 @@ function isPresetActive(form: FormData, preset: ThemePreset): boolean {
 export function PageForm({
 	mode,
 	page,
+	currentKeyword,
 	defaultLinks,
 	onSuccess,
 	onCancel,
@@ -488,6 +509,50 @@ export function PageForm({
 	const [streamingOpen, setStreamingOpen] = useState(hasAnyLink(initialForm.streaming_links));
 	const [socialOpen, setSocialOpen] = useState(hasAnyLink(initialForm.social_links));
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	// Keyword state
+	const [keyword, setKeyword] = useState(currentKeyword ?? "");
+	const [kwCheck, setKwCheck] = useState<KeywordCheckResult | null>(null);
+	const [kwChecking, setKwChecking] = useState(false);
+	const [kwDebouncing, setKwDebouncing] = useState(false);
+
+	const checkKeyword = useCallback(
+		async (kw: string) => {
+			if (kw.length < 2 || !page?.id) {
+				setKwCheck(null);
+				setKwDebouncing(false);
+				return;
+			}
+			setKwChecking(true);
+			setKwDebouncing(false);
+			try {
+				const result = await api.post<KeywordCheckResult>(
+					`/capture-pages/${page.id}/keyword/check`,
+					{ keyword: kw },
+				);
+				setKwCheck(result);
+			} catch {
+				setKwCheck(null);
+			} finally {
+				setKwChecking(false);
+			}
+		},
+		[page?.id],
+	);
+
+	useEffect(() => {
+		if (mode !== "edit") return;
+		const clean = keyword.replace(/[^A-Za-z0-9]/g, "");
+		if (clean.length >= 2) setKwDebouncing(true);
+		const timer = setTimeout(() => {
+			if (clean.length >= 2) checkKeyword(clean);
+			else {
+				setKwCheck(null);
+				setKwDebouncing(false);
+			}
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [keyword, checkKeyword, mode]);
 
 	const hasExistingFile = mode === "edit" && page?.incentive_file_name && !fileRemoved;
 
@@ -522,13 +587,23 @@ export function PageForm({
 				await uploadToSignedUrl(signed_url, token, pendingFile, setUploadProgress);
 			}
 
+			// Save keyword if provided (or remove if cleared in edit mode)
+			const kwClean = keyword.replace(/[^A-Za-z0-9]/g, "");
+			if (kwClean.length >= 2 && kwClean.toUpperCase() !== currentKeyword) {
+				await api.put(`/capture-pages/${created.id}/keyword`, { keyword: kwClean });
+			} else if (!kwClean && currentKeyword) {
+				await api.delete(`/capture-pages/${created.id}/keyword`);
+			}
+
 			return created;
 		},
 		onSuccess: (data) => {
 			queryClient.invalidateQueries({ queryKey: ["capture-pages"] });
+			queryClient.invalidateQueries({ queryKey: ["keywords"] });
 			if (mode === "create") {
 				setForm(EMPTY_FORM);
 				setPendingFile(null);
+				setKeyword("");
 			}
 			setUploadProgress(null);
 			setUploadError(null);
@@ -572,6 +647,7 @@ export function PageForm({
 	}
 
 	const isCreate = mode === "create";
+	const slugPreview = useMemo(() => slugify(form.title), [form.title]);
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-6">
@@ -582,13 +658,28 @@ export function PageForm({
 				</div>
 				<Input
 					id="title"
-					placeholder='e.g. "Spring Tour 2026" or "Merch Drop Signup"'
+					placeholder='e.g. "Austin - March 28" or "Spring Tour 2026"'
 					value={form.title}
 					onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
 					required
 					maxLength={100}
 					autoFocus
 				/>
+				{isCreate && (
+					<div className="space-y-1">
+						<p className="font-mono text-xs text-muted-foreground">
+							afterset.net/c/
+							{slugPreview ? (
+								<span className="text-electric-blue">{slugPreview}</span>
+							) : (
+								<span className="italic">your-page-url</span>
+							)}
+						</p>
+						<p className="text-xs text-muted-foreground/70">
+							This link is permanent — update the title before each show, the URL stays the same.
+						</p>
+					</div>
+				)}
 			</div>
 
 			<div className="space-y-2">
@@ -608,6 +699,78 @@ export function PageForm({
 					maxLength={500}
 					rows={2}
 				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label htmlFor="keyword">
+					<span className="flex items-center gap-1.5">
+						<MessageSquare className="size-3.5" />
+						Text-to-Join Keyword <span className="text-muted-foreground">(optional)</span>
+					</span>
+				</Label>
+				<p className="text-xs text-muted-foreground">
+					Fans text this keyword to your number to get the capture page link.
+				</p>
+				<div className="relative">
+					<Input
+						id="keyword"
+						placeholder="e.g. JDOE"
+						value={keyword.toUpperCase()}
+						onChange={(e) => {
+							const clean = e.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 20);
+							setKeyword(clean);
+						}}
+						maxLength={20}
+						className="pr-10 uppercase"
+					/>
+					{keyword.length >= 2 && mode === "edit" && (
+						<div className="absolute inset-y-0 right-3 flex items-center">
+							{kwChecking || kwDebouncing ? (
+								<Loader2 className="size-4 animate-spin text-muted-foreground" />
+							) : kwCheck?.available || kwCheck?.current ? (
+								<Check className="size-4 text-green-500" />
+							) : kwCheck ? (
+								<X className="size-4 text-destructive" />
+							) : null}
+						</div>
+					)}
+				</div>
+				<p className="text-xs text-muted-foreground">2–20 characters, letters and numbers only.</p>
+				{mode === "edit" && kwCheck && !kwCheck.available && !kwCheck.current && (
+					<>
+						{kwCheck.reserved ? (
+							<div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+								<AlertCircle className="size-4 shrink-0" />
+								This keyword is reserved for SMS compliance.
+							</div>
+						) : (
+							<p className="text-sm text-destructive">This keyword is already taken.</p>
+						)}
+						{kwCheck.suggestions && kwCheck.suggestions.length > 0 && (
+							<div className="space-y-1.5">
+								<p className="text-xs text-muted-foreground">Available alternatives:</p>
+								<div className="flex flex-wrap gap-2">
+									{kwCheck.suggestions.map((s) => (
+										<button
+											key={s}
+											type="button"
+											onClick={() => setKeyword(s)}
+											className="rounded-full border border-border px-3 py-1 font-mono text-xs transition-colors hover:border-honey-gold hover:text-honey-gold"
+										>
+											{s}
+										</button>
+									))}
+								</div>
+							</div>
+						)}
+					</>
+				)}
+				{currentKeyword && keyword.length === 0 && (
+					<p className="flex items-center gap-1.5 text-xs text-destructive">
+						<Trash2 className="size-3" />
+						Keyword will be removed on save.
+					</p>
+				)}
 			</div>
 
 			<div className="space-y-4">

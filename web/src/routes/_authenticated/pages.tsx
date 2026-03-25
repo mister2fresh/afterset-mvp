@@ -120,8 +120,8 @@ function PagesPage() {
 						</div>
 						<h3 className="font-display text-lg font-semibold">No capture pages yet</h3>
 						<p className="mt-1 max-w-sm text-center text-sm text-muted-foreground">
-							Capture pages let fans submit their email after scanning a QR code at your show. Each
-							page generates a unique QR code and link.
+							Create a capture page for fans to submit their email via QR code or link. Update the
+							title before each show — the link and QR code stay the same.
 						</p>
 						<Button className="mt-6" onClick={() => setCreateOpen(true)}>
 							<Plus />
@@ -260,6 +260,7 @@ function PageCard({
 								setEditingTitle(true);
 							}}
 							className="group flex max-w-full items-center gap-1.5"
+							title="What's tonight's show? Click to update."
 						>
 							<CardTitle className="truncate font-display text-base">{page.title}</CardTitle>
 							<Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
@@ -420,7 +421,6 @@ type PageFormDialogProps =
 
 function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps) {
 	const isCreate = mode === "create";
-	const [keywordOpen, setKeywordOpen] = useState(false);
 
 	const { data: keywords } = useKeywords();
 	const { data: pages } = useCapturePages();
@@ -443,43 +443,14 @@ function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps)
 				</DialogTitle>
 				<DialogDescription>
 					{isCreate
-						? "Set up a new fan capture page. Fans scan a QR code or visit the link to submit their email."
+						? "Create a page with a permanent link and QR code. Update the title before each show — the URL stays the same."
 						: "Update your capture page details."}
 				</DialogDescription>
 			</DialogHeader>
-			{!isCreate && page && (
-				<>
-					<div className="flex items-center justify-between rounded-lg border border-border p-3">
-						<div className="space-y-0.5">
-							<p className="text-sm font-medium">Text-to-Join Keyword</p>
-							<p className="text-xs text-muted-foreground">
-								{keyword ? (
-									<>
-										Fans text <span className="font-mono font-bold">{keyword.keyword}</span> to{" "}
-										{formatPhone(keyword.phone_number)}
-									</>
-								) : (
-									"Let fans text a keyword to get your capture page link."
-								)}
-							</p>
-						</div>
-						<Button variant="outline" size="sm" onClick={() => setKeywordOpen(true)}>
-							<MessageSquare className="size-3.5" />
-							{keyword ? "Change" : "Set Up"}
-						</Button>
-					</div>
-					<KeywordDialog
-						pageId={page.id}
-						pageTitle={page.title}
-						currentKeyword={keyword?.keyword ?? null}
-						open={keywordOpen}
-						onOpenChange={setKeywordOpen}
-					/>
-				</>
-			)}
 			<PageForm
 				mode={mode}
 				page={page}
+				currentKeyword={keyword?.keyword ?? null}
 				defaultLinks={defaultLinks}
 				onSuccess={() => onOpenChange(false)}
 				onCancel={() => onOpenChange(false)}
