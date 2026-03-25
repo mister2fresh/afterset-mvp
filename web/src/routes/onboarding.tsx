@@ -1,13 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { Check, Download, ExternalLink, Loader2 } from "lucide-react";
+import {
+	Check,
+	Clock,
+	Download,
+	ExternalLink,
+	Eye,
+	Loader2,
+	Send,
+	Sunrise,
+	Zap,
+} from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { type CapturePage, PageForm } from "@/components/page-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/onboarding")({
 	beforeLoad: ({ context }) => {
@@ -41,7 +53,15 @@ function getAllTimezones(): string[] {
 	}
 }
 
-const STEPS = ["Profile", "First Page", "Ready"] as const;
+const STEPS = ["Profile", "First Page", "Follow-Up Email", "Ready"] as const;
+
+type DelayMode = "immediate" | "1_hour" | "next_morning";
+
+const DELAY_OPTIONS: { value: DelayMode; label: string; icon: typeof Zap }[] = [
+	{ value: "immediate", label: "Immediately", icon: Zap },
+	{ value: "1_hour", label: "After 1 hour", icon: Clock },
+	{ value: "next_morning", label: "Next morning (9am)", icon: Sunrise },
+];
 
 function OnboardingPage() {
 	const navigate = useNavigate();
@@ -68,8 +88,16 @@ function OnboardingPage() {
 		}
 	}
 
-	// Step 3 state — created page
+	// Step 2 state — created page
 	const [createdPage, setCreatedPage] = useState<CapturePage | null>(null);
+
+	// Step 3 state — follow-up email form
+	const [emailSubject, setEmailSubject] = useState("");
+	const [emailBody, setEmailBody] = useState("");
+	const [delayMode, setDelayMode] = useState<DelayMode>("immediate");
+	const [includeIncentive, setIncludeIncentive] = useState(false);
+	const [previewHtml, setPreviewHtml] = useState("");
+	const [showPreview, setShowPreview] = useState(false);
 
 	const profileMutation = useMutation({
 		mutationFn: (updates: { name: string; timezone: string }) =>
@@ -94,9 +122,52 @@ function OnboardingPage() {
 		profileMutation.mutate({ name: name.trim(), timezone });
 	}
 
+	const emailSaveMutation = useMutation({
+		mutationFn: () =>
+			api.put(`/capture-pages/${createdPage?.id}/email-sequence/0`, {
+				subject: emailSubject,
+				body: emailBody,
+				delay_mode: delayMode,
+				include_incentive_link: includeIncentive,
+				is_active: true,
+				delay_days: 0,
+			}),
+		onSuccess: () => setStep(3),
+	});
+
+	const emailPreviewMutation = useMutation({
+		mutationFn: async () => {
+			const {
+				data: { session },
+			} = await supabase.auth.getSession();
+			const res = await fetch(`/api/capture-pages/${createdPage?.id}/email-sequence/0/preview`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${session?.access_token}`,
+				},
+				body: JSON.stringify({
+					subject: emailSubject,
+					body: emailBody,
+					include_incentive_link: includeIncentive,
+				}),
+			});
+			return res.text();
+		},
+		onSuccess: (html) => {
+			setPreviewHtml(html);
+			setShowPreview(true);
+		},
+	});
+
 	function handlePageCreated(page: CapturePage) {
 		setCreatedPage(page);
 		setStep(2);
+	}
+
+	function handleEmailSubmit(e: FormEvent) {
+		e.preventDefault();
+		emailSaveMutation.mutate();
 	}
 
 	function handleComplete() {
@@ -230,6 +301,27 @@ function OnboardingPage() {
 					)}
 
 					{step === 2 && createdPage && (
+						<EmailStep
+							createdPage={createdPage}
+							subject={emailSubject}
+							onSubjectChange={setEmailSubject}
+							body={emailBody}
+							onBodyChange={setEmailBody}
+							delayMode={delayMode}
+							onDelayModeChange={setDelayMode}
+							includeIncentive={includeIncentive}
+							onIncludeIncentiveChange={setIncludeIncentive}
+							previewHtml={previewHtml}
+							showPreview={showPreview}
+							onShowPreviewChange={setShowPreview}
+							saveMutation={emailSaveMutation}
+							previewMutation={emailPreviewMutation}
+							onSubmit={handleEmailSubmit}
+							onSkip={() => setStep(3)}
+						/>
+					)}
+
+					{step === 3 && createdPage && (
 						<div className="space-y-6 text-center">
 							<div>
 								<h2 className="font-display text-xl font-bold">You're All Set</h2>
@@ -256,10 +348,6 @@ function OnboardingPage() {
 								</a>
 							</div>
 
-							<p className="text-xs text-muted-foreground">
-								You can add follow-up emails from the dashboard.
-							</p>
-
 							<Button
 								onClick={handleComplete}
 								className="w-full"
@@ -279,6 +367,180 @@ function OnboardingPage() {
 				</CardContent>
 			</Card>
 		</div>
+	);
+}
+
+function EmailStep({
+	createdPage,
+	subject,
+	onSubjectChange,
+	body,
+	onBodyChange,
+	delayMode,
+	onDelayModeChange,
+	includeIncentive,
+	onIncludeIncentiveChange,
+	previewHtml,
+	showPreview,
+	onShowPreviewChange,
+	saveMutation,
+	previewMutation,
+	onSubmit,
+	onSkip,
+}: {
+	createdPage: CapturePage;
+	subject: string;
+	onSubjectChange: (v: string) => void;
+	body: string;
+	onBodyChange: (v: string) => void;
+	delayMode: DelayMode;
+	onDelayModeChange: (v: DelayMode) => void;
+	includeIncentive: boolean;
+	onIncludeIncentiveChange: (v: boolean) => void;
+	previewHtml: string;
+	showPreview: boolean;
+	onShowPreviewChange: (v: boolean) => void;
+	saveMutation: { mutate: () => void; isPending: boolean; isError: boolean; error: Error | null };
+	previewMutation: { mutate: () => void; isPending: boolean };
+	onSubmit: (e: FormEvent) => void;
+	onSkip: () => void;
+}) {
+	const hasIncentive = !!createdPage.incentive_file_path;
+	const canSubmit = subject.trim() && body.trim();
+
+	if (showPreview) {
+		return (
+			<div className="space-y-4">
+				<div className="text-center">
+					<h2 className="font-display text-xl font-bold">Preview Email</h2>
+					<p className="mt-1 text-sm text-muted-foreground">Subject: {subject}</p>
+				</div>
+				<div className="overflow-hidden rounded-lg border border-border">
+					<iframe
+						title="Email preview"
+						srcDoc={previewHtml}
+						className="h-[300px] w-full bg-[#0a0e1a]"
+						sandbox=""
+					/>
+				</div>
+				<Button variant="outline" className="w-full" onClick={() => onShowPreviewChange(false)}>
+					Back to Editor
+				</Button>
+			</div>
+		);
+	}
+
+	return (
+		<form onSubmit={onSubmit} className="space-y-5">
+			<div className="text-center">
+				<h2 className="font-display text-xl font-bold">Set Up Follow-Up Email</h2>
+				<p className="mt-1 text-sm text-muted-foreground">
+					Send fans an email after they sign up. You can always edit this later.
+				</p>
+			</div>
+
+			<div className="space-y-2">
+				<Label htmlFor="onb-email-subject">Subject Line</Label>
+				<Input
+					id="onb-email-subject"
+					placeholder='e.g. "Thanks for coming out tonight!"'
+					value={subject}
+					onChange={(e) => onSubjectChange(e.target.value)}
+					maxLength={200}
+					autoFocus
+				/>
+			</div>
+
+			<div className="space-y-2">
+				<Label htmlFor="onb-email-body">Email Body</Label>
+				<Textarea
+					id="onb-email-body"
+					placeholder="Write your message to new fans..."
+					value={body}
+					onChange={(e) => onBodyChange(e.target.value)}
+					maxLength={5000}
+					rows={5}
+					className="resize-y"
+				/>
+				<p className="text-xs text-muted-foreground">{body.length}/5000</p>
+			</div>
+
+			<div className="space-y-2">
+				<Label>When to Send</Label>
+				<div className="grid grid-cols-3 gap-2">
+					{DELAY_OPTIONS.map((opt) => {
+						const Icon = opt.icon;
+						const active = delayMode === opt.value;
+						return (
+							<button
+								key={opt.value}
+								type="button"
+								onClick={() => onDelayModeChange(opt.value)}
+								className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${active ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
+							>
+								<Icon className="size-4" />
+								<span className="text-xs font-medium">{opt.label}</span>
+							</button>
+						);
+					})}
+				</div>
+			</div>
+
+			{hasIncentive && (
+				<div className="flex items-center justify-between rounded-lg border border-border p-3">
+					<div>
+						<p className="text-sm font-medium">Include download link</p>
+						<p className="text-xs text-muted-foreground">
+							Attach your incentive file to this email.
+						</p>
+					</div>
+					<button
+						type="button"
+						role="switch"
+						aria-checked={includeIncentive}
+						onClick={() => onIncludeIncentiveChange(!includeIncentive)}
+						className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${includeIncentive ? "bg-honey-gold" : "bg-muted"}`}
+					>
+						<span
+							className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow transition-transform ${includeIncentive ? "translate-x-5" : "translate-x-0"}`}
+						/>
+					</button>
+				</div>
+			)}
+
+			<div className="flex items-center gap-2">
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					disabled={!canSubmit || previewMutation.isPending}
+					onClick={() => previewMutation.mutate()}
+				>
+					{previewMutation.isPending ? (
+						<Loader2 className="size-4 animate-spin" />
+					) : (
+						<Eye className="size-4" />
+					)}
+					Preview
+				</Button>
+				<div className="flex-1" />
+				<Button type="button" variant="ghost" size="sm" onClick={onSkip}>
+					Skip
+				</Button>
+				<Button type="submit" size="sm" disabled={!canSubmit || saveMutation.isPending}>
+					{saveMutation.isPending ? (
+						<Loader2 className="size-4 animate-spin" />
+					) : (
+						<Send className="size-4" />
+					)}
+					Save & Continue
+				</Button>
+			</div>
+
+			{saveMutation.isError && (
+				<p className="text-center text-sm text-red-400">{saveMutation.error?.message}</p>
+			)}
+		</form>
 	);
 }
 

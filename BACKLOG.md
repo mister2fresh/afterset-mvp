@@ -23,7 +23,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 
 ## Onboarding
 
-- [ ] **Add email setup step to onboarding wizard** — after page creation, guide artist through configuring their first follow-up email before the success screen
+- [x] **Add email setup step to onboarding wizard** — shipped March 24, 2026. New step 3 "Follow-Up Email" between page creation and ready screen; inline editor with subject, body, delay mode, incentive toggle, preview, and skip option.
 
 ## Dashboard & Analytics
 

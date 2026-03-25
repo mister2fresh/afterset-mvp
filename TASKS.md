@@ -3,8 +3,8 @@
 
 **Last updated:** March 24, 2026 (v27 — broadcast campaigns)
 **Current phase:** Sprint 3 — Text-to-Join + Polish
-**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped, broadcast campaigns shipped
-**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1), onboarding email step (BACKLOG)
+**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped, broadcast campaigns shipped, onboarding email step shipped
+**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1)
 
 ---
 
