@@ -323,13 +323,18 @@ function EmailsPage() {
 														{sequence.map((t) => {
 															const info = stepLabel(t);
 															const Icon = info.icon;
+															const isWelcome = t.sequence_order === 0;
 															return (
 																<div
 																	key={t.id}
 																	className="flex items-center gap-2 text-xs text-muted-foreground"
 																>
-																	<Icon className="size-3 shrink-0" />
-																	<span className="shrink-0">{info.label}</span>
+																	<Icon
+																		className={`size-3 shrink-0 ${isWelcome ? "text-honey-gold" : ""}`}
+																	/>
+																	<span className="shrink-0">
+																		{isWelcome ? "Welcome" : info.label}
+																	</span>
 																	<span className="truncate">{t.subject}</span>
 																</div>
 															);

@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+	ChevronDown,
+	ChevronUp,
 	FileAudio,
 	FileImage,
 	FileText,
@@ -320,19 +322,45 @@ export function IncentiveFileDisplay({
 type PageFormProps = {
 	mode: "create" | "edit";
 	page?: CapturePage;
+	defaultLinks?: {
+		streaming_links: Record<string, string>;
+		social_links: Record<string, string>;
+	};
 	onSuccess: (page: CapturePage) => void;
 	onCancel?: () => void;
 	submitLabel?: string;
 };
 
-export function PageForm({ mode, page, onSuccess, onCancel, submitLabel }: PageFormProps) {
+function hasAnyLink(links: Record<string, string>): boolean {
+	return Object.values(links).some((v) => v.trim() !== "");
+}
+
+export function PageForm({
+	mode,
+	page,
+	defaultLinks,
+	onSuccess,
+	onCancel,
+	submitLabel,
+}: PageFormProps) {
 	const queryClient = useQueryClient();
-	const [form, setForm] = useState<FormData>(page ? formFromPage(page) : EMPTY_FORM);
+	const initialForm = page
+		? formFromPage(page)
+		: defaultLinks
+			? {
+					...EMPTY_FORM,
+					streaming_links: { ...defaultLinks.streaming_links },
+					social_links: { ...defaultLinks.social_links },
+				}
+			: EMPTY_FORM;
+	const [form, setForm] = useState<FormData>(initialForm);
 	const [pendingFile, setPendingFile] = useState<File | null>(null);
 	const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 	const [uploadError, setUploadError] = useState<string | null>(null);
 	const [fileRemoved, setFileRemoved] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
+	const [streamingOpen, setStreamingOpen] = useState(hasAnyLink(initialForm.streaming_links));
+	const [socialOpen, setSocialOpen] = useState(hasAnyLink(initialForm.social_links));
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const hasExistingFile = mode === "edit" && page?.incentive_file_name && !fileRemoved;
@@ -422,7 +450,10 @@ export function PageForm({ mode, page, onSuccess, onCancel, submitLabel }: PageF
 	return (
 		<form onSubmit={handleSubmit} className="space-y-6">
 			<div className="space-y-2">
-				<Label htmlFor="title">Page Title</Label>
+				<div className="flex items-center justify-between">
+					<Label htmlFor="title">Page Title</Label>
+					<span className="text-xs text-muted-foreground">{form.title.length}/100</span>
+				</div>
 				<Input
 					id="title"
 					placeholder='e.g. "Spring Tour 2026" or "Merch Drop Signup"'
@@ -435,9 +466,14 @@ export function PageForm({ mode, page, onSuccess, onCancel, submitLabel }: PageF
 			</div>
 
 			<div className="space-y-2">
-				<Label htmlFor="value_exchange">
-					What do fans get? <span className="text-muted-foreground">(optional)</span>
-				</Label>
+				<div className="flex items-center justify-between">
+					<Label htmlFor="value_exchange">
+						What do fans get? <span className="text-muted-foreground">(optional)</span>
+					</Label>
+					<span className="text-xs text-muted-foreground">
+						{form.value_exchange_text.length}/500
+					</span>
+				</div>
 				<Textarea
 					id="value_exchange"
 					placeholder='e.g. "Get early access to new releases and exclusive merch drops"'
@@ -451,13 +487,19 @@ export function PageForm({ mode, page, onSuccess, onCancel, submitLabel }: PageF
 			<div className="space-y-4">
 				<Label>Theme</Label>
 				<CapturePagePreview form={form} />
-				<div className="flex flex-wrap gap-2">
+				<div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
 					{THEME_PRESETS.map((preset) => {
 						const isActive =
 							form.accent_color === preset.accent_color &&
 							form.secondary_color === preset.secondary_color &&
 							form.background_style === preset.background_style &&
 							form.button_style === preset.button_style;
+						const bg = previewBackground(
+							preset.background_style,
+							preset.accent_color,
+							preset.secondary_color,
+						);
+						const btnRadius = BUTTON_RADIUS[preset.button_style];
 						return (
 							<button
 								key={preset.name}
@@ -471,19 +513,28 @@ export function PageForm({ mode, page, onSuccess, onCancel, submitLabel }: PageF
 										button_style: preset.button_style,
 									}))
 								}
-								className={`flex flex-col items-center gap-1 rounded-lg border px-3 py-2 transition-colors ${isActive ? "border-honey-gold bg-honey-gold/10" : "border-border hover:border-honey-gold/50"}`}
+								className={`flex flex-col items-center gap-1.5 rounded-lg border p-1.5 transition-colors ${isActive ? "border-honey-gold ring-1 ring-honey-gold/30" : "border-border hover:border-honey-gold/50"}`}
 							>
-								<div className="flex gap-0.5">
+								<div
+									className="flex w-full items-center justify-center rounded-md py-3"
+									style={{ background: bg }}
+								>
 									<div
-										className="size-4 rounded-full"
-										style={{ backgroundColor: preset.accent_color }}
-									/>
-									<div
-										className="size-4 rounded-full"
-										style={{ backgroundColor: preset.secondary_color }}
-									/>
+										className="px-3 py-0.5 text-[9px] font-semibold"
+										style={{
+											backgroundColor: preset.accent_color,
+											color: "#0a0e1a",
+											borderRadius: btnRadius,
+										}}
+									>
+										Join
+									</div>
 								</div>
-								<span className="text-xs text-muted-foreground">{preset.name}</span>
+								<span
+									className={`text-[10px] ${isActive ? "font-medium text-honey-gold" : "text-muted-foreground"}`}
+								>
+									{preset.name}
+								</span>
 							</button>
 						);
 					})}
@@ -625,51 +676,75 @@ export function PageForm({ mode, page, onSuccess, onCancel, submitLabel }: PageF
 			</div>
 
 			<div className="space-y-3">
-				<Label>
-					Streaming Links <span className="text-muted-foreground">(optional)</span>
-				</Label>
-				{STREAMING_PLATFORMS.map((p) => (
-					<div key={p.key} className="flex items-center gap-2">
-						<Label
-							htmlFor={`stream-${p.key}`}
-							className="w-28 shrink-0 text-xs text-muted-foreground"
-						>
-							{p.label}
-						</Label>
-						<Input
-							id={`stream-${p.key}`}
-							type="url"
-							placeholder="https://..."
-							value={form.streaming_links[p.key] ?? ""}
-							onChange={(e) => setLink("streaming_links", p.key, e.target.value)}
-							className="text-sm"
-						/>
-					</div>
-				))}
+				<button
+					type="button"
+					onClick={() => setStreamingOpen(!streamingOpen)}
+					className="flex w-full items-center justify-between"
+				>
+					<Label className="pointer-events-none">
+						Streaming Links <span className="text-muted-foreground">(optional)</span>
+					</Label>
+					{streamingOpen ? (
+						<ChevronUp className="size-4 text-muted-foreground" />
+					) : (
+						<ChevronDown className="size-4 text-muted-foreground" />
+					)}
+				</button>
+				{streamingOpen &&
+					STREAMING_PLATFORMS.map((p) => (
+						<div key={p.key} className="flex items-center gap-2">
+							<Label
+								htmlFor={`stream-${p.key}`}
+								className="w-28 shrink-0 text-xs text-muted-foreground"
+							>
+								{p.label}
+							</Label>
+							<Input
+								id={`stream-${p.key}`}
+								type="url"
+								placeholder="https://..."
+								value={form.streaming_links[p.key] ?? ""}
+								onChange={(e) => setLink("streaming_links", p.key, e.target.value)}
+								className="text-sm"
+							/>
+						</div>
+					))}
 			</div>
 
 			<div className="space-y-3">
-				<Label>
-					Social Links <span className="text-muted-foreground">(optional)</span>
-				</Label>
-				{SOCIAL_PLATFORMS.map((p) => (
-					<div key={p.key} className="flex items-center gap-2">
-						<Label
-							htmlFor={`social-${p.key}`}
-							className="w-28 shrink-0 text-xs text-muted-foreground"
-						>
-							{p.label}
-						</Label>
-						<Input
-							id={`social-${p.key}`}
-							type="url"
-							placeholder="https://..."
-							value={form.social_links[p.key] ?? ""}
-							onChange={(e) => setLink("social_links", p.key, e.target.value)}
-							className="text-sm"
-						/>
-					</div>
-				))}
+				<button
+					type="button"
+					onClick={() => setSocialOpen(!socialOpen)}
+					className="flex w-full items-center justify-between"
+				>
+					<Label className="pointer-events-none">
+						Social Links <span className="text-muted-foreground">(optional)</span>
+					</Label>
+					{socialOpen ? (
+						<ChevronUp className="size-4 text-muted-foreground" />
+					) : (
+						<ChevronDown className="size-4 text-muted-foreground" />
+					)}
+				</button>
+				{socialOpen &&
+					SOCIAL_PLATFORMS.map((p) => (
+						<div key={p.key} className="flex items-center gap-2">
+							<Label
+								htmlFor={`social-${p.key}`}
+								className="w-28 shrink-0 text-xs text-muted-foreground"
+							>
+								{p.label}
+							</Label>
+							<Input
+								id={`social-${p.key}`}
+								type="url"
+								placeholder="https://..."
+								value={form.social_links[p.key] ?? ""}
+								onChange={(e) => setLink("social_links", p.key, e.target.value)}
+								className="text-sm"
+							/>
+						</div>
+					))}
 			</div>
 
 			<div className="flex gap-2">

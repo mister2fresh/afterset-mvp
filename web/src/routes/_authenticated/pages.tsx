@@ -368,9 +368,23 @@ type PageFormDialogProps =
 
 function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps) {
 	const isCreate = mode === "create";
+	const [keywordOpen, setKeywordOpen] = useState(false);
+
+	const { data: keywords } = useKeywords();
+	const { data: pages } = useCapturePages();
+	const keyword = page ? (keywords?.[page.id] ?? null) : null;
+
+	// Pre-populate links from most recent page when creating
+	const defaultLinks =
+		isCreate && pages && pages.length > 0
+			? {
+					streaming_links: { ...pages[0].streaming_links },
+					social_links: { ...pages[0].social_links },
+				}
+			: undefined;
 
 	const dialogContent = (
-		<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+		<DialogContent className="max-h-[85vh] overflow-y-auto scroll-shadows sm:max-w-lg">
 			<DialogHeader>
 				<DialogTitle className="font-display">
 					{isCreate ? "Create Capture Page" : "Edit Capture Page"}
@@ -381,9 +395,40 @@ function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps)
 						: "Update your capture page details."}
 				</DialogDescription>
 			</DialogHeader>
+			{!isCreate && page && (
+				<>
+					<div className="flex items-center justify-between rounded-lg border border-border p-3">
+						<div className="space-y-0.5">
+							<p className="text-sm font-medium">Text-to-Join Keyword</p>
+							<p className="text-xs text-muted-foreground">
+								{keyword ? (
+									<>
+										Fans text <span className="font-mono font-bold">{keyword.keyword}</span> to{" "}
+										{formatPhone(keyword.phone_number)}
+									</>
+								) : (
+									"Let fans text a keyword to get your capture page link."
+								)}
+							</p>
+						</div>
+						<Button variant="outline" size="sm" onClick={() => setKeywordOpen(true)}>
+							<MessageSquare className="size-3.5" />
+							{keyword ? "Change" : "Set Up"}
+						</Button>
+					</div>
+					<KeywordDialog
+						pageId={page.id}
+						pageTitle={page.title}
+						currentKeyword={keyword?.keyword ?? null}
+						open={keywordOpen}
+						onOpenChange={setKeywordOpen}
+					/>
+				</>
+			)}
 			<PageForm
 				mode={mode}
 				page={page}
+				defaultLinks={defaultLinks}
 				onSuccess={() => onOpenChange(false)}
 				onCancel={() => onOpenChange(false)}
 			/>

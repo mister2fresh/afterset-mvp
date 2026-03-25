@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Download, Loader2, Search, Users, X } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Download, Loader2, QrCode, Search, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { type CaptureRow, CapturesTable } from "@/components/captures-table";
 import { QueryError } from "@/components/query-error";
@@ -262,7 +262,7 @@ function FansPage() {
 						<h3 className="font-display text-lg font-semibold">
 							{hasFilters ? "No matching fans" : "No fans yet"}
 						</h3>
-						<p className="mt-1 max-w-sm text-center text-sm text-muted-foreground">
+						<p className="mt-1 mb-4 max-w-sm text-center text-sm text-muted-foreground">
 							{hasFilters ? (
 								<>
 									No fans match your current filters.{" "}
@@ -275,9 +275,17 @@ function FansPage() {
 									</button>
 								</>
 							) : (
-								"When fans submit their email through your capture pages, they'll appear here."
+								"Share a capture page at your next gig and fans will start appearing here as they sign up."
 							)}
 						</p>
+						{!hasFilters && (
+							<Button variant="outline" asChild>
+								<Link to="/pages">
+									<QrCode />
+									Go to Capture Pages
+								</Link>
+							</Button>
+						)}
 					</CardContent>
 				</Card>
 			)}

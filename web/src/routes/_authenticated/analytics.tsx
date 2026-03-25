@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { BarChart3, Loader2, TrendingUp } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { BarChart3, Loader2, QrCode, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import {
 	Area,
@@ -15,6 +15,7 @@ import {
 	YAxis,
 } from "recharts";
 import { QueryError } from "@/components/query-error";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 
@@ -90,8 +91,9 @@ function AnalyticsPage() {
 
 	if (overviewLoading) {
 		return (
-			<div className="flex items-center justify-center py-16">
+			<div className="flex flex-col items-center justify-center gap-2 py-16">
 				<Loader2 className="size-6 animate-spin text-muted-foreground" />
+				<p className="text-sm text-muted-foreground">Loading your analytics...</p>
 			</div>
 		);
 	}
@@ -108,10 +110,16 @@ function AnalyticsPage() {
 						<BarChart3 className="size-8 text-muted-foreground" />
 					</div>
 					<h3 className="font-display text-lg font-semibold">No analytics yet</h3>
-					<p className="mt-1 max-w-sm text-center text-sm text-muted-foreground">
-						Once you start capturing fans, you'll see per-page stats, capture method breakdowns, and
-						growth over time.
+					<p className="mt-1 mb-4 max-w-sm text-center text-sm text-muted-foreground">
+						Share a capture page at your next gig. Once fans start signing up, you'll see per-page
+						stats, method breakdowns, and growth trends here.
 					</p>
+					<Button variant="outline" asChild>
+						<Link to="/pages">
+							<QrCode />
+							Go to Capture Pages
+						</Link>
+					</Button>
 				</CardContent>
 			</Card>
 		);
@@ -165,8 +173,9 @@ function AnalyticsPage() {
 			{/* Per-page detail */}
 			{selectedPageId &&
 				(pageLoading ? (
-					<div className="flex items-center justify-center py-8">
+					<div className="flex items-center justify-center gap-2 py-8">
 						<Loader2 className="size-5 animate-spin text-muted-foreground" />
+						<p className="text-sm text-muted-foreground">Loading page details...</p>
 					</div>
 				) : pageData ? (
 					<div className="space-y-4">

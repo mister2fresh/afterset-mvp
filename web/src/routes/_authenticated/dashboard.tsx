@@ -77,19 +77,31 @@ function DashboardPage() {
 					<StatCard label="This Week" value={0} icon={BarChart3} />
 				</div>
 				<Card>
-					<CardHeader>
-						<CardTitle>Get Started</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<p className="text-muted-foreground">
-							Create your first capture page to start collecting fan emails at your next gig.
+					<CardContent className="flex flex-col items-center justify-center py-12">
+						<div className="mb-4 rounded-full bg-muted p-4">
+							<QrCode className="size-8 text-muted-foreground" />
+						</div>
+						<h3 className="font-display text-lg font-semibold">Welcome to Afterset</h3>
+						<p className="mt-1 mb-4 max-w-sm text-center text-sm text-muted-foreground">
+							{overview && overview.total_pages > 0
+								? "Your capture pages are ready — share one at your next gig and fans will start appearing here."
+								: "Create a capture page, print the QR code, and start collecting fan emails at your next show."}
 						</p>
-						<Button asChild>
-							<Link to="/pages">
-								<QrCode />
-								Create Capture Page
-							</Link>
-						</Button>
+						{overview && overview.total_pages > 0 ? (
+							<Button variant="outline" asChild>
+								<Link to="/pages">
+									<QrCode />
+									View Your Pages
+								</Link>
+							</Button>
+						) : (
+							<Button asChild>
+								<Link to="/pages">
+									<QrCode />
+									Create Capture Page
+								</Link>
+							</Button>
+						)}
 					</CardContent>
 				</Card>
 			</div>

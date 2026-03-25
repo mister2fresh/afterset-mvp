@@ -16,7 +16,7 @@ import {
 	ShoppingBag,
 	Trash2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -175,17 +175,6 @@ export function BroadcastComposeDialog({
 		setBody(preset.body);
 	}
 
-	async function saveFilters() {
-		if (!broadcastId) return;
-		await api.put(`/broadcasts/${broadcastId}`, {
-			filter_page_ids: filterPageIds.length > 0 ? filterPageIds : null,
-			filter_date_from: filterDateFrom ? `${filterDateFrom}T00:00:00Z` : null,
-			filter_date_to: filterDateTo ? `${filterDateTo}T23:59:59Z` : null,
-			filter_method: filterMethod || null,
-		});
-		queryClient.invalidateQueries({ queryKey: ["broadcast-recipients", broadcastId] });
-	}
-
 	async function handleSave() {
 		if (!broadcastId) return;
 		setSaving(true);
@@ -247,6 +236,50 @@ export function BroadcastComposeDialog({
 		}
 	}
 
+	const isDraft = !broadcast || broadcast.status === "draft";
+
+	// Auto-save filters on change (debounced)
+	const filterSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+	const filterInitialized = useRef(false);
+
+	useEffect(() => {
+		// Skip the first run (initial load from broadcast)
+		if (!filterInitialized.current) {
+			filterInitialized.current = true;
+			return;
+		}
+		if (!broadcastId || !isDraft) return;
+		if (filterSaveTimer.current) clearTimeout(filterSaveTimer.current);
+		filterSaveTimer.current = setTimeout(async () => {
+			await api.put(`/broadcasts/${broadcastId}`, {
+				filter_page_ids: filterPageIds.length > 0 ? filterPageIds : null,
+				filter_date_from: filterDateFrom ? `${filterDateFrom}T00:00:00Z` : null,
+				filter_date_to: filterDateTo ? `${filterDateTo}T23:59:59Z` : null,
+				filter_method: filterMethod || null,
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["broadcast-recipients", broadcastId],
+			});
+		}, 500);
+		return () => {
+			if (filterSaveTimer.current) clearTimeout(filterSaveTimer.current);
+		};
+	}, [
+		broadcastId,
+		isDraft,
+		filterPageIds,
+		filterDateFrom,
+		filterDateTo,
+		filterMethod,
+		queryClient,
+	]);
+
+	// Reset initialized flag when dialog opens with new broadcast
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when broadcastId changes
+	useEffect(() => {
+		filterInitialized.current = false;
+	}, [broadcastId]);
+
 	function togglePageFilter(pageId: string) {
 		setFilterPageIds((prev) =>
 			prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId],
@@ -260,12 +293,11 @@ export function BroadcastComposeDialog({
 		onOpenChange(false);
 	}
 
-	const isDraft = !broadcast || broadcast.status === "draft";
 	const isScheduled = !!scheduledAt;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto scroll-shadows">
 				<DialogHeader>
 					<DialogTitle>
 						{isDraft ? (broadcast ? "Edit Broadcast" : "New Broadcast") : "View Broadcast"}
@@ -325,7 +357,10 @@ export function BroadcastComposeDialog({
 
 						{/* Subject */}
 						<div className="space-y-1.5">
-							<Label htmlFor="broadcast-subject">Subject</Label>
+							<div className="flex items-center justify-between">
+								<Label htmlFor="broadcast-subject">Subject</Label>
+								<span className="text-xs text-muted-foreground">{subject.length}/200</span>
+							</div>
 							<Input
 								id="broadcast-subject"
 								value={subject}
@@ -465,9 +500,12 @@ export function BroadcastComposeDialog({
 											</select>
 										</div>
 
-										<Button variant="outline" size="sm" onClick={saveFilters} disabled={!isDraft}>
-											Update count
-										</Button>
+										{countLoading && (
+											<div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+												<Loader2 className="size-3 animate-spin" />
+												Updating count...
+											</div>
+										)}
 									</CardContent>
 								</Card>
 							)}
@@ -633,12 +671,23 @@ export function BroadcastCard({
 				</div>
 
 				{broadcast.status !== "draft" && (
-					<div className="flex gap-4 text-xs text-muted-foreground">
-						<span>{broadcast.recipient_count} recipients</span>
-						<span>{broadcast.sent_count} sent</span>
-						<span>
-							{broadcast.opened_count} opened ({openRate}%)
-						</span>
+					<div className="space-y-1.5">
+						<div className="flex gap-4 text-xs text-muted-foreground">
+							<span>
+								<span className="font-medium text-foreground">{broadcast.sent_count}</span>
+								{" / "}
+								{broadcast.recipient_count} delivered
+							</span>
+							<span>
+								<span className="font-medium text-foreground">{openRate}%</span> open rate
+							</span>
+						</div>
+						{broadcast.sent_count < broadcast.recipient_count && (
+							<p className="text-[10px] text-muted-foreground/70">
+								{broadcast.recipient_count - broadcast.sent_count} suppressed (bounced or
+								unsubscribed)
+							</p>
+						)}
 					</div>
 				)}
 

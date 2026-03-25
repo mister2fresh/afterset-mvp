@@ -180,7 +180,10 @@ function SequenceStepEditor({
 			</div>
 
 			<div className="space-y-2">
-				<Label>Subject Line</Label>
+				<div className="flex items-center justify-between">
+					<Label>Subject Line</Label>
+					<span className="text-xs text-muted-foreground">{form.subject.length}/200</span>
+				</div>
 				<Input
 					placeholder='e.g. "Thanks for coming out tonight!"'
 					value={form.subject}
@@ -371,7 +374,7 @@ export function EmailTemplateDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+			<DialogContent className="max-h-[85vh] overflow-y-auto scroll-shadows sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle className="font-display flex items-center gap-2">
 						<Mail className="size-5" />
@@ -394,18 +397,22 @@ export function EmailTemplateDialog({
 									onClick={() => setExpandedOrder(isExpanded ? null : step.sequence_order)}
 									className="flex w-full items-center gap-3 p-3 text-left"
 								>
-									<div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
+									<div
+										className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${step.sequence_order === 0 ? "bg-honey-gold/20 text-honey-gold" : "bg-muted"}`}
+									>
 										{step.sequence_order + 1}
 									</div>
 									<div className="min-w-0 flex-1">
 										<p className="truncate text-sm font-medium">{step.subject || "Untitled"}</p>
 										<p className="flex items-center gap-1 text-xs text-muted-foreground">
 											{step.sequence_order === 0 ? (
-												<Zap className="size-3" />
+												<Zap className="size-3 text-honey-gold" />
 											) : (
 												<CalendarDays className="size-3" />
 											)}
-											{stepDelayLabel(step)}
+											{step.sequence_order === 0
+												? "Welcome email"
+												: `Follow-up · ${stepDelayLabel(step)}`}
 										</p>
 									</div>
 									<Badge

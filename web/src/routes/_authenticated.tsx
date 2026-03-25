@@ -85,16 +85,26 @@ function AuthenticatedLayout() {
 							<SidebarGroupLabel>Menu</SidebarGroupLabel>
 							<SidebarGroupContent>
 								<SidebarMenu>
-									{navItems.map((item) => (
-										<SidebarMenuItem key={item.to}>
-											<SidebarMenuButton asChild isActive={!!matchRoute({ to: item.to })}>
-												<Link to={item.to}>
-													<item.icon />
-													<span>{item.label}</span>
-												</Link>
-											</SidebarMenuButton>
-										</SidebarMenuItem>
-									))}
+									{navItems.map((item) => {
+										const active = !!matchRoute({ to: item.to });
+										return (
+											<SidebarMenuItem key={item.to}>
+												<SidebarMenuButton asChild isActive={active}>
+													<Link
+														to={item.to}
+														className={
+															active
+																? "border-l-2 border-honey-gold pl-1.5 [&_svg]:text-honey-gold"
+																: ""
+														}
+													>
+														<item.icon />
+														<span>{item.label}</span>
+													</Link>
+												</SidebarMenuButton>
+											</SidebarMenuItem>
+										);
+									})}
 								</SidebarMenu>
 							</SidebarGroupContent>
 						</SidebarGroup>

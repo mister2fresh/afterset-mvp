@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 24, 2026 (v28 — UI polish + broadcast archive)
+**Last updated:** March 24, 2026 (v29 — medium/low UI polish + capture page UX)
 **Current phase:** Sprint 3 — Text-to-Join + Polish
-**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped, broadcast campaigns shipped, onboarding email step shipped, high-impact UI polish shipped, broadcast archive shipped
-**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1), medium/low-impact UI polish
+**Sprint:** Sprint 3 in progress — P0 keyword management complete, P1 onboarding complete, safe page deletion shipped, P2 error handling shipped, broadcast campaigns shipped, onboarding email step shipped, high-impact UI polish shipped, broadcast archive shipped, medium/low UI polish shipped
+**Next up:** Telnyx toll-free verification (manual, in progress), landing page update (P1)
 
 ---
 
@@ -748,7 +748,7 @@ Run ADR validation tasks before committing to the stack.
   - Archived cards shown at reduced opacity with "Unarchive" option
   - *Acceptance:* Sent broadcasts can be cleaned up without losing stats.
 
-- [ ] **Medium/low-impact UI polish**
+- [x] **Medium/low-impact UI polish** ✅ March 24, 2026
   - Empty states: guide users on what to do next (dashboard, analytics, fans)
   - Email sequence steps: visually distinguish step 0 (immediate) from delayed steps
   - Broadcast filters: auto-update recipient count on filter change
@@ -759,6 +759,8 @@ Run ADR validation tasks before committing to the stack.
   - Analytics loading: contextual message instead of bare spinner
   - Theme preset buttons: larger swatches or mini previews
   - Nav active state: stronger contrast
+  - Capture page edit: keyword section moved to top, collapsible streaming/social links, link persistence across pages
+  - Dialog overlay: darkened for better readability
 
 - [ ] **Invite waitlist users to beta**
   - Email waitlist via Kit with beta access instructions

@@ -43,11 +43,13 @@ export function KeywordDialog({
 	const [value, setValue] = useState(currentKeyword ?? "");
 	const [check, setCheck] = useState<CheckResult | null>(null);
 	const [checking, setChecking] = useState(false);
+	const [debouncing, setDebouncing] = useState(false);
 
 	useEffect(() => {
 		if (open) {
 			setValue(currentKeyword ?? "");
 			setCheck(null);
+			setDebouncing(false);
 		}
 	}, [open, currentKeyword]);
 
@@ -55,9 +57,11 @@ export function KeywordDialog({
 		async (keyword: string) => {
 			if (keyword.length < 2) {
 				setCheck(null);
+				setDebouncing(false);
 				return;
 			}
 			setChecking(true);
+			setDebouncing(false);
 			try {
 				const result = await api.post<CheckResult>(`/capture-pages/${pageId}/keyword/check`, {
 					keyword,
@@ -73,10 +77,16 @@ export function KeywordDialog({
 	);
 
 	useEffect(() => {
+		const clean = value.replace(/[^A-Za-z0-9]/g, "");
+		if (clean.length >= 2) {
+			setDebouncing(true);
+		}
 		const timer = setTimeout(() => {
-			const clean = value.replace(/[^A-Za-z0-9]/g, "");
 			if (clean.length >= 2) checkAvailability(clean);
-			else setCheck(null);
+			else {
+				setCheck(null);
+				setDebouncing(false);
+			}
 		}, 300);
 		return () => clearTimeout(timer);
 	}, [value, checkAvailability]);
@@ -112,6 +122,7 @@ export function KeywordDialog({
 	const canSave =
 		value.length >= 2 &&
 		!checking &&
+		!debouncing &&
 		check &&
 		(check.available || check.current) &&
 		value.toUpperCase() !== currentKeyword;
@@ -141,7 +152,7 @@ export function KeywordDialog({
 								className="pr-10 uppercase"
 							/>
 							<div className="absolute inset-y-0 right-3 flex items-center">
-								<StatusIcon checking={checking} check={check} value={value} />
+								<StatusIcon checking={checking || debouncing} check={check} value={value} />
 							</div>
 						</div>
 						<p className="text-xs text-muted-foreground">

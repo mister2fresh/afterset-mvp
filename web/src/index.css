@@ -89,8 +89,8 @@
 	--sidebar-foreground: #e5e7eb;
 	--sidebar-primary: #e8c547;
 	--sidebar-primary-foreground: #0a0e1a;
-	--sidebar-accent: #1e293b;
-	--sidebar-accent-foreground: #f0f0f0;
+	--sidebar-accent: #1a2333;
+	--sidebar-accent-foreground: #f5f5f5;
 	--sidebar-border: rgba(255 255 255 / 8%);
 	--sidebar-ring: #e8c547;
 }
@@ -101,5 +101,23 @@
 	}
 	body {
 		@apply bg-background text-foreground font-sans antialiased;
+	}
+}
+
+@layer utilities {
+	.scroll-shadows {
+		background:
+			/* top shadow cover */ linear-gradient(var(--color-background) 33%, transparent) center top,
+			/* bottom shadow cover */ linear-gradient(transparent, var(--color-background) 66%) center
+				bottom,
+			/* top shadow */ linear-gradient(rgba(0 0 0 / 0.3), transparent) center top,
+			/* bottom shadow */ linear-gradient(transparent, rgba(0 0 0 / 0.3)) center bottom;
+		background-repeat: no-repeat;
+		background-size:
+			100% 24px,
+			100% 24px,
+			100% 8px,
+			100% 8px;
+		background-attachment: local, local, scroll, scroll;
 	}
 }
