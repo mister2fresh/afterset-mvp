@@ -208,7 +208,7 @@ function AnalyticsPage() {
 											</p>
 											{pageData.email.steps.map((step) => (
 												<div key={step.sequence_order} className="flex items-center gap-3 text-sm">
-													<span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">
+													<span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
 														{step.sequence_order + 1}
 													</span>
 													<span className="min-w-0 flex-1 truncate text-muted-foreground">
@@ -243,7 +243,7 @@ function StatCard({ label, value }: { label: string; value: number }) {
 				<TrendingUp className="size-4 text-muted-foreground" />
 			</CardHeader>
 			<CardContent>
-				<p className="font-display text-3xl font-bold">{value.toLocaleString()}</p>
+				<p className="font-display text-2xl font-bold sm:text-3xl">{value.toLocaleString()}</p>
 			</CardContent>
 		</Card>
 	);

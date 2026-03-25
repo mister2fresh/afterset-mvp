@@ -189,7 +189,7 @@ function SortBar({
 						key={opt.key}
 						type="button"
 						onClick={() => onToggle(opt.key)}
-						className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${active ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+						className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${active ? "bg-muted text-foreground" : "text-muted-foreground"}`}
 					>
 						{opt.label}
 						{active && (sortDir === "asc" ? " ↑" : " ↓")}
@@ -262,7 +262,7 @@ function PageLink({ row, className }: { row: CaptureRow; className?: string }) {
 
 function MethodBadge({ method }: { method: string }) {
 	return (
-		<Badge variant={METHOD_VARIANTS[method] ?? "secondary"} className="text-[10px]">
+		<Badge variant={METHOD_VARIANTS[method] ?? "secondary"} className="text-xs">
 			{METHOD_LABELS[method] ?? method}
 		</Badge>
 	);

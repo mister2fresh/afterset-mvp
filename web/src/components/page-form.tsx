@@ -520,7 +520,7 @@ export function PageForm({
 									style={{ background: bg }}
 								>
 									<div
-										className="px-3 py-0.5 text-[9px] font-semibold"
+										className="px-3 py-0.5 text-[11px] font-semibold"
 										style={{
 											backgroundColor: preset.accent_color,
 											color: "#0a0e1a",
@@ -531,7 +531,7 @@ export function PageForm({
 									</div>
 								</div>
 								<span
-									className={`text-[10px] ${isActive ? "font-medium text-honey-gold" : "text-muted-foreground"}`}
+									className={`text-xs ${isActive ? "font-medium text-honey-gold" : "text-muted-foreground"}`}
 								>
 									{preset.name}
 								</span>

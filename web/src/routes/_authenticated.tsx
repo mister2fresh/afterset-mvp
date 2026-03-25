@@ -95,7 +95,7 @@ function AuthenticatedLayout() {
 						<DropdownMenuTrigger asChild>
 							<button
 								type="button"
-								className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								className="flex size-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 							>
 								<Avatar className="size-8">
 									<AvatarFallback className="bg-honey-gold/20 text-honey-gold text-xs">
@@ -133,7 +133,7 @@ function AuthenticatedLayout() {
 								<Link
 									key={item.to}
 									to={item.to}
-									className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[10px] transition-colors ${
+									className={`flex flex-col items-center justify-center gap-0.5 px-3 py-2 text-xs transition-colors ${
 										active ? "text-honey-gold" : "text-muted-foreground"
 									}`}
 								>

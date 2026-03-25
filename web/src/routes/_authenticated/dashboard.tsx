@@ -195,7 +195,7 @@ function StatCard({
 				<Icon className="size-4 text-muted-foreground" />
 			</CardHeader>
 			<CardContent>
-				<p className="font-display text-3xl font-bold">{value.toLocaleString()}</p>
+				<p className="font-display text-2xl font-bold sm:text-3xl">{value.toLocaleString()}</p>
 			</CardContent>
 		</Card>
 	);

@@ -778,7 +778,7 @@ export function BroadcastCard({
 							</span>
 						</div>
 						{broadcast.sent_count < broadcast.recipient_count && (
-							<p className="text-[10px] text-muted-foreground/70">
+							<p className="text-xs text-muted-foreground/70">
 								{broadcast.recipient_count - broadcast.sent_count} suppressed (bounced or
 								unsubscribed)
 							</p>

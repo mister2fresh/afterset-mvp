@@ -53,7 +53,9 @@ function LoginPage() {
 					<div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-honey-gold/10">
 						<Mail className="size-6 text-honey-gold" />
 					</div>
-					<h1 className="font-display text-3xl font-bold text-honey-gold">Check your email</h1>
+					<h1 className="font-display text-2xl font-bold text-honey-gold sm:text-3xl">
+						Check your email
+					</h1>
 					<p className="mt-4 text-gray-400">
 						We sent a magic link to <span className="text-white">{email}</span>. Click it to sign
 						in.
@@ -99,7 +101,7 @@ function LoginPage() {
 	return (
 		<div className="flex min-h-screen items-center justify-center">
 			<div className="mx-auto w-full max-w-sm">
-				<h1 className="font-display text-center text-3xl font-bold text-honey-gold">
+				<h1 className="font-display text-center text-2xl font-bold text-honey-gold sm:text-3xl">
 					Sign in to Afterset
 				</h1>
 				<p className="mt-2 text-center text-gray-400">Enter your email to receive a magic link.</p>

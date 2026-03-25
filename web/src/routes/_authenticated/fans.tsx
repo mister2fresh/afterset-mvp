@@ -194,9 +194,9 @@ function FansPage() {
 							<button
 								type="button"
 								onClick={() => updateFilter({ page_id: undefined, page_title: undefined })}
-								className="ml-0.5 rounded-full hover:bg-muted"
+								className="ml-0.5 rounded-full p-1 hover:bg-muted"
 							>
-								<X className="size-3" />
+								<X className="size-3.5" />
 							</button>
 						</Badge>
 					)}
@@ -206,9 +206,9 @@ function FansPage() {
 							<button
 								type="button"
 								onClick={() => updateFilter({ method: undefined })}
-								className="ml-0.5 rounded-full hover:bg-muted"
+								className="ml-0.5 rounded-full p-1 hover:bg-muted"
 							>
-								<X className="size-3" />
+								<X className="size-3.5" />
 							</button>
 						</Badge>
 					)}
@@ -218,9 +218,9 @@ function FansPage() {
 							<button
 								type="button"
 								onClick={() => updateFilter({ search: undefined })}
-								className="ml-0.5 rounded-full hover:bg-muted"
+								className="ml-0.5 rounded-full p-1 hover:bg-muted"
 							>
-								<X className="size-3" />
+								<X className="size-3.5" />
 							</button>
 						</Badge>
 					)}
@@ -230,9 +230,9 @@ function FansPage() {
 							<button
 								type="button"
 								onClick={() => updateFilter({ date_from: undefined, date_to: undefined })}
-								className="ml-0.5 rounded-full hover:bg-muted"
+								className="ml-0.5 rounded-full p-1 hover:bg-muted"
 							>
-								<X className="size-3" />
+								<X className="size-3.5" />
 							</button>
 						</Badge>
 					)}

@@ -417,7 +417,7 @@ export function EmailTemplateDialog({
 									</div>
 									<Badge
 										variant={step.is_active ? "default" : "secondary"}
-										className="shrink-0 text-[10px]"
+										className="shrink-0 text-xs"
 									>
 										{step.is_active ? "Active" : "Draft"}
 									</Badge>
@@ -517,7 +517,7 @@ export function EmailTemplateBadge({ pageId, onClick }: { pageId: string; onClic
 			<button type="button" onClick={onClick}>
 				<Badge
 					variant={data.active > 0 ? "default" : "secondary"}
-					className="gap-1 text-[10px] cursor-pointer hover:opacity-80 transition-opacity"
+					className="gap-1 text-xs cursor-pointer hover:opacity-80 transition-opacity"
 				>
 					<Mail className="size-2.5" />
 					{label}
@@ -527,7 +527,7 @@ export function EmailTemplateBadge({ pageId, onClick }: { pageId: string; onClic
 	}
 
 	return (
-		<Badge variant={data.active > 0 ? "default" : "secondary"} className="gap-1 text-[10px]">
+		<Badge variant={data.active > 0 ? "default" : "secondary"} className="gap-1 text-xs">
 			<Mail className="size-2.5" />
 			{label}
 		</Badge>

@@ -212,7 +212,7 @@ function PageCard({
 		<Card>
 			<CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
 				<div className="space-y-1">
-					<CardTitle className="font-display text-base">{page.title}</CardTitle>
+					<CardTitle className="truncate font-display text-base">{page.title}</CardTitle>
 					<a
 						href={`https://afterset.net/c/${page.slug}`}
 						target="_blank"
@@ -225,7 +225,7 @@ function PageCard({
 				</div>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" size="icon" className="size-8">
+						<Button variant="ghost" size="icon" className="size-11 sm:size-8">
 							<MoreVertical className="size-4" />
 						</Button>
 					</DropdownMenuTrigger>
