@@ -24,6 +24,11 @@ const createSchema = z.object({
 	secondary_color: hexColor.optional(),
 	background_style: z.enum(["solid", "gradient", "glow"]).optional(),
 	button_style: z.enum(["rounded", "pill", "sharp"]).optional(),
+	font_style: z.enum(["modern", "editorial", "mono", "condensed"]).optional(),
+	title_size: z.enum(["default", "large", "xl"]).optional(),
+	layout_style: z.enum(["centered", "stacked"]).optional(),
+	text_color: hexColor.optional(),
+	bg_color: hexColor.optional(),
 });
 
 const updateSchema = createSchema.partial();
@@ -82,6 +87,11 @@ app.post("/", async (c) => {
 		secondary_color,
 		background_style,
 		button_style,
+		font_style,
+		title_size,
+		layout_style,
+		text_color,
+		bg_color,
 	} = parsed.data;
 	const baseSlug = parsed.data.slug || slugify(title);
 	const slug = await findUniqueSlug(baseSlug);
@@ -99,6 +109,11 @@ app.post("/", async (c) => {
 			secondary_color: secondary_color ?? "#D4A017",
 			background_style: background_style ?? "solid",
 			button_style: button_style ?? "rounded",
+			font_style: font_style ?? "modern",
+			title_size: title_size ?? "default",
+			layout_style: layout_style ?? "centered",
+			text_color: text_color ?? "#f9fafb",
+			bg_color: bg_color ?? "#0a0e1a",
 		})
 		.select()
 		.single();

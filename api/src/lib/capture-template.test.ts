@@ -10,6 +10,11 @@ function basePage(overrides = {}) {
 		secondary_color: "#D4A017",
 		background_style: "solid" as const,
 		button_style: "rounded" as const,
+		font_style: "modern" as const,
+		title_size: "default" as const,
+		layout_style: "centered" as const,
+		text_color: "#f9fafb",
+		bg_color: "#0a0e1a",
 		streaming_links: {} as Record<string, string>,
 		social_links: {} as Record<string, string>,
 		incentive_file_name: null as string | null,
@@ -49,11 +54,73 @@ describe("generateCaptureHtml", () => {
 		expect(html).not.toContain('class="sub"');
 	});
 
-	it("uses system font stack", () => {
-		const html = generateCaptureHtml(basePage());
+	it("uses system font stack for modern style", () => {
+		const html = generateCaptureHtml(basePage({ font_style: "modern" }));
 		expect(html).toContain("-apple-system,BlinkMacSystemFont");
-		expect(html).not.toContain("Bricolage");
-		expect(html).not.toContain("DM Sans");
+	});
+
+	it("uses serif font stack for editorial style", () => {
+		const html = generateCaptureHtml(basePage({ font_style: "editorial" }));
+		expect(html).toContain("Georgia");
+		expect(html).toContain("serif");
+	});
+
+	it("uses monospace font stack for mono style", () => {
+		const html = generateCaptureHtml(basePage({ font_style: "mono" }));
+		expect(html).toContain("monospace");
+	});
+
+	it("applies uppercase for condensed style", () => {
+		const html = generateCaptureHtml(basePage({ font_style: "condensed" }));
+		expect(html).toContain("text-transform:uppercase");
+		expect(html).toContain("letter-spacing:.15em");
+	});
+
+	it("applies default title size", () => {
+		const html = generateCaptureHtml(basePage({ title_size: "default" }));
+		expect(html).toContain("font-size:1.5rem");
+	});
+
+	it("applies large title size", () => {
+		const html = generateCaptureHtml(basePage({ title_size: "large" }));
+		expect(html).toContain("font-size:2rem");
+	});
+
+	it("applies xl title size", () => {
+		const html = generateCaptureHtml(basePage({ title_size: "xl" }));
+		expect(html).toContain("font-size:2.75rem");
+	});
+
+	it("applies stacked layout", () => {
+		const html = generateCaptureHtml(basePage({ layout_style: "stacked" }));
+		expect(html).toContain("flex-direction:column");
+	});
+
+	it("does not use stacked layout for centered", () => {
+		const html = generateCaptureHtml(basePage({ layout_style: "centered" }));
+		expect(html).not.toContain("flex-direction:column");
+	});
+
+	it("uses custom text color", () => {
+		const html = generateCaptureHtml(basePage({ text_color: "#1a1a1a" }));
+		expect(html).toContain("color:#1a1a1a");
+	});
+
+	it("uses custom bg color", () => {
+		const html = generateCaptureHtml(basePage({ bg_color: "#ffffff" }));
+		expect(html).toContain("#ffffff");
+	});
+
+	it("adapts muted color for light backgrounds", () => {
+		const html = generateCaptureHtml(basePage({ bg_color: "#ffffff" }));
+		expect(html).toContain("#6b7280");
+		expect(html).toContain("#f3f4f6");
+	});
+
+	it("adapts muted color for dark backgrounds", () => {
+		const html = generateCaptureHtml(basePage({ bg_color: "#0a0e1a" }));
+		expect(html).toContain("#9ca3af");
+		expect(html).toContain("#111827");
 	});
 
 	it("applies solid background", () => {
@@ -66,7 +133,7 @@ describe("generateCaptureHtml", () => {
 			basePage({ background_style: "gradient", secondary_color: "#D4A017" }),
 		);
 		expect(html).toContain("linear-gradient");
-		expect(html).toContain("#D4A01726");
+		expect(html).toContain("#D4A01742");
 	});
 
 	it("applies glow background using accent color", () => {
@@ -74,7 +141,7 @@ describe("generateCaptureHtml", () => {
 			basePage({ background_style: "glow", accent_color: "#E8C547" }),
 		);
 		expect(html).toContain("radial-gradient");
-		expect(html).toContain("#E8C5471A");
+		expect(html).toContain("#E8C54733");
 	});
 
 	it("applies rounded button style", () => {
@@ -96,6 +163,16 @@ describe("generateCaptureHtml", () => {
 		const html = generateCaptureHtml(basePage({ accent_color: "#FF0000" }));
 		expect(html).toContain("background:#FF0000");
 		expect(html).toContain("border-color:#FF0000");
+	});
+
+	it("uses dark text on light accent buttons", () => {
+		const html = generateCaptureHtml(basePage({ accent_color: "#FFFFFF" }));
+		expect(html).toContain("color:#0a0e1a");
+	});
+
+	it("uses light text on dark accent buttons", () => {
+		const html = generateCaptureHtml(basePage({ accent_color: "#000000" }));
+		expect(html).toContain("color:#f9fafb");
 	});
 
 	it("renders streaming link icons", () => {
@@ -215,10 +292,26 @@ describe("generateCaptureHtml", () => {
 		expect(html).toContain("min-width:48px");
 	});
 
+	it("includes fade-in animation", () => {
+		const html = generateCaptureHtml(basePage());
+		expect(html).toContain("@keyframes fi");
+		expect(html).toContain("animation:fi");
+	});
+
+	it("includes hover state for input", () => {
+		const html = generateCaptureHtml(basePage());
+		expect(html).toContain(".f input:hover");
+	});
+
 	it("stays under 14KB TCP window budget", () => {
 		const maxPage = basePage({
 			title: "A".repeat(100),
 			value_exchange_text: "B".repeat(500),
+			font_style: "condensed",
+			title_size: "xl",
+			layout_style: "stacked",
+			text_color: "#1a1a1a",
+			bg_color: "#ffffff",
 			streaming_links: {
 				spotify: "https://open.spotify.com/artist/xxxxxxxxxx",
 				apple_music: "https://music.apple.com/artist/xxxxxxxxxx",

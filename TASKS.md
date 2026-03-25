@@ -1,7 +1,7 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 25, 2026 (v35 — touch target audit + responsive typography pass)
+**Last updated:** March 25, 2026 (v36 — capture page style upgrade: fonts, title sizes, layout, custom colors)
 **Current phase:** Sprint 4 — Mobile-First + PWA
 **Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) next
 **Next up:** Touch target audit (P0), responsive typography pass (P0), PWA manifest (P0)
@@ -460,18 +460,18 @@ Run ADR validation tasks before committing to the stack.
   - *Acceptance:* Artist creates a page, sees it in dashboard, can edit and delete. ✓
 
 - [x] **Capture page customization (dashboard)** ✓ completed 2026-03-22
-  - 7 theme presets (Gold, Neon, Ember, Violet, Minimal, Verdant, Retro) — one-click fills accent color, secondary color, background style, button style
-  - Individual override knobs: accent/secondary color pickers, background style (solid/gradient/glow), button style (rounded/pill/sharp)
-  - Migration: `secondary_color`, `background_style`, `button_style` columns on `capture_pages`
+  - 6 theme presets (Gold, Neon, Ember, Violet, Minimal, Verdant) — one-click fills all style options
+  - Individual override knobs: accent/secondary color pickers, text/bg color pickers, background effect (solid/gradient/glow), button style (rounded/pill/sharp), font style (modern/editorial/mono/condensed), title size (Sm/Md/Lg), layout (side-by-side/stacked)
+  - Migration: `secondary_color`, `background_style`, `button_style`, `font_style`, `title_size`, `layout_style`, `text_color`, `bg_color` columns on `capture_pages`
   - *Acceptance:* Artist picks a preset or customizes individual knobs. Settings persist and display on page cards. ✓
-  - **Polish (revisit during build pipeline):** More visual differentiation between presets — stronger gradients, format/layout positioning differences, font and font size variations per theme
+  - [x] **Polish: visual differentiation between presets** ✅ March 25, 2026 — stronger gradients/glow, 4 font stacks, 3 title sizes, stacked layout, custom text/bg colors (light mode support), smart contrast for button text, fade-in animation, hover/active states
 
 - [x] **Capture page live preview (dashboard)** ✓ completed 2026-03-22
   - Inline preview component in the page creator/editor dialog (above theme presets)
   - Shows title, value exchange text, email input, CTA button, streaming link indicators
   - Reflects accent/secondary color, background style, and button style in real time
   - *Acceptance:* Artist sees a representative preview updating live as they change theme settings. ✓
-  - **Polish (revisit during build pipeline):** Preview should match the actual fan-facing HTML template once built — currently a dashboard approximation
+  - [x] **Polish: preview reflects new style options** ✅ March 25, 2026 — preview now mirrors font style, title size, layout, text/bg colors, and smart contrast
 
 - [x] **Capture page build pipeline** ✓ completed 2026-03-22
   - `buildPage()` in `api/src/lib/build-page.ts`: reads page from Supabase → generates HTML via template → Brotli 11 compress → uploads to R2 (`c/{slug}/index.html`)

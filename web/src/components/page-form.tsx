@@ -20,6 +20,9 @@ import { api, uploadToSignedUrl } from "@/lib/api";
 
 export type BackgroundStyle = "solid" | "gradient" | "glow";
 export type ButtonStyle = "rounded" | "pill" | "sharp";
+export type FontStyle = "modern" | "editorial" | "mono" | "condensed";
+export type TitleSize = "default" | "large" | "xl";
+export type LayoutStyle = "centered" | "stacked";
 
 export type CapturePage = {
 	id: string;
@@ -32,6 +35,11 @@ export type CapturePage = {
 	secondary_color: string;
 	background_style: BackgroundStyle;
 	button_style: ButtonStyle;
+	font_style: FontStyle;
+	title_size: TitleSize;
+	layout_style: LayoutStyle;
+	text_color: string;
+	bg_color: string;
 	is_active: boolean;
 	incentive_file_path: string | null;
 	incentive_file_name: string | null;
@@ -48,6 +56,11 @@ export type FormData = {
 	secondary_color: string;
 	background_style: BackgroundStyle;
 	button_style: ButtonStyle;
+	font_style: FontStyle;
+	title_size: TitleSize;
+	layout_style: LayoutStyle;
+	text_color: string;
+	bg_color: string;
 	streaming_links: Record<string, string>;
 	social_links: Record<string, string>;
 };
@@ -59,6 +72,11 @@ export const EMPTY_FORM: FormData = {
 	secondary_color: "#D4A017",
 	background_style: "solid",
 	button_style: "rounded",
+	font_style: "modern",
+	title_size: "default",
+	layout_style: "centered",
+	text_color: "#f9fafb",
+	bg_color: "#0a0e1a",
 	streaming_links: {},
 	social_links: {},
 };
@@ -71,6 +89,11 @@ export function formFromPage(page: CapturePage): FormData {
 		secondary_color: page.secondary_color,
 		background_style: page.background_style,
 		button_style: page.button_style,
+		font_style: page.font_style ?? "modern",
+		title_size: page.title_size ?? "default",
+		layout_style: page.layout_style ?? "centered",
+		text_color: page.text_color ?? "#f9fafb",
+		bg_color: page.bg_color ?? "#0a0e1a",
 		streaming_links: { ...page.streaming_links },
 		social_links: { ...page.social_links },
 	};
@@ -82,6 +105,11 @@ type ThemePreset = {
 	secondary_color: string;
 	background_style: BackgroundStyle;
 	button_style: ButtonStyle;
+	font_style: FontStyle;
+	title_size: TitleSize;
+	layout_style: LayoutStyle;
+	text_color: string;
+	bg_color: string;
 };
 
 export const THEME_PRESETS: ThemePreset[] = [
@@ -91,6 +119,11 @@ export const THEME_PRESETS: ThemePreset[] = [
 		secondary_color: "#D4A017",
 		background_style: "solid",
 		button_style: "rounded",
+		font_style: "modern",
+		title_size: "default",
+		layout_style: "centered",
+		text_color: "#f9fafb",
+		bg_color: "#0a0e1a",
 	},
 	{
 		name: "Neon",
@@ -98,6 +131,11 @@ export const THEME_PRESETS: ThemePreset[] = [
 		secondary_color: "#E040FB",
 		background_style: "glow",
 		button_style: "pill",
+		font_style: "condensed",
+		title_size: "large",
+		layout_style: "centered",
+		text_color: "#f9fafb",
+		bg_color: "#0a0e1a",
 	},
 	{
 		name: "Ember",
@@ -105,6 +143,11 @@ export const THEME_PRESETS: ThemePreset[] = [
 		secondary_color: "#F7C948",
 		background_style: "gradient",
 		button_style: "rounded",
+		font_style: "modern",
+		title_size: "default",
+		layout_style: "stacked",
+		text_color: "#f9fafb",
+		bg_color: "#0a0e1a",
 	},
 	{
 		name: "Violet",
@@ -112,13 +155,23 @@ export const THEME_PRESETS: ThemePreset[] = [
 		secondary_color: "#6D28D9",
 		background_style: "glow",
 		button_style: "pill",
+		font_style: "editorial",
+		title_size: "large",
+		layout_style: "centered",
+		text_color: "#f9fafb",
+		bg_color: "#0a0e1a",
 	},
 	{
 		name: "Minimal",
-		accent_color: "#E5E7EB",
+		accent_color: "#1a1a1a",
 		secondary_color: "#9CA3AF",
 		background_style: "solid",
 		button_style: "sharp",
+		font_style: "modern",
+		title_size: "default",
+		layout_style: "stacked",
+		text_color: "#1a1a1a",
+		bg_color: "#ffffff",
 	},
 	{
 		name: "Verdant",
@@ -126,13 +179,11 @@ export const THEME_PRESETS: ThemePreset[] = [
 		secondary_color: "#059669",
 		background_style: "gradient",
 		button_style: "rounded",
-	},
-	{
-		name: "Retro",
-		accent_color: "#40E0D0",
-		secondary_color: "#FF8C42",
-		background_style: "gradient",
-		button_style: "pill",
+		font_style: "modern",
+		title_size: "default",
+		layout_style: "centered",
+		text_color: "#f9fafb",
+		bg_color: "#0a0e1a",
 	},
 ];
 
@@ -203,49 +254,95 @@ const BUTTON_RADIUS: Record<ButtonStyle, string> = {
 	sharp: "0",
 };
 
-function previewBackground(style: BackgroundStyle, accent: string, secondary: string): string {
+const FONT_STACK_PREVIEW: Record<FontStyle, string> = {
+	modern: "system-ui, sans-serif",
+	editorial: "Georgia, Times, serif",
+	mono: "ui-monospace, monospace",
+	condensed: "system-ui, sans-serif",
+};
+
+const TITLE_SIZE_PREVIEW: Record<TitleSize, string> = {
+	default: "1rem",
+	large: "1.25rem",
+	xl: "1.5rem",
+};
+
+function isLightColor(hex: string): boolean {
+	const r = Number.parseInt(hex.slice(1, 3), 16);
+	const g = Number.parseInt(hex.slice(3, 5), 16);
+	const b = Number.parseInt(hex.slice(5, 7), 16);
+	return r * 0.299 + g * 0.587 + b * 0.114 > 150;
+}
+
+function previewBackground(
+	style: BackgroundStyle,
+	accent: string,
+	secondary: string,
+	bg: string,
+): string {
 	if (style === "gradient") {
-		return `linear-gradient(180deg, ${secondary}26 0%, transparent 60%), #0a0e1a`;
+		return `linear-gradient(180deg, ${secondary}42 0%, transparent 60%), ${bg}`;
 	}
 	if (style === "glow") {
-		return `radial-gradient(ellipse at 50% 30%, ${accent}1A 0%, transparent 70%), #0a0e1a`;
+		return `radial-gradient(ellipse at 50% 30%, ${accent}33 0%, transparent 70%), ${bg}`;
 	}
-	return "#0a0e1a";
+	return bg;
 }
 
 export function CapturePagePreview({ form }: { form: FormData }) {
-	const bg = previewBackground(form.background_style, form.accent_color, form.secondary_color);
+	const bg = previewBackground(
+		form.background_style,
+		form.accent_color,
+		form.secondary_color,
+		form.bg_color,
+	);
 	const btnRadius = BUTTON_RADIUS[form.button_style];
 	const title = form.title || "Your Page Title";
 	const subtitle = form.value_exchange_text || "Get exclusive updates and early access";
 	const streamingCount = Object.values(form.streaming_links).filter((v) => v.trim()).length;
+	const fontFamily = FONT_STACK_PREVIEW[form.font_style];
+	const titleFontSize = TITLE_SIZE_PREVIEW[form.title_size];
+	const isStacked = form.layout_style === "stacked";
+	const mutedColor = isLightColor(form.bg_color) ? "#6b7280" : "#9ca3af";
+	const inputBg = isLightColor(form.bg_color) ? "#f3f4f6" : "#111827";
+	const inputBorder = isLightColor(form.bg_color) ? "#d1d5db" : "#374151";
+	const btnTextColor = isLightColor(form.accent_color) ? "#0a0e1a" : "#f9fafb";
 
 	return (
 		<div className="overflow-hidden rounded-lg border border-border" style={{ background: bg }}>
 			<div className="flex flex-col items-center gap-3 px-6 py-6 text-center">
-				<h3 className="text-base font-bold tracking-tight" style={{ color: "#f9fafb" }}>
+				<h3
+					className="font-bold tracking-tight"
+					style={{
+						color: form.text_color,
+						fontFamily,
+						fontSize: titleFontSize,
+						textTransform: form.font_style === "condensed" ? "uppercase" : undefined,
+						letterSpacing: form.font_style === "condensed" ? "0.15em" : "-0.025em",
+					}}
+				>
 					{title}
 				</h3>
-				<p className="max-w-[240px] text-xs leading-relaxed" style={{ color: "#9ca3af" }}>
+				<p className="max-w-[240px] text-xs leading-relaxed" style={{ color: mutedColor }}>
 					{subtitle}
 				</p>
 
-				<div className="mt-1 flex w-full max-w-[260px] gap-2">
+				<div className={`mt-1 flex w-full max-w-[260px] gap-2 ${isStacked ? "flex-col" : ""}`}>
 					<div
 						className="flex-1 rounded-md border px-3 py-1.5 text-left text-xs"
 						style={{
-							borderColor: "#374151",
-							color: "#6b7280",
-							backgroundColor: "#111827",
+							borderColor: inputBorder,
+							color: mutedColor,
+							backgroundColor: inputBg,
 						}}
 					>
 						your@email.com
 					</div>
 					<div
-						className="shrink-0 px-4 py-1.5 text-xs font-semibold"
+						className="shrink-0 px-4 py-1.5 text-center text-xs font-semibold"
 						style={{
 							backgroundColor: form.accent_color,
-							color: "#0a0e1a",
+							color: btnTextColor,
 							borderRadius: btnRadius,
 						}}
 					>
@@ -333,6 +430,35 @@ type PageFormProps = {
 
 function hasAnyLink(links: Record<string, string>): boolean {
 	return Object.values(links).some((v) => v.trim() !== "");
+}
+
+function applyPreset(form: FormData, preset: ThemePreset): FormData {
+	return {
+		...form,
+		accent_color: preset.accent_color,
+		secondary_color: preset.secondary_color,
+		background_style: preset.background_style,
+		button_style: preset.button_style,
+		font_style: preset.font_style,
+		title_size: preset.title_size,
+		layout_style: preset.layout_style,
+		text_color: preset.text_color,
+		bg_color: preset.bg_color,
+	};
+}
+
+function isPresetActive(form: FormData, preset: ThemePreset): boolean {
+	return (
+		form.accent_color === preset.accent_color &&
+		form.secondary_color === preset.secondary_color &&
+		form.background_style === preset.background_style &&
+		form.button_style === preset.button_style &&
+		form.font_style === preset.font_style &&
+		form.title_size === preset.title_size &&
+		form.layout_style === preset.layout_style &&
+		form.text_color === preset.text_color &&
+		form.bg_color === preset.bg_color
+	);
 }
 
 export function PageForm({
@@ -487,32 +613,22 @@ export function PageForm({
 			<div className="space-y-4">
 				<Label>Theme</Label>
 				<CapturePagePreview form={form} />
-				<div className="grid grid-cols-3 gap-2 sm:grid-cols-7">
+				<div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
 					{THEME_PRESETS.map((preset) => {
-						const isActive =
-							form.accent_color === preset.accent_color &&
-							form.secondary_color === preset.secondary_color &&
-							form.background_style === preset.background_style &&
-							form.button_style === preset.button_style;
+						const isActive = isPresetActive(form, preset);
 						const bg = previewBackground(
 							preset.background_style,
 							preset.accent_color,
 							preset.secondary_color,
+							preset.bg_color,
 						);
 						const btnRadius = BUTTON_RADIUS[preset.button_style];
+						const btnTextColor = isLightColor(preset.accent_color) ? "#0a0e1a" : "#f9fafb";
 						return (
 							<button
 								key={preset.name}
 								type="button"
-								onClick={() =>
-									setForm((f) => ({
-										...f,
-										accent_color: preset.accent_color,
-										secondary_color: preset.secondary_color,
-										background_style: preset.background_style,
-										button_style: preset.button_style,
-									}))
-								}
+								onClick={() => setForm((f) => applyPreset(f, preset))}
 								className={`flex flex-col items-center gap-1.5 rounded-lg border p-1.5 transition-colors ${isActive ? "border-honey-gold ring-1 ring-honey-gold/30" : "border-border hover:border-honey-gold/50"}`}
 							>
 								<div
@@ -523,7 +639,7 @@ export function PageForm({
 										className="px-3 py-0.5 text-[11px] font-semibold"
 										style={{
 											backgroundColor: preset.accent_color,
-											color: "#0a0e1a",
+											color: btnTextColor,
 											borderRadius: btnRadius,
 										}}
 									>
@@ -585,7 +701,50 @@ export function PageForm({
 
 				<div className="grid grid-cols-2 gap-4">
 					<div className="space-y-1.5">
-						<Label className="text-xs text-muted-foreground">Background</Label>
+						<Label htmlFor="text_color" className="text-xs text-muted-foreground">
+							Text
+						</Label>
+						<div className="flex items-center gap-2">
+							<input
+								type="color"
+								id="text_color"
+								value={form.text_color}
+								onChange={(e) => setForm((f) => ({ ...f, text_color: e.target.value }))}
+								className="h-8 w-10 cursor-pointer rounded border border-border bg-transparent"
+							/>
+							<Input
+								value={form.text_color}
+								onChange={(e) => setForm((f) => ({ ...f, text_color: e.target.value }))}
+								className="font-mono text-xs"
+								maxLength={7}
+							/>
+						</div>
+					</div>
+					<div className="space-y-1.5">
+						<Label htmlFor="bg_color" className="text-xs text-muted-foreground">
+							Background
+						</Label>
+						<div className="flex items-center gap-2">
+							<input
+								type="color"
+								id="bg_color"
+								value={form.bg_color}
+								onChange={(e) => setForm((f) => ({ ...f, bg_color: e.target.value }))}
+								className="h-8 w-10 cursor-pointer rounded border border-border bg-transparent"
+							/>
+							<Input
+								value={form.bg_color}
+								onChange={(e) => setForm((f) => ({ ...f, bg_color: e.target.value }))}
+								className="font-mono text-xs"
+								maxLength={7}
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div className="grid grid-cols-2 gap-4">
+					<div className="space-y-1.5">
+						<Label className="text-xs text-muted-foreground">Background Effect</Label>
 						<div className="flex gap-1">
 							{(["solid", "gradient", "glow"] as const).map((style) => (
 								<button
@@ -613,6 +772,55 @@ export function PageForm({
 								</button>
 							))}
 						</div>
+					</div>
+				</div>
+
+				<div className="grid grid-cols-2 gap-4">
+					<div className="space-y-1.5">
+						<Label className="text-xs text-muted-foreground">Font</Label>
+						<div className="flex gap-1">
+							{(["modern", "editorial", "mono", "condensed"] as const).map((style) => (
+								<button
+									key={style}
+									type="button"
+									onClick={() => setForm((f) => ({ ...f, font_style: style }))}
+									className={`flex-1 rounded-md border px-1.5 py-1.5 text-xs capitalize transition-colors ${form.font_style === style ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
+								>
+									{style === "condensed" ? "bold" : style}
+								</button>
+							))}
+						</div>
+					</div>
+					<div className="space-y-1.5">
+						<Label className="text-xs text-muted-foreground">Title Size</Label>
+						<div className="flex gap-1">
+							{(["default", "large", "xl"] as const).map((size) => (
+								<button
+									key={size}
+									type="button"
+									onClick={() => setForm((f) => ({ ...f, title_size: size }))}
+									className={`flex-1 rounded-md border px-2 py-1.5 text-xs transition-colors ${form.title_size === size ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
+								>
+									{size === "default" ? "Sm" : size === "large" ? "Md" : "Lg"}
+								</button>
+							))}
+						</div>
+					</div>
+				</div>
+
+				<div className="space-y-1.5">
+					<Label className="text-xs text-muted-foreground">Layout</Label>
+					<div className="flex gap-1">
+						{(["centered", "stacked"] as const).map((style) => (
+							<button
+								key={style}
+								type="button"
+								onClick={() => setForm((f) => ({ ...f, layout_style: style }))}
+								className={`flex-1 rounded-md border px-2 py-1.5 text-xs capitalize transition-colors ${form.layout_style === style ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
+							>
+								{style === "centered" ? "Side by side" : "Stacked"}
+							</button>
+						))}
 					</div>
 				</div>
 			</div>

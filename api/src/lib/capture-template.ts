@@ -6,6 +6,11 @@ type CapturePage = {
 	secondary_color: string;
 	background_style: "solid" | "gradient" | "glow";
 	button_style: "rounded" | "pill" | "sharp";
+	font_style: "modern" | "editorial" | "mono" | "condensed";
+	title_size: "default" | "large" | "xl";
+	layout_style: "centered" | "stacked";
+	text_color: string;
+	bg_color: string;
 	streaming_links: Record<string, string>;
 	social_links: Record<string, string>;
 	incentive_file_name: string | null;
@@ -18,14 +23,27 @@ const BUTTON_RADIUS: Record<string, string> = {
 	sharp: "0",
 };
 
-function cssBackground(style: string, accent: string, secondary: string): string {
+const FONT_STACKS: Record<string, string> = {
+	modern: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif',
+	editorial: 'Georgia,"Times New Roman",Times,serif',
+	mono: '"SF Mono",SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace',
+	condensed: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif',
+};
+
+const TITLE_SIZES: Record<string, string> = {
+	default: "1.5rem",
+	large: "2rem",
+	xl: "2.75rem",
+};
+
+function cssBackground(style: string, accent: string, secondary: string, bg: string): string {
 	if (style === "gradient") {
-		return `linear-gradient(180deg, ${secondary}26 0%, transparent 60%), #0a0e1a`;
+		return `linear-gradient(180deg, ${secondary}42 0%, transparent 60%), ${bg}`;
 	}
 	if (style === "glow") {
-		return `radial-gradient(ellipse at 50% 30%, ${accent}1A 0%, transparent 70%), #0a0e1a`;
+		return `radial-gradient(ellipse at 50% 30%, ${accent}33 0%, transparent 70%), ${bg}`;
 	}
-	return "#0a0e1a";
+	return bg;
 }
 
 function escapeHtml(str: string): string {
@@ -35,6 +53,13 @@ function escapeHtml(str: string): string {
 		.replace(/>/g, "&gt;")
 		.replace(/"/g, "&quot;")
 		.replace(/'/g, "&#39;");
+}
+
+function isLightColor(hex: string): boolean {
+	const r = Number.parseInt(hex.slice(1, 3), 16);
+	const g = Number.parseInt(hex.slice(3, 5), 16);
+	const b = Number.parseInt(hex.slice(5, 7), 16);
+	return r * 0.299 + g * 0.587 + b * 0.114 > 150;
 }
 
 const STREAMING_ICONS: Record<string, { label: string; svg: string }> = {
@@ -48,7 +73,7 @@ const STREAMING_ICONS: Record<string, { label: string; svg: string }> = {
 	},
 	youtube_music: {
 		label: "YouTube Music",
-		svg: '<circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="#0a0e1a"/>',
+		svg: '<circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16" fill="currentBg"/>',
 	},
 	soundcloud: {
 		label: "SoundCloud",
@@ -91,6 +116,7 @@ function renderIconLinks(
 	links: Record<string, string>,
 	icons: Record<string, { label: string; svg: string }>,
 	accentColor: string,
+	bgColor: string,
 ): string {
 	const entries = Object.entries(links).filter(([, url]) => url.trim());
 	if (entries.length === 0) return "";
@@ -99,7 +125,8 @@ function renderIconLinks(
 		.map(([key, url]) => {
 			const icon = icons[key];
 			if (!icon) return "";
-			return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" aria-label="${icon.label}" style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:${accentColor}18;color:${accentColor};transition:background .15s"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">${icon.svg}</svg></a>`;
+			const svgContent = icon.svg.replace("currentBg", bgColor);
+			return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" aria-label="${icon.label}" style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:${accentColor}18;color:${accentColor};transition:background .15s"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">${svgContent}</svg></a>`;
 		})
 		.filter(Boolean)
 		.join("\n");
@@ -118,17 +145,38 @@ function incentiveLabel(contentType: string | null): string {
 }
 
 export function generateCaptureHtml(page: CapturePage): string {
-	const bg = cssBackground(page.background_style, page.accent_color, page.secondary_color);
+	const fontStyle = page.font_style ?? "modern";
+	const titleSize = page.title_size ?? "default";
+	const layoutStyle = page.layout_style ?? "centered";
+	const textColor = page.text_color ?? "#f9fafb";
+	const bgColor = page.bg_color ?? "#0a0e1a";
+	const mutedColor = isLightColor(bgColor) ? "#6b7280" : "#9ca3af";
+	const inputBg = isLightColor(bgColor) ? "#f3f4f6" : "#111827";
+	const inputBorder = isLightColor(bgColor) ? "#d1d5db" : "#374151";
+	const btnTextColor = isLightColor(page.accent_color) ? "#0a0e1a" : "#f9fafb";
+
+	const bg = cssBackground(page.background_style, page.accent_color, page.secondary_color, bgColor);
 	const btnRadius = BUTTON_RADIUS[page.button_style] ?? "6px";
+	const fontStack = FONT_STACKS[fontStyle];
+	const titleFontSize = TITLE_SIZES[titleSize];
 	const title = escapeHtml(page.title);
 	const subtitle = page.value_exchange_text ? escapeHtml(page.value_exchange_text) : "";
-	const streamingHtml = renderIconLinks(page.streaming_links, STREAMING_ICONS, page.accent_color);
-	const socialHtml = renderIconLinks(page.social_links, SOCIAL_ICONS, page.accent_color);
+	const streamingHtml = renderIconLinks(
+		page.streaming_links,
+		STREAMING_ICONS,
+		page.accent_color,
+		bgColor,
+	);
+	const socialHtml = renderIconLinks(page.social_links, SOCIAL_ICONS, page.accent_color, bgColor);
 
 	const hasIncentive = page.incentive_file_name && page.incentive_content_type;
 	const incentiveMsg = hasIncentive
 		? `We&#39;ll send ${incentiveLabel(page.incentive_content_type)} to your inbox shortly.`
 		: "We&#39;ll be in touch soon.";
+
+	const condensedH1 =
+		fontStyle === "condensed" ? "text-transform:uppercase;letter-spacing:.15em;" : "";
+	const isStacked = layoutStyle === "stacked";
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -139,22 +187,25 @@ export function generateCaptureHtml(page: CapturePage): string {
 <title>${title}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:${bg};color:#f9fafb;-webkit-font-smoothing:antialiased}
+body{font-family:${fontStack};min-height:100dvh;display:flex;align-items:center;justify-content:center;background:${bg};color:${textColor};-webkit-font-smoothing:antialiased}
 .c{width:100%;max-width:400px;padding:32px 24px;text-align:center}
-h1{font-size:1.5rem;font-weight:700;letter-spacing:-.025em;line-height:1.2;margin-bottom:8px}
-.sub{color:#9ca3af;font-size:.875rem;line-height:1.6;margin-bottom:20px;max-width:320px;margin-left:auto;margin-right:auto}
-.f{display:flex;gap:8px;margin-bottom:16px}
-.f input{flex:1;padding:12px 14px;border:1px solid #374151;border-radius:6px;background:#111827;color:#f9fafb;font-size:.875rem;outline:none;min-width:0}
+h1{font-size:${titleFontSize};font-weight:700;letter-spacing:-.025em;line-height:1.2;margin-bottom:8px;${condensedH1}animation:fi .5s ease}
+.sub{color:${mutedColor};font-size:.875rem;line-height:1.6;margin-bottom:20px;max-width:320px;margin-left:auto;margin-right:auto;animation:fi .5s ease .1s both}
+.f{display:flex;${isStacked ? "flex-direction:column;" : ""}gap:8px;margin-bottom:16px;animation:fi .5s ease .2s both}
+.f input{flex:1;padding:12px 14px;border:1px solid ${inputBorder};border-radius:6px;background:${inputBg};color:${textColor};font-size:.875rem;outline:none;min-width:0;transition:border-color .15s}
 .f input:focus{border-color:${page.accent_color}}
-.f input::placeholder{color:#6b7280}
-.f button{padding:12px 24px;border:none;background:${page.accent_color};color:#0a0e1a;font-size:.875rem;font-weight:600;border-radius:${btnRadius};cursor:pointer;white-space:nowrap;min-height:48px;min-width:48px}
-.f button:active{opacity:.9}
-.ok{display:none;margin-top:12px}
+.f input:hover{border-color:${page.accent_color}80}
+.f input::placeholder{color:${mutedColor}}
+.f button{padding:12px 24px;border:none;background:${page.accent_color};color:${btnTextColor};font-size:.875rem;font-weight:600;border-radius:${btnRadius};cursor:pointer;white-space:nowrap;min-height:48px;min-width:48px;transition:opacity .15s,transform .1s}
+.f button:hover{opacity:.9}
+.f button:active{opacity:.85;transform:scale(.98)}
+.ok{display:none;margin-top:12px;animation:fi .3s ease}
 .ok-h{color:#4ade80;font-size:1rem;font-weight:600;margin-bottom:6px}
-.ok-d{color:#9ca3af;font-size:.875rem;line-height:1.5}
+.ok-d{color:${mutedColor};font-size:.875rem;line-height:1.5}
 .err{display:none;color:#f87171;font-size:.875rem;margin-top:8px}
-.pw{font-size:.7rem;color:#4b5563;margin-top:24px}
-.pw a{color:#6b7280}
+.pw{font-size:.7rem;color:${isLightColor(bgColor) ? "#9ca3af" : "#4b5563"};margin-top:24px}
+.pw a{color:${isLightColor(bgColor) ? "#6b7280" : "#6b7280"}}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>

@@ -40,7 +40,8 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **Service abstractions from day 1:** `EmailService` (ADR-002) and `SmsService` (ADR-005) wrap providers for future swapability
 - **Fan-facing path bypasses the app server:** capture form POSTs to a Cloudflare Worker using Supabase `service_role` key — not through the Hono API
 - **Two separate fan-facing deploys:** R2 static HTML (template changes) and Cloudflare Worker (submission logic)
-- **Capture pages must fit in the 14KB TCP initial congestion window** — system fonts, inline CSS/JS, no external resources
+- **Capture pages must fit in the 14KB TCP initial congestion window** — system fonts (4 stacks: modern/editorial/mono/condensed), inline CSS/JS, no external resources
+- **Capture page style options:** `font_style` (modern/editorial/mono/condensed), `title_size` (default/large/xl), `layout_style` (centered/stacked), `text_color`, `bg_color` — plus existing `accent_color`, `secondary_color`, `background_style`, `button_style`. 6 presets (Gold, Neon, Ember, Violet, Minimal, Verdant). Template auto-adapts input/muted colors based on bg lightness via `isLightColor()`. Button text contrast is also auto-detected.
 - **Domain is `afterset.net`** (not .com) — email subdomain is `send.afterset.net`
 - **One email template per capture page** — stored in `email_templates` table, editable from page card dropdown or dedicated Emails tab
 - **Email templates are plain text** — rendered to HTML at send/preview time via `renderFollowUpHtml()`, no React Email dependency
@@ -95,7 +96,7 @@ pnpm typecheck            # tsc --noEmit across all packages
 | `font-sans` | DM Sans | Body text (dashboard only) |
 | `font-mono` | Space Mono | Code/data (dashboard only) |
 
-Capture pages use system font stack — no custom fonts.
+Capture pages use system font stacks — no custom/web fonts. Four stacks: modern (sans-serif), editorial (serif), mono (monospace), condensed (sans-serif + uppercase).
 
 ## Security
 
