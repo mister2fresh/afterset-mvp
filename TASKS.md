@@ -4,7 +4,7 @@
 **Last updated:** March 26, 2026 (v48 — Branded download page for incentive files)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
 **Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped
-**Next up:** Download page preview + customizable text, configure Resend webhook, fix email sender name + unsubscribe link, manual QA pass, native platform generation on Mac
+**Next up:** Branded fan-facing theme consistency (emails + download page + preview editor), configure Resend webhook, fix email sender name + unsubscribe link, manual QA pass, native platform generation on Mac
 
 ---
 
