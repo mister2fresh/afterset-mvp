@@ -1,10 +1,17 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 26, 2026 (v44 — Per-show drill-down with inline analytics)
+**Last updated:** March 26, 2026 (v45 — Railway deployed, pg_cron wired, email flow live)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
-**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped
-**Next up:** Manual QA pass, expanded reports, native platform generation on Mac
+**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production
+**Next up:** Fix email sender name + unsubscribe link, manual QA pass, expanded reports, native platform generation on Mac
+
+---
+
+## Bugs — Found During QA (March 26, 2026)
+
+- [ ] **Email sender/heading shows page title instead of artist name** — sequence emails display "hello via Afterset" (page title) as the heading; should show artist name with page title below
+- [ ] **No visible unsubscribe link in email body** — RFC 8058 List-Unsubscribe headers exist (native client buttons work), but no clickable link in the email footer; required for CAN-SPAM compliance
 
 ---
 
@@ -360,11 +367,12 @@ Full stack: Vite + React + Hono + Cloudflare Pages + Railway (per ADR-004).
   - [ ] Cloudflare Worker for capture form submission (`POST /api/capture`) — Sprint 1 P0 task
   - [ ] Set up Cloudflare Pages project connected to `web/` folder
   - [ ] Verify DNS for `afterset.net` — capture pages at `/c/[slug]`, Worker at `/api/capture`
-- [ ] **Configure Railway** ⛔ *Blocked: can run API locally until deployment*
-  - Create Railway Hobby project connected to `api/` folder
-  - Verify GitHub auto-deploy works
-  - Set up environment variables
-  - Confirm actual compute cost after 24hrs idle (should be within $5 credit)
+- [x] **Configure Railway** *(completed 2026-03-26)*
+  - Railway Hobby plan, `api/` root directory, public domain: `api-production-496d.up.railway.app`
+  - Build: `npm install -g pnpm && pnpm install && pnpm run build` / Start: `npx tsx src/index.ts`
+  - Environment variables set (missing: Telnyx/phone secrets — to be added later)
+  - pg_cron jobs updated with real Railway URL + BATCH_SEND_SECRET
+  - End-to-end email sequence flow verified: fan capture → pending_emails → pg_cron → send-batch → Resend → email delivered
 - [ ] Configure Sentry on both SPA and API — verify error capture from each
 - [x] Install and configure shadcn/ui *(completed 2026-03-22 — Radix Nova preset, Tailwind v4, brand-themed dark mode)*
 - [ ] Create `docs/CONVENTIONS.md`:
