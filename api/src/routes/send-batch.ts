@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { createDownloadToken } from "../lib/download-token.js";
 import { getEmailService } from "../lib/email/index.js";
-import { renderFollowUpHtml } from "../lib/email/render-template.js";
+import { type EmailTheme, renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.js";
 import type { SendParams } from "../lib/email/types.js";
 import { supabase } from "../lib/supabase.js";
 
@@ -127,24 +127,26 @@ app.post("/send-batch", async (c) => {
 
 	const templateByPage = new Map((legacyTemplates ?? []).map((t) => [t.capture_page_id, t]));
 
-	// Collect all page IDs that need incentive URL checks
+	// Collect all page IDs referenced by templates (for incentive URLs + theming)
 	const allTemplates = [...(templatesById ?? []), ...(legacyTemplates ?? [])];
-	const pagesWithIncentive = allTemplates
-		.filter((t) => t.include_incentive_link)
-		.map((t) => t.capture_page_id);
+	const allPageIds = [...new Set(allTemplates.map((t) => t.capture_page_id).filter(Boolean))];
 
 	const baseUrl = process.env.API_BASE_URL ?? "https://api.afterset.net";
 	const incentiveUrlMap = new Map<string, string>();
-	if (pagesWithIncentive.length > 0) {
+	const pageThemeMap = new Map<string, EmailTheme>();
+
+	if (allPageIds.length > 0) {
 		const { data: pages } = await supabase
 			.from("capture_pages")
-			.select("id, incentive_file_path")
-			.in("id", pagesWithIncentive)
-			.not("incentive_file_path", "is", null);
+			.select("id, incentive_file_path, accent_color, bg_color, text_color, button_style")
+			.in("id", allPageIds);
 
 		for (const page of pages ?? []) {
-			const token = createDownloadToken(page.id);
-			incentiveUrlMap.set(page.id, `${baseUrl}/download/${token}`);
+			pageThemeMap.set(page.id, toEmailTheme(page));
+			if (page.incentive_file_path) {
+				const token = createDownloadToken(page.id);
+				incentiveUrlMap.set(page.id, `${baseUrl}/download/${token}`);
+			}
 		}
 	}
 
@@ -163,6 +165,28 @@ app.post("/send-batch", async (c) => {
 
 	const broadcastMap = new Map((broadcastsData ?? []).map((b) => [b.id, b]));
 
+	// For broadcast emails, fetch each artist's most recently updated page for theming
+	const broadcastArtistIds = [
+		...new Set(pendingRows.filter((r) => r.broadcast_id != null).map((r) => r.artist_id)),
+	];
+
+	const artistThemeMap = new Map<string, EmailTheme>();
+	if (broadcastArtistIds.length > 0) {
+		for (const artistId of broadcastArtistIds) {
+			const { data: latestPage } = await supabase
+				.from("capture_pages")
+				.select("accent_color, bg_color, text_color, button_style")
+				.eq("artist_id", artistId)
+				.order("updated_at", { ascending: false })
+				.limit(1)
+				.single();
+
+			if (latestPage) {
+				artistThemeMap.set(artistId, toEmailTheme(latestPage));
+			}
+		}
+	}
+
 	// Build send params for each pending email
 	const sendable: { pendingId: string; params: SendParams }[] = [];
 	const skippedIds: string[] = [];
@@ -177,7 +201,8 @@ app.post("/send-batch", async (c) => {
 				skippedIds.push(row.id);
 				continue;
 			}
-			const html = renderFollowUpHtml({ artistName: artist.name, body: broadcast.body });
+			const theme = artistThemeMap.get(row.artist_id);
+			const html = renderFollowUpHtml({ artistName: artist.name, body: broadcast.body, theme });
 			sendable.push({
 				pendingId: row.id,
 				params: {
@@ -211,10 +236,12 @@ app.post("/send-batch", async (c) => {
 				? incentiveUrlMap.get(capturePageId)
 				: undefined;
 
+		const theme = capturePageId ? pageThemeMap.get(capturePageId) : undefined;
 		const html = renderFollowUpHtml({
 			artistName: artist.name,
 			body: template.body,
 			incentiveUrl,
+			theme,
 		});
 
 		sendable.push({

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { renderFollowUpHtml } from "../lib/email/render-template.js";
+import { renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.js";
 import { filterSuppressed } from "../lib/email/suppression.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
@@ -179,9 +179,18 @@ app.post("/:id/preview", async (c) => {
 	const parsed = z.object({ subject: z.string().min(1), body: z.string().min(1) }).safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
+	const { data: latestPage } = await supabase
+		.from("capture_pages")
+		.select("accent_color, bg_color, text_color, button_style")
+		.eq("artist_id", artist.id)
+		.order("updated_at", { ascending: false })
+		.limit(1)
+		.single();
+
 	const html = renderFollowUpHtml({
 		artistName: artist.name,
 		body: parsed.data.body,
+		theme: latestPage ? toEmailTheme(latestPage) : undefined,
 	});
 
 	return c.html(html);

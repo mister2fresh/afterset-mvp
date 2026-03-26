@@ -31,7 +31,10 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Expanded reports** — sortable/filterable show list by capture method, timeframe, and engagement rate; exportable report views; top-level sort controls on "Captures by Show" section
 - [ ] **Date range picker + period comparison** — let artists slice analytics by week/month/custom range; compare periods ("this week vs last week")
 - [ ] **Trend deltas on stat cards** — "+23% captures this week" arrows showing direction of change
-- [ ] **Branded fan-facing theme consistency** — follow-up emails should inherit artist's capture page colors (accent, bg, text, button style) instead of hardcoded Afterset branding; add preview tab in page form editor showing capture page, email, and download page side by side; let artists customize download page copy (button text, heading, description)
+- [x] **Branded fan-facing theme consistency** — follow-up emails now inherit artist's capture page colors (accent, bg, text, button style); shipped March 26, 2026
+- [ ] **Broadcast email theme editor** — let artists override the inherited theme per broadcast (color pickers for accent, bg, text + button style) instead of always pulling from their latest capture page
+- [ ] **Rich text email editor** — replace plain-text body textarea with a rich text editor (bold, italic, links, lists) for broadcasts and follow-up templates; renders to inline-styled HTML for email client compatibility
+- [ ] **Fan-facing preview tab** — preview tab in page form editor showing capture page, email, and download page side by side; let artists customize download page copy (button text, heading, description)
 - [ ] **Email funnel visualization** — Sent → Delivered → Opened → Clicked drop-off chart per sequence step
 - [ ] **Best time to capture heatmap** — captures by day-of-week and hour; helps artists understand when fans engage
 - [ ] **Page comparison** — select 2-3 pages side-by-side to compare theme/incentive/sequence performance

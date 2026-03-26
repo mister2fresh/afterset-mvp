@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { renderFollowUpHtml } from "../lib/email/render-template.js";
+import { renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -94,14 +94,23 @@ app.delete("/:id/email-template", async (c) => {
 // POST /capture-pages/:id/email-template/preview — returns rendered HTML
 app.post("/:id/email-template/preview", async (c) => {
 	const artist = c.get("artist");
+	const pageId = c.req.param("id");
 	const body = await c.req.json();
 	const parsed = upsertSchema.pick({ subject: true, body: true }).safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+	const { data: page } = await supabase
+		.from("capture_pages")
+		.select("accent_color, bg_color, text_color, button_style")
+		.eq("id", pageId)
+		.eq("artist_id", artist.id)
+		.single();
 
 	const html = renderFollowUpHtml({
 		artistName: artist.name,
 		body: parsed.data.body,
 		incentiveUrl: body.include_incentive_link ? "https://example.com/download" : undefined,
+		theme: page ? toEmailTheme(page) : undefined,
 	});
 
 	return c.html(html);
@@ -211,14 +220,23 @@ app.delete("/:id/email-sequence/:order", async (c) => {
 // POST /capture-pages/:id/email-sequence/:order/preview
 app.post("/:id/email-sequence/:order/preview", async (c) => {
 	const artist = c.get("artist");
+	const pageId = c.req.param("id");
 	const body = await c.req.json();
 	const parsed = sequenceUpsertSchema.pick({ subject: true, body: true }).safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+	const { data: page } = await supabase
+		.from("capture_pages")
+		.select("accent_color, bg_color, text_color, button_style")
+		.eq("id", pageId)
+		.eq("artist_id", artist.id)
+		.single();
 
 	const html = renderFollowUpHtml({
 		artistName: artist.name,
 		body: parsed.data.body,
 		incentiveUrl: body.include_incentive_link ? "https://example.com/download" : undefined,
+		theme: page ? toEmailTheme(page) : undefined,
 	});
 
 	return c.html(html);

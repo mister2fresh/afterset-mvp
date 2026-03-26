@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 26, 2026 (v48 — Branded download page for incentive files)
+**Last updated:** March 26, 2026 (v50 — Email open tracking via Resend webhook + debug logging)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
-**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped
-**Next up:** Branded fan-facing theme consistency (emails + download page + preview editor), configure Resend webhook, fix email sender name + unsubscribe link, manual QA pass, native platform generation on Mac
+**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working
+**Next up:** Redesign analytics captures + open rate layout, fix email sender name + unsubscribe link, manual QA pass, native platform generation on Mac
 
 ---
 
@@ -12,6 +12,7 @@
 
 - [ ] **Email sender/heading shows page title instead of artist name** — sequence emails display "hello via Afterset" (page title) as the heading; should show artist name with page title below
 - [ ] **No visible unsubscribe link in email body** — RFC 8058 List-Unsubscribe headers exist (native client buttons work), but no clickable link in the email footer; required for CAN-SPAM compliance
+- [ ] **Redesign analytics captures + open rate data layout** — current layout of captures by show and email open rate data is confusing; improve hierarchy, grouping, and visual clarity of engagement metrics
 - [x] **Duplicate emails on capture (9 emails sent)** — race condition in send-batch: non-atomic fetch+claim allowed overlapping pg_cron runs to double-send; also skipped emails looped back to pending forever (fixed March 26)
 - [x] **Incentive file not included in emails** — send-batch queried nonexistent `incentive_uploads` table instead of `capture_pages.incentive_file_path` (fixed March 26)
 

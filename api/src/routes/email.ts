@@ -65,7 +65,10 @@ email.post("/webhooks/resend", async (c) => {
 		return c.json({ error: "Invalid signature" }, 401);
 	}
 
-	console.log(`[webhook] Received event: ${event.type}`, event.data.email_id);
+	console.log(
+		`[webhook] Received event: ${event.type}`,
+		"email_id" in event.data ? event.data.email_id : "n/a",
+	);
 	await handleWebhookEvent(event);
 	return c.json({ ok: true });
 });
