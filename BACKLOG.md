@@ -27,7 +27,8 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 
 ## Dashboard & Analytics
 
-- [ ] **Rename "Top Pages" to "Captures by Show"** — group by title+date instead of page ID; full drill-down analytics for all entries including deleted pages; show method breakdown (QR/NFC/SMS) and daily counts per show
+- [x] **Rename "Top Pages" to "Captures by Show"** — shipped March 26, 2026. Grouped by title snapshot, full drill-down (method breakdown, daily trend, email stats) for all entries including deleted pages, inline within single card.
+- [ ] **Expanded reports** — sortable/filterable show list by capture method, timeframe, and engagement rate; exportable report views; top-level sort controls on "Captures by Show" section
 - [ ] **Date range picker + period comparison** — let artists slice analytics by week/month/custom range; compare periods ("this week vs last week")
 - [ ] **Trend deltas on stat cards** — "+23% captures this week" arrows showing direction of change
 - [ ] **Email funnel visualization** — Sent → Delivered → Opened → Clicked drop-off chart per sequence step

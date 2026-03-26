@@ -5,10 +5,7 @@ import { useState } from "react";
 import {
 	Area,
 	AreaChart,
-	Bar,
-	BarChart,
 	CartesianGrid,
-	Cell,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
@@ -24,22 +21,25 @@ export const Route = createFileRoute("/_authenticated/analytics")({
 	component: AnalyticsPage,
 });
 
+type ShowStats = {
+	id: string | null;
+	title: string;
+	slug: string | null;
+	latest_capture: string | null;
+	captures: number;
+	methods: { method: string; count: number }[];
+	daily: { date: string; count: number }[];
+	emails_sent: number;
+	emails_opened: number;
+	open_rate: number;
+};
+
 type OverviewData = {
 	total_fans: number;
 	total_pages: number;
 	this_week: number;
-	pages: {
-		id: string | null;
-		title: string;
-		slug: string | null;
-		latest_capture: string | null;
-		captures: number;
-		methods: { method: string; count: number }[];
-		daily: { date: string; count: number }[];
-		emails_sent: number;
-		emails_opened: number;
-		open_rate: number;
-	}[];
+	pages: ShowStats[];
+	daily: { date: string; count: number }[];
 };
 
 type Broadcast = {
@@ -86,7 +86,7 @@ const METHOD_COLORS: Record<string, string> = {
 };
 
 function AnalyticsPage() {
-	const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+	const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
 
 	const {
 		data: overview,
@@ -102,6 +102,9 @@ function AnalyticsPage() {
 		queryKey: ["broadcasts"],
 		queryFn: () => api.get<Broadcast[]>("/broadcasts"),
 	});
+
+	const selectedShow = overview?.pages.find((p) => p.title === selectedTitle);
+	const selectedPageId = selectedShow?.id ?? null;
 
 	const { data: pageData, isLoading: pageLoading } = useQuery({
 		queryKey: ["page-analytics", selectedPageId],
@@ -154,21 +157,29 @@ function AnalyticsPage() {
 				<StatCard label="Capture Pages" value={overview.total_pages} />
 			</div>
 
-			{/* Top pages ranking */}
+			{/* Captures by show — list + drill-down together */}
 			<Card>
 				<CardHeader>
 					<CardTitle className="text-sm font-medium">Captures by Show</CardTitle>
+					<p className="text-xs text-muted-foreground">
+						Select a show to see its capture methods, daily trend, and email stats
+					</p>
 				</CardHeader>
-				<CardContent>
-					<div className="space-y-2">
+				<CardContent className="space-y-4">
+					<div className="space-y-1">
 						{overview.pages.map((p) => {
 							const pct = overview.total_fans > 0 ? (p.captures / overview.total_fans) * 100 : 0;
 							return (
 								<button
 									key={p.id ?? p.title}
 									type="button"
-									onClick={() => p.id && setSelectedPageId(p.id === selectedPageId ? null : p.id)}
-									className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${p.id === selectedPageId ? "bg-honey-gold/10 text-honey-gold" : "hover:bg-muted"} ${!p.id ? "opacity-60" : ""}`}
+									onClick={() => setSelectedTitle(p.title === selectedTitle ? null : p.title)}
+									className={cn(
+										"flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors",
+										p.title === selectedTitle
+											? "bg-honey-gold/10 text-honey-gold"
+											: "hover:bg-muted",
+									)}
 								>
 									<span className="min-w-0 flex-1 truncate">{p.title}</span>
 									{p.latest_capture && (
@@ -196,73 +207,24 @@ function AnalyticsPage() {
 							);
 						})}
 					</div>
+					{selectedShow && (
+						<>
+							<div className="border-t border-border pt-4">
+								<p className="mb-3 text-xs font-medium text-muted-foreground">
+									{selectedShow.title}
+								</p>
+							</div>
+							<ShowDrillDown show={selectedShow} stepData={pageData} stepLoading={pageLoading} />
+						</>
+					)}
 				</CardContent>
 			</Card>
 
+			{/* Overall daily trend */}
+			<DailyChart daily={overview.daily} title="All Captures (Last 30 Days)" />
+
 			{/* Broadcast engagement */}
 			<BroadcastEngagement broadcasts={broadcasts} />
-
-			{/* Per-page detail */}
-			{selectedPageId &&
-				(pageLoading ? (
-					<div className="flex items-center justify-center gap-2 py-8">
-						<Loader2 className="size-5 animate-spin text-muted-foreground" />
-						<p className="text-sm text-muted-foreground">Loading page details...</p>
-					</div>
-				) : pageData ? (
-					<div className="space-y-4">
-						{pageData.email.sent > 0 && (
-							<Card>
-								<CardHeader>
-									<CardTitle className="text-sm font-medium">Email Performance</CardTitle>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									<div className="flex items-center gap-6">
-										<div>
-											<p className="font-display text-2xl font-bold">
-												{Math.round(pageData.email.open_rate * 100)}%
-											</p>
-											<p className="text-xs text-muted-foreground">Open Rate</p>
-										</div>
-										<div>
-											<p className="text-lg tabular-nums">{pageData.email.sent}</p>
-											<p className="text-xs text-muted-foreground">Sent</p>
-										</div>
-										<div>
-											<p className="text-lg tabular-nums">{pageData.email.opened}</p>
-											<p className="text-xs text-muted-foreground">Opened</p>
-										</div>
-									</div>
-									{pageData.email.steps && pageData.email.steps.length > 1 && (
-										<div className="space-y-2 border-t border-border pt-3">
-											<p className="text-xs font-medium text-muted-foreground">
-												Per-step breakdown
-											</p>
-											{pageData.email.steps.map((step) => (
-												<div key={step.sequence_order} className="flex items-center gap-3 text-sm">
-													<span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
-														{step.sequence_order + 1}
-													</span>
-													<span className="min-w-0 flex-1 truncate text-muted-foreground">
-														{step.subject}
-													</span>
-													<span className="shrink-0 tabular-nums">{step.sent} sent</span>
-													<span className="shrink-0 tabular-nums text-muted-foreground">
-														{step.sent > 0 ? `${Math.round(step.open_rate * 100)}%` : "—"}
-													</span>
-												</div>
-											))}
-										</div>
-									)}
-								</CardContent>
-							</Card>
-						)}
-						<div className="grid gap-4 lg:grid-cols-2">
-							<MethodBreakdownChart methods={pageData.methods} total={pageData.total} />
-							<DailyChart daily={pageData.daily} />
-						</div>
-					</div>
-				) : null)}
 		</div>
 	);
 }
@@ -327,6 +289,149 @@ function BroadcastEngagement({ broadcasts }: { broadcasts: Broadcast[] | undefin
 	);
 }
 
+function ShowDrillDown({
+	show,
+	stepData,
+	stepLoading,
+}: {
+	show: ShowStats;
+	stepData: PageAnalytics | undefined;
+	stepLoading: boolean;
+}) {
+	return (
+		<div className="space-y-3">
+			{/* Stat row */}
+			<div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+				<div>
+					<p className="font-display text-xl font-bold">{show.captures}</p>
+					<p className="text-xs text-muted-foreground">Captures</p>
+				</div>
+				{show.emails_sent > 0 && (
+					<>
+						<div>
+							<p className="text-lg tabular-nums">{show.emails_sent}</p>
+							<p className="text-xs text-muted-foreground">Emails Sent</p>
+						</div>
+						<div>
+							<p className="text-lg tabular-nums">{Math.round(show.open_rate * 100)}%</p>
+							<p className="text-xs text-muted-foreground">Open Rate</p>
+						</div>
+					</>
+				)}
+			</div>
+
+			{/* Method + daily charts */}
+			<div className="grid gap-3 lg:grid-cols-2">
+				<div className="rounded-md bg-muted/40 p-3">
+					<p className="mb-2 text-xs font-medium text-muted-foreground">Capture Method</p>
+					<MethodList methods={show.methods} total={show.captures} />
+				</div>
+				<div className="rounded-md bg-muted/40 p-3">
+					<p className="mb-2 text-xs font-medium text-muted-foreground">Daily Trend</p>
+					<MiniDailyChart daily={show.daily} />
+				</div>
+			</div>
+
+			{/* Per-step email breakdown */}
+			{stepLoading && (
+				<div className="flex items-center gap-2">
+					<Loader2 className="size-4 animate-spin text-muted-foreground" />
+					<p className="text-xs text-muted-foreground">Loading step breakdown…</p>
+				</div>
+			)}
+			{stepData?.email.steps && stepData.email.steps.length > 1 && (
+				<div className="space-y-2">
+					<p className="text-xs font-medium text-muted-foreground">Email Sequence</p>
+					{stepData.email.steps.map((step) => (
+						<div key={step.sequence_order} className="flex items-center gap-3 text-sm">
+							<span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold">
+								{step.sequence_order + 1}
+							</span>
+							<span className="min-w-0 flex-1 truncate text-muted-foreground">{step.subject}</span>
+							<span className="shrink-0 tabular-nums">{step.sent} sent</span>
+							<span className="shrink-0 tabular-nums text-muted-foreground">
+								{step.sent > 0 ? `${Math.round(step.open_rate * 100)}%` : "—"}
+							</span>
+						</div>
+					))}
+				</div>
+			)}
+		</div>
+	);
+}
+
+function MethodList({
+	methods,
+	total,
+}: {
+	methods: { method: string; count: number }[];
+	total: number;
+}) {
+	return (
+		<div className="space-y-1.5">
+			{methods.map((m) => (
+				<div key={m.method} className="flex items-center gap-2 text-sm">
+					<div
+						className="size-2.5 shrink-0 rounded-full"
+						style={{ backgroundColor: METHOD_COLORS[m.method] ?? "#6b7280" }}
+					/>
+					<span className="flex-1 text-muted-foreground">
+						{METHOD_LABELS[m.method] ?? m.method}
+					</span>
+					<span className="tabular-nums">{m.count}</span>
+					<span className="w-8 text-right text-xs tabular-nums text-muted-foreground">
+						{total > 0 ? `${Math.round((m.count / total) * 100)}%` : "0%"}
+					</span>
+				</div>
+			))}
+		</div>
+	);
+}
+
+function MiniDailyChart({ daily }: { daily: { date: string; count: number }[] }) {
+	const filled = fillLast30Days(daily);
+	const data = filled.map((d) => ({
+		date: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+		count: d.count,
+	}));
+
+	return (
+		<ResponsiveContainer width="100%" height={120}>
+			<AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+				<defs>
+					<linearGradient id="showGradient" x1="0" y1="0" x2="0" y2="1">
+						<stop offset="0%" stopColor="#E8C547" stopOpacity={0.3} />
+						<stop offset="100%" stopColor="#E8C547" stopOpacity={0} />
+					</linearGradient>
+				</defs>
+				<XAxis
+					dataKey="date"
+					tick={{ fill: "#9ca3af", fontSize: 10 }}
+					axisLine={false}
+					tickLine={false}
+					interval="preserveStartEnd"
+				/>
+				<YAxis hide allowDecimals={false} />
+				<Tooltip
+					contentStyle={{
+						backgroundColor: "#111827",
+						border: "1px solid #374151",
+						borderRadius: 6,
+						fontSize: 12,
+					}}
+				/>
+				<Area
+					type="monotone"
+					dataKey="count"
+					stroke="#E8C547"
+					strokeWidth={2}
+					fill="url(#showGradient)"
+				/>
+			</AreaChart>
+		</ResponsiveContainer>
+	);
+}
+
 function StatCard({ label, value }: { label: string; value: number }) {
 	return (
 		<Card>
@@ -341,62 +446,31 @@ function StatCard({ label, value }: { label: string; value: number }) {
 	);
 }
 
-function MethodBreakdownChart({
-	methods,
-	total,
-}: {
-	methods: { method: string; count: number }[];
-	total: number;
-}) {
-	const data = methods.map((m) => ({
-		name: METHOD_LABELS[m.method] ?? m.method,
-		value: m.count,
-		color: METHOD_COLORS[m.method] ?? "#6b7280",
-	}));
-
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="text-sm font-medium">Capture Method</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<ResponsiveContainer width="100%" height={200}>
-					<BarChart data={data} layout="vertical" margin={{ left: 0, right: 16 }}>
-						<XAxis type="number" hide />
-						<YAxis
-							type="category"
-							dataKey="name"
-							width={100}
-							tick={{ fill: "#9ca3af", fontSize: 12 }}
-							axisLine={false}
-							tickLine={false}
-						/>
-						<Tooltip
-							contentStyle={{
-								backgroundColor: "#111827",
-								border: "1px solid #374151",
-								borderRadius: 6,
-								fontSize: 12,
-							}}
-							formatter={(value) => {
-								const n = Number(value);
-								return [`${n} (${total > 0 ? Math.round((n / total) * 100) : 0}%)`, "Captures"];
-							}}
-						/>
-						<Bar dataKey="value" radius={[0, 4, 4, 0]}>
-							{data.map((entry) => (
-								<Cell key={entry.name} fill={entry.color} />
-							))}
-						</Bar>
-					</BarChart>
-				</ResponsiveContainer>
-			</CardContent>
-		</Card>
-	);
+function fillLast30Days(
+	sparse: { date: string; count: number }[],
+): { date: string; count: number }[] {
+	const counts = new Map(sparse.map((d) => [d.date, d.count]));
+	const result: { date: string; count: number }[] = [];
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	for (let i = 29; i >= 0; i--) {
+		const d = new Date(today);
+		d.setDate(d.getDate() - i);
+		const key = d.toISOString().slice(0, 10);
+		result.push({ date: key, count: counts.get(key) ?? 0 });
+	}
+	return result;
 }
 
-function DailyChart({ daily }: { daily: { date: string; count: number }[] }) {
-	const data = daily.map((d) => ({
+function DailyChart({
+	daily,
+	title = "Captures (Last 30 Days)",
+}: {
+	daily: { date: string; count: number }[];
+	title?: string;
+}) {
+	const filled = fillLast30Days(daily);
+	const data = filled.map((d) => ({
 		date: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
 		count: d.count,
 	}));
@@ -404,7 +478,7 @@ function DailyChart({ daily }: { daily: { date: string; count: number }[] }) {
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle className="text-sm font-medium">Captures (Last 30 Days)</CardTitle>
+				<CardTitle className="text-sm font-medium">{title}</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<ResponsiveContainer width="100%" height={200}>
