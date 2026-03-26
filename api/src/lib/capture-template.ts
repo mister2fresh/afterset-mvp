@@ -77,7 +77,7 @@ const STREAMING_ICONS: Record<string, { label: string; svg: string }> = {
 	},
 	soundcloud: {
 		label: "SoundCloud",
-		svg: '<path d="M2 14h1v4H2zm3-1h1v5H5zm3-2h1v7H8zm3-2h1v9h-1zm4-2a5 5 0 0 1 5 5v6h-6V7z"/>',
+		svg: '<path d="M2 14h1v4H2zm3-1h1v5H5zm3-2h1v7H8zm3-2h1v9h-1zm3 0v-1a2 2 0 0 1 4 0v2a4.5 4.5 0 0 1 4 7h-8V9z"/>',
 	},
 	tidal: {
 		label: "Tidal",
