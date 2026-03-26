@@ -31,6 +31,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Expanded reports** — sortable/filterable show list by capture method, timeframe, and engagement rate; exportable report views; top-level sort controls on "Captures by Show" section
 - [ ] **Date range picker + period comparison** — let artists slice analytics by week/month/custom range; compare periods ("this week vs last week")
 - [ ] **Trend deltas on stat cards** — "+23% captures this week" arrows showing direction of change
+- [ ] **Download page preview + customizable text** — add preview tab in page form editor (alongside capture page preview), let artists customize download page copy (button text, heading, description)
 - [ ] **Email funnel visualization** — Sent → Delivered → Opened → Clicked drop-off chart per sequence step
 - [ ] **Best time to capture heatmap** — captures by day-of-week and hour; helps artists understand when fans engage
 - [ ] **Page comparison** — select 2-3 pages side-by-side to compare theme/incentive/sequence performance

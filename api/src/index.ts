@@ -9,6 +9,7 @@ import build from "./routes/build.js";
 import capturePages from "./routes/capture-pages.js";
 import captures from "./routes/captures.js";
 import deviceTokens from "./routes/device-tokens.js";
+import download from "./routes/download.js";
 import email from "./routes/email.js";
 import emailTemplates from "./routes/email-templates.js";
 import incentive from "./routes/incentive.js";
@@ -47,6 +48,7 @@ app.get("/api/health", async (c) => {
 	});
 });
 
+app.route("/download", download);
 app.route("/api/email", email);
 app.route("/api/emails", sendBatch);
 

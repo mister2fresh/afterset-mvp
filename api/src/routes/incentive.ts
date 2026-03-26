@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { createDownloadToken } from "../lib/download-token.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -135,7 +136,7 @@ app.delete("/:id/incentive", async (c) => {
 	return c.body(null, 204);
 });
 
-// Generate signed download URL (for Sprint 2 email delivery)
+// Generate download page URL (artist preview — same page fans see)
 app.get("/:id/incentive/download-url", async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
@@ -147,12 +148,9 @@ app.get("/:id/incentive/download-url", async (c) => {
 		return c.json({ error: "No incentive file attached" }, 400);
 	}
 
-	const { data, error } = await supabase.storage
-		.from("incentives")
-		.createSignedUrl(page.incentive_file_path, 3600);
-
-	if (error) return c.json({ error: error.message }, 500);
-	return c.json({ signed_url: data.signedUrl });
+	const baseUrl = process.env.API_BASE_URL ?? "https://api.afterset.net";
+	const token = createDownloadToken(pageId);
+	return c.json({ signed_url: `${baseUrl}/download/${token}` });
 });
 
 export default app;

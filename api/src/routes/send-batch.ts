@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { createDownloadToken } from "../lib/download-token.js";
 import { getEmailService } from "../lib/email/index.js";
 import { renderFollowUpHtml } from "../lib/email/render-template.js";
 import type { SendParams } from "../lib/email/types.js";
@@ -132,6 +133,7 @@ app.post("/send-batch", async (c) => {
 		.filter((t) => t.include_incentive_link)
 		.map((t) => t.capture_page_id);
 
+	const baseUrl = process.env.API_BASE_URL ?? "https://api.afterset.net";
 	const incentiveUrlMap = new Map<string, string>();
 	if (pagesWithIncentive.length > 0) {
 		const { data: pages } = await supabase
@@ -141,12 +143,8 @@ app.post("/send-batch", async (c) => {
 			.not("incentive_file_path", "is", null);
 
 		for (const page of pages ?? []) {
-			const { data: signed } = await supabase.storage
-				.from("incentives")
-				.createSignedUrl(page.incentive_file_path, 7 * 24 * 60 * 60); // 7 days
-			if (signed?.signedUrl) {
-				incentiveUrlMap.set(page.id, signed.signedUrl);
-			}
+			const token = createDownloadToken(page.id);
+			incentiveUrlMap.set(page.id, `${baseUrl}/download/${token}`);
 		}
 	}
 
