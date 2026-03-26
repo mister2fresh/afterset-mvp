@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BarChart3, Loader2, QrCode, TrendingUp } from "lucide-react";
+import { BarChart3, Loader2, Mail, QrCode, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import {
 	Area,
@@ -18,6 +18,7 @@ import { QueryError } from "@/components/query-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/analytics")({
 	component: AnalyticsPage,
@@ -39,6 +40,17 @@ type OverviewData = {
 		emails_opened: number;
 		open_rate: number;
 	}[];
+};
+
+type Broadcast = {
+	id: string;
+	subject: string | null;
+	status: "draft" | "scheduled" | "sending" | "sent" | "failed";
+	recipient_count: number;
+	sent_count: number;
+	opened_count: number;
+	created_at: string;
+	scheduled_at: string | null;
 };
 
 type PageAnalytics = {
@@ -84,6 +96,11 @@ function AnalyticsPage() {
 	} = useQuery({
 		queryKey: ["analytics-overview"],
 		queryFn: () => api.get<OverviewData>("/analytics"),
+	});
+
+	const { data: broadcasts } = useQuery({
+		queryKey: ["broadcasts"],
+		queryFn: () => api.get<Broadcast[]>("/broadcasts"),
 	});
 
 	const { data: pageData, isLoading: pageLoading } = useQuery({
@@ -140,7 +157,7 @@ function AnalyticsPage() {
 			{/* Top pages ranking */}
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-sm font-medium">Captures by Page</CardTitle>
+					<CardTitle className="text-sm font-medium">Captures by Show</CardTitle>
 				</CardHeader>
 				<CardContent>
 					<div className="space-y-2">
@@ -181,6 +198,9 @@ function AnalyticsPage() {
 					</div>
 				</CardContent>
 			</Card>
+
+			{/* Broadcast engagement */}
+			<BroadcastEngagement broadcasts={broadcasts} />
 
 			{/* Per-page detail */}
 			{selectedPageId &&
@@ -244,6 +264,66 @@ function AnalyticsPage() {
 					</div>
 				) : null)}
 		</div>
+	);
+}
+
+const STATUS_COLORS = {
+	sent: "bg-emerald-500/20 text-emerald-400",
+	sending: "bg-blue-500/20 text-blue-400",
+	scheduled: "bg-amber-500/20 text-amber-400",
+	draft: "bg-zinc-500/20 text-zinc-400",
+	failed: "bg-red-500/20 text-red-400",
+} as const;
+
+function BroadcastEngagement({ broadcasts }: { broadcasts: Broadcast[] | undefined }) {
+	const sent = (broadcasts ?? []).filter((b) => b.status !== "draft");
+	if (sent.length === 0) return null;
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm font-medium">Broadcast Engagement</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<div className="space-y-2">
+					{sent.map((b) => {
+						const openRate =
+							b.sent_count > 0 ? Math.round((b.opened_count / b.sent_count) * 100) : 0;
+						return (
+							<div key={b.id} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm">
+								<Mail className="size-4 shrink-0 text-muted-foreground" />
+								<span className="min-w-0 flex-1 truncate">{b.subject || "Untitled broadcast"}</span>
+								<span
+									className={cn(
+										"shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+										STATUS_COLORS[b.status],
+									)}
+								>
+									{b.status}
+								</span>
+								{b.status === "sent" || b.status === "sending" ? (
+									<>
+										<span className="shrink-0 tabular-nums text-muted-foreground">
+											{b.sent_count} sent
+										</span>
+										<span className="shrink-0 tabular-nums">{openRate}% opened</span>
+									</>
+								) : b.status === "scheduled" && b.scheduled_at ? (
+									<span className="shrink-0 text-xs text-muted-foreground">
+										{new Date(b.scheduled_at).toLocaleDateString("en-US", {
+											month: "numeric",
+											day: "numeric",
+											hour: "numeric",
+											minute: "2-digit",
+										})}
+									</span>
+								) : null}
+							</div>
+						);
+					})}
+				</div>
+			</CardContent>
+		</Card>
 	);
 }
 
