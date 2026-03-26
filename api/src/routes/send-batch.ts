@@ -34,28 +34,40 @@ app.post("/send-batch", async (c) => {
 	const parsed = requestSchema.safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
-	// Fetch pending emails ready to send
-	let query = supabase
-		.from("pending_emails")
-		.select("id, fan_capture_id, artist_id, email, retry_count, email_template_id, broadcast_id")
-		.eq("status", "pending")
-		.lte("send_at", new Date().toISOString())
-		.order("send_at", { ascending: true })
-		.limit(BATCH_LIMIT);
+	// Atomically claim pending emails (SELECT + UPDATE in one step to prevent race conditions)
+	let pendingRows: {
+		id: string;
+		fan_capture_id: string;
+		artist_id: string;
+		email: string;
+		retry_count: number;
+		email_template_id: string | null;
+		broadcast_id: string | null;
+	}[];
 
 	if (parsed.data?.ids) {
-		query = query.in("id", parsed.data.ids);
+		// Specific IDs requested — claim only those
+		const { data, error } = await supabase
+			.from("pending_emails")
+			.update({ status: "sending" })
+			.in("id", parsed.data.ids)
+			.eq("status", "pending")
+			.lte("send_at", new Date().toISOString())
+			.select("id, fan_capture_id, artist_id, email, retry_count, email_template_id, broadcast_id");
+		if (error) return c.json({ error: error.message }, 500);
+		pendingRows = data ?? [];
+	} else {
+		// Normal poll — use atomic claim RPC (FOR UPDATE SKIP LOCKED)
+		const { data, error } = await supabase.rpc("claim_pending_emails", {
+			batch_limit: BATCH_LIMIT,
+		});
+		if (error) return c.json({ error: error.message }, 500);
+		pendingRows = data ?? [];
 	}
 
-	const { data: pendingRows, error: fetchErr } = await query;
-	if (fetchErr) return c.json({ error: fetchErr.message }, 500);
-	if (!pendingRows || pendingRows.length === 0) {
+	if (pendingRows.length === 0) {
 		return c.json({ sent: 0, failed: 0, skipped: 0 });
 	}
-
-	// Claim these rows (set status to 'sending' to prevent double-pickup)
-	const pendingIds = pendingRows.map((r) => r.id);
-	await supabase.from("pending_emails").update({ status: "sending" }).in("id", pendingIds);
 
 	// Collect unique artist IDs to batch-fetch artist info
 	const artistIds = [...new Set(pendingRows.map((r) => r.artist_id))];
@@ -122,17 +134,18 @@ app.post("/send-batch", async (c) => {
 
 	const incentiveUrlMap = new Map<string, string>();
 	if (pagesWithIncentive.length > 0) {
-		const { data: incentives } = await supabase
-			.from("incentive_uploads")
-			.select("capture_page_id, storage_path")
-			.in("capture_page_id", pagesWithIncentive);
+		const { data: pages } = await supabase
+			.from("capture_pages")
+			.select("id, incentive_file_path")
+			.in("id", pagesWithIncentive)
+			.not("incentive_file_path", "is", null);
 
-		for (const inc of incentives ?? []) {
+		for (const page of pages ?? []) {
 			const { data: signed } = await supabase.storage
 				.from("incentives")
-				.createSignedUrl(inc.storage_path, 7 * 24 * 60 * 60); // 7 days
+				.createSignedUrl(page.incentive_file_path, 7 * 24 * 60 * 60); // 7 days
 			if (signed?.signedUrl) {
-				incentiveUrlMap.set(inc.capture_page_id, signed.signedUrl);
+				incentiveUrlMap.set(page.id, signed.signedUrl);
 			}
 		}
 	}
@@ -218,9 +231,9 @@ app.post("/send-batch", async (c) => {
 		});
 	}
 
-	// Mark skipped emails back to pending (no template / inactive)
+	// Mark skipped emails as failed (no template / inactive — retrying won't help)
 	if (skippedIds.length > 0) {
-		await supabase.from("pending_emails").update({ status: "pending" }).in("id", skippedIds);
+		await supabase.from("pending_emails").update({ status: "failed" }).in("id", skippedIds);
 	}
 
 	if (sendable.length === 0) {
