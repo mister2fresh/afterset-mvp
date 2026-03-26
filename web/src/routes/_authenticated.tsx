@@ -1,5 +1,14 @@
 import { createFileRoute, Link, Outlet, redirect, useMatchRoute } from "@tanstack/react-router";
-import { BarChart3, LayoutDashboard, LogOut, Mail, QrCode, Settings, Users } from "lucide-react";
+import {
+	BarChart3,
+	HelpCircle,
+	LayoutDashboard,
+	LogOut,
+	Mail,
+	QrCode,
+	Settings,
+	Users,
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -69,6 +78,7 @@ const sidebarItems = [
 		...item,
 		label: item.to === "/pages" ? "Capture Pages" : item.label,
 	})),
+	{ to: "/help", label: "Help", icon: HelpCircle },
 	{ to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -111,6 +121,12 @@ function AuthenticatedLayout() {
 								{user?.email}
 							</div>
 							<DropdownMenuSeparator />
+							<DropdownMenuItem asChild>
+								<Link to="/help">
+									<HelpCircle />
+									<span>Help</span>
+								</Link>
+							</DropdownMenuItem>
 							<DropdownMenuItem asChild>
 								<Link to="/settings">
 									<Settings />

@@ -138,71 +138,97 @@ app.get("/", async (c) => {
 		.eq("artist_id", artist.id);
 
 	const pageIds = (pages ?? []).map((p) => p.id);
-	if (pageIds.length === 0) {
-		return c.json({
-			total_fans: 0,
-			total_pages: 0,
-			this_week: 0,
-			pages: [],
-			daily: [],
-		});
-	}
 
+	// Query through fan_captures to include events from deleted pages
 	const { data: events } = await supabase
 		.from("capture_events")
-		.select("id, capture_page_id, entry_method, captured_at")
-		.in("capture_page_id", pageIds);
+		.select(
+			"id, fan_capture_id, capture_page_id, page_title, entry_method, captured_at, fan_captures!inner(artist_id)",
+		)
+		.eq("fan_captures.artist_id", artist.id);
 
 	const rows = events ?? [];
 	const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 	const thisWeek = rows.filter((r) => r.captured_at >= sevenDaysAgo).length;
 
-	// Per-page counts for ranking
-	const pageCounts = new Map<string, number>();
+	// Group by page_title snapshot — each unique title is a "page" in top pages
+	const titleCounts = new Map<string, number>();
+	const titleToPageId = new Map<string, string | null>();
+	const titleLatestDate = new Map<string, string>();
+	const titleMethods = new Map<string, Map<string, number>>();
+	const titleDaily = new Map<string, Map<string, number>>();
 	for (const row of rows) {
-		const pid = row.capture_page_id;
-		pageCounts.set(pid, (pageCounts.get(pid) ?? 0) + 1);
+		const title = row.page_title ?? "Unknown";
+		titleCounts.set(title, (titleCounts.get(title) ?? 0) + 1);
+		if (!titleToPageId.has(title)) {
+			titleToPageId.set(title, row.capture_page_id);
+		}
+		const prev = titleLatestDate.get(title);
+		if (!prev || row.captured_at > prev) {
+			titleLatestDate.set(title, row.captured_at);
+		}
+		// Method breakdown per title
+		if (!titleMethods.has(title)) titleMethods.set(title, new Map());
+		const methods = titleMethods.get(title)!;
+		methods.set(row.entry_method, (methods.get(row.entry_method) ?? 0) + 1);
+		// Daily counts per title
+		const date = row.captured_at.slice(0, 10);
+		if (!titleDaily.has(title)) titleDaily.set(title, new Map());
+		const daily = titleDaily.get(title)!;
+		daily.set(date, (daily.get(date) ?? 0) + 1);
 	}
 
-	const { data: pageDetails } = await supabase
-		.from("capture_pages")
-		.select("id, title, slug")
-		.in("id", pageIds);
+	// Look up slugs for active pages
+	const { data: pageDetails } =
+		pageIds.length > 0
+			? await supabase.from("capture_pages").select("id, slug").in("id", pageIds)
+			: { data: [] };
+	const pageSlugMap = new Map((pageDetails ?? []).map((p) => [p.id, p.slug]));
 
-	// Email open stats per page
+	// Email open stats per page_title
 	const { data: emailRows } = await supabase
 		.from("pending_emails")
 		.select("fan_capture_id, opened_at")
 		.eq("artist_id", artist.id)
 		.eq("status", "sent");
 
-	// Map capture_event id -> capture_page_id (reuse already-fetched events)
-	const ceToPage = new Map<string, string>();
+	// Map fan_capture_id -> page_title
+	const fanToTitle = new Map<string, string>();
 	for (const row of rows) {
-		ceToPage.set(row.id, row.capture_page_id);
+		fanToTitle.set(row.fan_capture_id, row.page_title ?? "Unknown");
 	}
 
-	// Aggregate email stats per page
-	const pageEmailSent = new Map<string, number>();
-	const pageEmailOpened = new Map<string, number>();
+	// Aggregate email stats per title
+	const titleEmailSent = new Map<string, number>();
+	const titleEmailOpened = new Map<string, number>();
 	for (const email of emailRows ?? []) {
-		const pid = ceToPage.get(email.fan_capture_id);
-		if (!pid) continue;
-		pageEmailSent.set(pid, (pageEmailSent.get(pid) ?? 0) + 1);
+		const title = fanToTitle.get(email.fan_capture_id);
+		if (!title) continue;
+		titleEmailSent.set(title, (titleEmailSent.get(title) ?? 0) + 1);
 		if (email.opened_at) {
-			pageEmailOpened.set(pid, (pageEmailOpened.get(pid) ?? 0) + 1);
+			titleEmailOpened.set(title, (titleEmailOpened.get(title) ?? 0) + 1);
 		}
 	}
 
-	const pageStats = (pageDetails ?? [])
-		.map((p) => {
-			const sent = pageEmailSent.get(p.id) ?? 0;
-			const opened = pageEmailOpened.get(p.id) ?? 0;
+	const pageStats = [...titleCounts.entries()]
+		.map(([title, captures]) => {
+			const pid = titleToPageId.get(title);
+			const sent = titleEmailSent.get(title) ?? 0;
+			const opened = titleEmailOpened.get(title) ?? 0;
+			const methods = [...(titleMethods.get(title) ?? new Map()).entries()]
+				.map(([method, count]) => ({ method, count }))
+				.sort((a, b) => b.count - a.count);
+			const daily = [...(titleDaily.get(title) ?? new Map()).entries()]
+				.map(([date, count]) => ({ date, count }))
+				.sort((a, b) => a.date.localeCompare(b.date));
 			return {
-				id: p.id,
-				title: p.title,
-				slug: p.slug,
-				captures: pageCounts.get(p.id) ?? 0,
+				id: pid,
+				title,
+				slug: pid ? (pageSlugMap.get(pid) ?? null) : null,
+				latest_capture: titleLatestDate.get(title) ?? null,
+				captures,
+				methods,
+				daily,
 				emails_sent: sent,
 				emails_opened: opened,
 				open_rate: sent > 0 ? opened / sent : 0,

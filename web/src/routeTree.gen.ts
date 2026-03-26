@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedPagesRouteImport } from './routes/_authenticated/pages'
+import { Route as AuthenticatedHelpRouteImport } from './routes/_authenticated/help'
 import { Route as AuthenticatedFansRouteImport } from './routes/_authenticated/fans'
 import { Route as AuthenticatedEmailsRouteImport } from './routes/_authenticated/emails'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -49,6 +50,11 @@ const AuthenticatedPagesRoute = AuthenticatedPagesRouteImport.update({
   path: '/pages',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedHelpRoute = AuthenticatedHelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedFansRoute = AuthenticatedFansRouteImport.update({
   id: '/fans',
   path: '/fans',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/emails': typeof AuthenticatedEmailsRoute
   '/fans': typeof AuthenticatedFansRoute
+  '/help': typeof AuthenticatedHelpRoute
   '/pages': typeof AuthenticatedPagesRoute
   '/settings': typeof AuthenticatedSettingsRoute
 }
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/emails': typeof AuthenticatedEmailsRoute
   '/fans': typeof AuthenticatedFansRoute
+  '/help': typeof AuthenticatedHelpRoute
   '/pages': typeof AuthenticatedPagesRoute
   '/settings': typeof AuthenticatedSettingsRoute
 }
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/emails': typeof AuthenticatedEmailsRoute
   '/_authenticated/fans': typeof AuthenticatedFansRoute
+  '/_authenticated/help': typeof AuthenticatedHelpRoute
   '/_authenticated/pages': typeof AuthenticatedPagesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
 }
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/emails'
     | '/fans'
+    | '/help'
     | '/pages'
     | '/settings'
   fileRoutesByTo: FileRoutesByTo
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/emails'
     | '/fans'
+    | '/help'
     | '/pages'
     | '/settings'
   id:
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/emails'
     | '/_authenticated/fans'
+    | '/_authenticated/help'
     | '/_authenticated/pages'
     | '/_authenticated/settings'
   fileRoutesById: FileRoutesById
@@ -193,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPagesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/help': {
+      id: '/_authenticated/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof AuthenticatedHelpRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/fans': {
       id: '/_authenticated/fans'
       path: '/fans'
@@ -229,6 +248,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEmailsRoute: typeof AuthenticatedEmailsRoute
   AuthenticatedFansRoute: typeof AuthenticatedFansRoute
+  AuthenticatedHelpRoute: typeof AuthenticatedHelpRoute
   AuthenticatedPagesRoute: typeof AuthenticatedPagesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
 }
@@ -238,6 +258,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEmailsRoute: AuthenticatedEmailsRoute,
   AuthenticatedFansRoute: AuthenticatedFansRoute,
+  AuthenticatedHelpRoute: AuthenticatedHelpRoute,
   AuthenticatedPagesRoute: AuthenticatedPagesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
 }

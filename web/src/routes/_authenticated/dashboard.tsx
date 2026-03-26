@@ -25,10 +25,13 @@ type OverviewData = {
 	total_pages: number;
 	this_week: number;
 	pages: {
-		id: string;
+		id: string | null;
 		title: string;
-		slug: string;
+		slug: string | null;
+		latest_capture: string | null;
 		captures: number;
+		methods: { method: string; count: number }[];
+		daily: { date: string; count: number }[];
 		emails_sent: number;
 		emails_opened: number;
 		open_rate: number;
@@ -134,31 +137,51 @@ function DashboardPage() {
 							{topPages.map((p, i) => {
 								const pct = overview.total_fans > 0 ? (p.captures / overview.total_fans) * 100 : 0;
 								return (
-									<div key={p.id} className="flex items-center gap-3 text-sm">
-										<span className="w-5 shrink-0 text-center text-muted-foreground">{i + 1}</span>
-										<span className="min-w-0 flex-1 truncate">{p.title}</span>
-										<span className="shrink-0 tabular-nums text-muted-foreground">
-											{p.captures}
-										</span>
-										{p.emails_sent > 0 && (
-											<span className="shrink-0 text-xs text-muted-foreground">
-												{Math.round(p.open_rate * 100)}%
+									<div key={p.id ?? p.title} className="space-y-1">
+										<div className="flex items-center gap-3 text-sm">
+											<span className="w-5 shrink-0 text-center text-muted-foreground">
+												{i + 1}
 											</span>
-										)}
-										<div className="h-2 w-16 shrink-0 overflow-hidden rounded-full bg-muted">
-											<div
-												className="h-full rounded-full bg-honey-gold transition-[width]"
-												style={{ width: `${pct}%` }}
-											/>
+											<span className="min-w-0 flex-1 truncate">{p.title}</span>
+											{p.latest_capture && (
+												<span className="shrink-0 text-xs text-muted-foreground">
+													{new Date(p.latest_capture).toLocaleDateString("en-US", {
+														month: "numeric",
+														day: "numeric",
+														year: "2-digit",
+													})}
+												</span>
+											)}
+											<span className="shrink-0 tabular-nums text-muted-foreground">
+												{p.captures}
+											</span>
+											{p.emails_sent > 0 && (
+												<span className="shrink-0 text-xs text-muted-foreground">
+													{Math.round(p.open_rate * 100)}%
+												</span>
+											)}
+											<div className="h-2 w-16 shrink-0 overflow-hidden rounded-full bg-muted">
+												<div
+													className="h-full rounded-full bg-honey-gold transition-[width]"
+													style={{ width: `${pct}%` }}
+												/>
+											</div>
 										</div>
+										{p.methods.length > 0 && (
+											<div className="flex gap-2 pl-8">
+												{p.methods.map((m) => (
+													<span key={m.method} className="text-xs text-muted-foreground">
+														{m.method} {m.count}
+													</span>
+												))}
+											</div>
+										)}
 									</div>
 								);
 							})}
 						</div>
 					</CardContent>
 				</Card>
-
-				{/* Recent captures */}
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between">
 						<CardTitle className="text-sm font-medium">Recent Captures</CardTitle>

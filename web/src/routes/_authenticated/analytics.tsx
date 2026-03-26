@@ -28,10 +28,13 @@ type OverviewData = {
 	total_pages: number;
 	this_week: number;
 	pages: {
-		id: string;
+		id: string | null;
 		title: string;
-		slug: string;
+		slug: string | null;
+		latest_capture: string | null;
 		captures: number;
+		methods: { method: string; count: number }[];
+		daily: { date: string; count: number }[];
 		emails_sent: number;
 		emails_opened: number;
 		open_rate: number;
@@ -145,12 +148,21 @@ function AnalyticsPage() {
 							const pct = overview.total_fans > 0 ? (p.captures / overview.total_fans) * 100 : 0;
 							return (
 								<button
-									key={p.id}
+									key={p.id ?? p.title}
 									type="button"
-									onClick={() => setSelectedPageId(p.id === selectedPageId ? null : p.id)}
-									className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${p.id === selectedPageId ? "bg-honey-gold/10 text-honey-gold" : "hover:bg-muted"}`}
+									onClick={() => p.id && setSelectedPageId(p.id === selectedPageId ? null : p.id)}
+									className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${p.id === selectedPageId ? "bg-honey-gold/10 text-honey-gold" : "hover:bg-muted"} ${!p.id ? "opacity-60" : ""}`}
 								>
 									<span className="min-w-0 flex-1 truncate">{p.title}</span>
+									{p.latest_capture && (
+										<span className="shrink-0 text-xs text-muted-foreground">
+											{new Date(p.latest_capture).toLocaleDateString("en-US", {
+												month: "numeric",
+												day: "numeric",
+												year: "2-digit",
+											})}
+										</span>
+									)}
 									<span className="shrink-0 tabular-nums text-muted-foreground">{p.captures}</span>
 									{p.emails_sent > 0 && (
 										<span className="shrink-0 text-xs text-muted-foreground">
