@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0a0e1a"/>
+  <!-- Bricolage Grotesque–style A: flat apex, wide stance, high crossbar, tapered stems -->
+  <path fill-rule="evenodd" fill="#E8C547" d="
+    M234 108 h44
+    L390 412 h-58 l-30-74 H210 l-30 74 h-58 Z
+    M224 292 h64 l-32-88 Z
+  "/>
+</svg>

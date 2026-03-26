@@ -4,6 +4,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { toast } from "sonner";
 import "./index.css";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
+import { PwaReloadPrompt } from "@/components/pwa-reload-prompt";
 import { Toaster } from "@/components/ui/sonner";
 import { getUser, initAuth } from "./lib/auth";
 import { routeTree } from "./routeTree.gen";
@@ -47,6 +49,8 @@ createRoot(root).render(
 		<QueryClientProvider client={queryClient}>
 			<RouterProvider router={router} />
 			<Toaster position="bottom-right" />
+			<PwaReloadPrompt />
+			<PwaInstallPrompt />
 		</QueryClientProvider>
 	</StrictMode>,
 );

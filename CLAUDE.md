@@ -7,8 +7,9 @@ Fan-capture SaaS for gigging musicians.
 ```
 web/                      # Vite + React SPA (artist dashboard)
   src/routes/             # TanStack Router file-based routes
-  src/components/         # Shared components (captures-table, email-template-dialog, keyword-dialog, page-form)
+  src/components/         # Shared components (captures-table, email-template-dialog, keyword-dialog, page-form, pwa-*)
   src/lib/                # Shared utilities (supabase client, api client, auth)
+  public/                 # Static assets (SVG logo, PNG icons for PWA)
 api/                      # Hono API server (Node.js)
   src/routes/             # Hono route modules (capture-pages, email-templates, captures, email, etc.)
   src/lib/email/          # EmailService abstraction, Resend provider, template renderer, suppression
@@ -47,6 +48,7 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **Email templates are plain text** — rendered to HTML at send/preview time via `renderFollowUpHtml()`, no React Email dependency
 - **Mobile-first dashboard layout:** Below 768px (`useIsMobile()`), the sidebar is replaced with a fixed bottom tab bar (5 tabs) + header with avatar dropdown (Settings + Sign out). Desktop sidebar unchanged. Layout uses `fixed inset-0` to prevent nav scrolling.
 - **Dialogs are full-screen on mobile:** Base `DialogContent` fills viewport on `<640px`, centered with max-height on `sm:` and up. Individual dialogs set `sm:max-w-*` for desktop sizing only.
+- **PWA installable:** `vite-plugin-pwa` with `generateSW` strategy. Manifest at `/manifest.webmanifest`, service worker precaches app shell + static assets, runtime caching for `/api/` (stale-while-revalidate, 5min). Apple PWA meta tags in `index.html`. Custom install prompt (`pwa-install-prompt.tsx`) uses `beforeinstallprompt` event, dismissible with localStorage persistence. SW update toast via Sonner (`pwa-reload-prompt.tsx`). App icons: SVG "A" lettermark + PNGs (32/180/192/512px) in `web/public/`.
 
 ## Tech stack details
 

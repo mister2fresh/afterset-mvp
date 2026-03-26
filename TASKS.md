@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 25, 2026 (v38 — slug education UX, inline keyword field, single-page model docs)
+**Last updated:** March 25, 2026 (v39 — PWA setup: manifest, service worker, icons, install prompt)
 **Current phase:** Sprint 4 — Mobile-First + PWA
-**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) next
-**Next up:** PWA manifest (P0), service worker (P0), Apple PWA meta tags (P0)
+**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Native) next
+**Next up:** Capacitor setup (P2), push notifications (P2), App Store submission (P2)
 
 ---
 
@@ -843,11 +843,11 @@ These are not scheduled. Pull from here once Sprints 1–3 ship.
 
 ### Phase 2 — PWA Setup (P0)
 
-- [ ] **Web app manifest** — `manifest.json` with app name, icons (192/512px), `display: standalone`, theme color `#0a0e1a`, background color `#0a0e1a`.
-- [ ] **Service worker via vite-plugin-pwa** — Cache app shell + static assets for offline access. Runtime caching for API responses (stale-while-revalidate for dashboard data).
-- [ ] **Apple PWA meta tags** — `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, splash screen images.
-- [ ] **App icons** — Generate full icon set (favicon, apple-touch-icon, PWA icons) from Afterset logo.
-- [ ] **Install prompt** — Custom "Add to Home Screen" banner for first-time mobile visitors.
+- [x] **Web app manifest** — `manifest.json` with app name, icons (192/512px), `display: standalone`, theme color `#0a0e1a`, background color `#0a0e1a`. ✅ 2026-03-25
+- [x] **Service worker via vite-plugin-pwa** — Cache app shell + static assets for offline access. Runtime caching for API responses (stale-while-revalidate for dashboard data). ✅ 2026-03-25
+- [x] **Apple PWA meta tags** — `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`, splash screen images. ✅ 2026-03-25
+- [x] **App icons** — Generate full icon set (favicon, apple-touch-icon, PWA icons) from Afterset logo. SVG "A" lettermark (honey-gold on midnight). ✅ 2026-03-25
+- [x] **Install prompt** — Custom "Add to Home Screen" banner for first-time mobile visitors. SW update toast via Sonner. ✅ 2026-03-25
 
 ### Phase 3 — App Store Distribution (P2, when ready)
 
