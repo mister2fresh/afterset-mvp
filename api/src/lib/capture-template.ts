@@ -69,7 +69,7 @@ const STREAMING_ICONS: Record<string, { label: string; svg: string }> = {
 	},
 	apple_music: {
 		label: "Apple Music",
-		svg: '<path d="M18.5 3.5h-13A2 2 0 0 0 3.5 5.5v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-13a2 2 0 0 0-2-2zm-3 3.5v7a2.5 2.5 0 1 1-1-2V9l-5 1.5v5a2.5 2.5 0 1 1-1-2V7.5l7-2z"/>',
+		svg: '<path d="M19 3v12.5a3.5 3.5 0 1 1-2-3.2V6.8L9 8.7v9.8a3.5 3.5 0 1 1-2-3.2V5.4L19 3z"/>',
 	},
 	youtube_music: {
 		label: "YouTube Music",
@@ -77,26 +77,26 @@ const STREAMING_ICONS: Record<string, { label: string; svg: string }> = {
 	},
 	soundcloud: {
 		label: "SoundCloud",
-		svg: '<path d="M3 14.5v-3m3 4v-5m3 5.5v-7m3 7v-9m3 9v-7a4 4 0 0 1 4 4v3H3"/>',
+		svg: '<path d="M2 14h1v4H2zm3-1h1v5H5zm3-2h1v7H8zm3-2h1v9h-1zm4-2a5 5 0 0 1 5 5v6h-6V7z"/>',
 	},
 	tidal: {
 		label: "Tidal",
-		svg: '<path d="M12 3L8 7l4 4-4 4 4 4 4-4-4-4 4-4-4-4zm-6 4L2 11l4 4 4-4-4-4zm12 0l-4 4 4 4 4-4-4-4z"/>',
+		svg: '<path d="M6 5l3 3-3 3-3-3zm6 0l3 3-3 3-3-3zm6 0l3 3-3 3-3-3zm-6 6l3 3-3 3-3-3z"/>',
 	},
 	bandcamp: {
 		label: "Bandcamp",
-		svg: '<path d="M0 17h10l4-10H4z"/>',
+		svg: '<path d="M4 19h10l6-14H10z"/>',
 	},
 };
 
 const SOCIAL_ICONS: Record<string, { label: string; svg: string }> = {
 	instagram: {
 		label: "Instagram",
-		svg: '<rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5"/>',
+		svg: '<rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.5"/>',
 	},
 	tiktok: {
 		label: "TikTok",
-		svg: '<path d="M16.6 5.8A4.3 4.3 0 0 1 13 2h-3v14a3 3 0 1 1-2-2.8V8a7 7 0 1 0 5 6.7V10a7 7 0 0 0 3.6 1V8a4.3 4.3 0 0 1-0-2.2z"/>',
+		svg: '<path d="M9 0h1.98c.144.715.54 1.617 1.235 2.512C12.895 3.389 13.797 4 15 4v2c-1.753 0-3.07-.814-4-1.829V11a5 5 0 1 1-5-5v2a3 3 0 1 0 3 3z" transform="translate(4 4) scale(1.125)"/>',
 	},
 	twitter: {
 		label: "X",
