@@ -60,10 +60,12 @@ email.post("/webhooks/resend", async (c) => {
 			headers: { id, timestamp, signature },
 			webhookSecret: secret,
 		});
-	} catch {
+	} catch (err) {
+		console.error("[webhook] Signature verification failed:", err);
 		return c.json({ error: "Invalid signature" }, 401);
 	}
 
+	console.log(`[webhook] Received event: ${event.type}`, event.data.email_id);
 	await handleWebhookEvent(event);
 	return c.json({ ok: true });
 });
@@ -84,6 +86,7 @@ async function handleWebhookEvent(event: WebhookEventPayload): Promise<void> {
 }
 
 async function handleEmailOpened(emailId: string): Promise<void> {
+	console.log(`[webhook] Processing email.opened for provider_message_id: ${emailId}`);
 	const { data } = await supabase
 		.from("pending_emails")
 		.update({ opened_at: new Date().toISOString() })
@@ -91,6 +94,11 @@ async function handleEmailOpened(emailId: string): Promise<void> {
 		.is("opened_at", null)
 		.select("broadcast_id")
 		.maybeSingle();
+
+	console.log(
+		`[webhook] email.opened update result:`,
+		data ? "matched" : "no match (already opened or unknown id)",
+	);
 
 	if (data?.broadcast_id) {
 		const { count } = await supabase
