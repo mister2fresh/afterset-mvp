@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { api } from "@/lib/api";
 import { clearUser, getUser, signOut } from "@/lib/auth";
 
@@ -76,6 +77,7 @@ function AuthenticatedLayout() {
 	const matchRoute = useMatchRoute();
 	const isMobile = useIsMobile();
 	const initials = user?.email?.slice(0, 2).toUpperCase() ?? "?";
+	usePushNotifications();
 
 	async function handleSignOut() {
 		await signOut();

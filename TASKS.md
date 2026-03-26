@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 25, 2026 (v39 — PWA setup: manifest, service worker, icons, install prompt)
-**Current phase:** Sprint 4 — Mobile-First + PWA
-**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Native) next
-**Next up:** Capacitor setup (P2), push notifications (P2), App Store submission (P2)
+**Last updated:** March 25, 2026 (v40 — Capacitor native wrapper: config, push notifications, splash screen, device token API)
+**Current phase:** Sprint 4 — Mobile-First + PWA + Native
+**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete
+**Next up:** QA checklist revision, native platform generation on Mac (cap add ios/android), App Store submissions
 
 ---
 
@@ -851,9 +851,13 @@ These are not scheduled. Pull from here once Sprints 1–3 ship.
 
 ### Phase 3 — App Store Distribution (P2, when ready)
 
-- [ ] **Add Capacitor** — `@capacitor/core` + `@capacitor/ios` + `@capacitor/android` to wrap PWA in native WebView.
-- [ ] **Push notifications** — `@capacitor/push-notifications` for new fan capture alerts, broadcast send confirmations.
-- [ ] **Native splash screen** — Capacitor splash screen plugin with Afterset branding.
+- [x] **Add Capacitor** — `@capacitor/core` + `@capacitor/ios` + `@capacitor/android` installed. `capacitor.config.ts` in `web/`. ✅ 2026-03-25
+- [x] **Push notifications** — `@capacitor/push-notifications` installed. `usePushNotifications` hook registers device token on native platforms. `POST /api/device-tokens` API endpoint + `device_tokens` migration. ✅ 2026-03-25
+- [x] **Native splash screen** — `@capacitor/splash-screen` configured (midnight bg, 2s duration, auto-hide). ✅ 2026-03-25
+- [ ] **Apply `device_tokens` migration** — `supabase db push` to create the table in Supabase.
+- [ ] **Generate native projects** — Run `pnpm build:web && cd web && npx cap add ios && npx cap add android && npx cap sync` on Mac with Xcode + Android Studio installed.
+- [ ] **iOS push notification setup** — Enable Push Notifications capability in Xcode, configure APNs key in Apple Developer portal.
+- [ ] **Android push notification setup** — Create Firebase project, add `google-services.json` to `android/app/`.
 - [ ] **Apple Developer Account** — $99/yr, submit to App Store.
 - [ ] **Google Play Console** — $25 one-time, submit to Play Store.
 

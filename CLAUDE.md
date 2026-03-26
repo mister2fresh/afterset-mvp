@@ -49,6 +49,7 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **Mobile-first dashboard layout:** Below 768px (`useIsMobile()`), the sidebar is replaced with a fixed bottom tab bar (5 tabs) + header with avatar dropdown (Settings + Sign out). Desktop sidebar unchanged. Layout uses `fixed inset-0` to prevent nav scrolling.
 - **Dialogs are full-screen on mobile:** Base `DialogContent` fills viewport on `<640px`, centered with max-height on `sm:` and up. Individual dialogs set `sm:max-w-*` for desktop sizing only.
 - **PWA installable:** `vite-plugin-pwa` with `generateSW` strategy. Manifest at `/manifest.webmanifest`, service worker precaches app shell + static assets, runtime caching for `/api/` (stale-while-revalidate, 5min). Apple PWA meta tags in `index.html`. Custom install prompt (`pwa-install-prompt.tsx`) uses `beforeinstallprompt` event, dismissible with localStorage persistence. SW update toast via Sonner (`pwa-reload-prompt.tsx`). App icons: SVG "A" lettermark + PNGs (32/180/192/512px) in `web/public/`.
+- **Capacitor native wrapper:** `capacitor.config.ts` in `web/`, app ID `net.afterset.app`. Splash screen (midnight bg, 2s auto-hide) and push notifications configured. `usePushNotifications` hook in `_authenticated` layout registers device tokens on native platforms via `POST /api/device-tokens`. `device_tokens` table stores tokens per artist with unique constraint on token. Native projects (`ios/`, `android/`) gitignored — regenerated via `npx cap sync`.
 
 ## Tech stack details
 
@@ -85,6 +86,11 @@ pnpm deploy:worker        # wrangler deploy (push to Cloudflare)
 pnpm test                 # Vitest run (api tests)
 pnpm lint                 # Biome check --write across all packages
 pnpm typecheck            # tsc --noEmit across all packages
+
+# Capacitor (native mobile — run on Mac with Xcode/Android Studio)
+cd web && npx cap sync    # Sync web build to native projects
+cd web && npx cap open ios      # Open in Xcode
+cd web && npx cap open android  # Open in Android Studio
 ```
 
 ## Design tokens

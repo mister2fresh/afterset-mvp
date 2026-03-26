@@ -7,3 +7,7 @@ dist
 .wrangler
 .routeTree.gen.ts
 .claude
+
+# Capacitor native projects (regenerated via `npx cap sync`)
+web/ios
+web/android

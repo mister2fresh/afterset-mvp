@@ -8,6 +8,7 @@ import broadcasts from "./routes/broadcasts.js";
 import build from "./routes/build.js";
 import capturePages from "./routes/capture-pages.js";
 import captures from "./routes/captures.js";
+import deviceTokens from "./routes/device-tokens.js";
 import email from "./routes/email.js";
 import emailTemplates from "./routes/email-templates.js";
 import incentive from "./routes/incentive.js";
@@ -73,6 +74,10 @@ app.route("/api/broadcasts", broadcasts);
 app.use("/api/captures", auth);
 app.use("/api/captures/*", auth);
 app.route("/api/captures", captures);
+
+app.use("/api/device-tokens", auth);
+app.use("/api/device-tokens/*", auth);
+app.route("/api/device-tokens", deviceTokens);
 
 const port = Number(process.env.PORT) || 3000;
 console.log(`API server running on port ${port}`);
