@@ -92,15 +92,21 @@ function calculateSendAt(template: SequenceTemplate, timezone: string): string |
 async function queueSequenceEmails(
 	env: Env,
 	templates: SequenceTemplate[],
-	fanCaptureId: string,
-	ctx: { artistId: string; email: string; timezone: string },
+	ctx: {
+		fanCaptureId: string;
+		captureEventId: string;
+		artistId: string;
+		email: string;
+		timezone: string;
+	},
 ): Promise<void> {
 	if (templates.length === 0) return;
 
 	const rows = templates.map((t) => {
 		const sendAt = calculateSendAt(t, ctx.timezone);
 		return {
-			fan_capture_id: fanCaptureId,
+			fan_capture_id: ctx.fanCaptureId,
+			capture_event_id: ctx.captureEventId,
 			artist_id: ctx.artistId,
 			email: ctx.email,
 			email_template_id: t.id,
@@ -258,9 +264,10 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 		s: "sms",
 	};
 
-	// Insert capture event
-	await supabaseRpc(env, "capture_events", {
+	// Insert capture event and get its ID
+	const eventRes = await supabaseRpc(env, "capture_events", {
 		method: "POST",
+		headers: { Prefer: "return=representation" },
 		body: {
 			fan_capture_id: fanCaptureId,
 			capture_page_id: page.id,
@@ -269,8 +276,17 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 		},
 	});
 
-	// Queue all sequence emails (one per active template)
-	await queueSequenceEmails(env, templates, fanCaptureId, {
+	if (!eventRes.ok) {
+		return json({ error: "Event creation failed" }, 502);
+	}
+
+	const events = (await eventRes.json()) as { id: string }[];
+	const captureEventId = events[0].id;
+
+	// Queue all sequence emails (one per active template per capture event)
+	await queueSequenceEmails(env, templates, {
+		fanCaptureId,
+		captureEventId,
 		artistId: page.artist_id,
 		email: normalizedEmail,
 		timezone,
