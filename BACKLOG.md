@@ -45,6 +45,57 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Gig calendar with title history** — log of past show titles per page; helps artists recall when/where they played (Layer 2)
 - [ ] **Financial tracking alongside fan data** (Layer 3)
 
+## Show Location Tagging (Geo-Based)
+
+**Goal:** Let artists tag a "show" with one tap using GPS, so all fan captures during that show are automatically grouped by venue. Zero typing required in the happy path.
+
+**Why:** The dashboard architecture (Tonight / All Shows) depends on show-scoped data. Without frictionless show creation, the per-show stats table, capture rate comparisons, and city leaderboards have no data to display. This is the missing input layer.
+
+**User story:** Between soundcheck and doors, the artist taps "I'm at a show" → grants location → sees a suggested venue name → confirms with one tap → all QR captures for the rest of the night attach to that show.
+
+### Phase 1 — Data Model / Schema
+
+- [ ] Add `shows` table: `id`, `artist_id`, `venue_name`, `city`, `state`, `country`, `latitude`, `longitude`, `started_at`, `ended_at`, `is_active`, `created_at`, `updated_at`
+- [ ] Add optional `show_id` FK to captures. Null = captured outside a tagged show.
+- [ ] `getActiveShow(artistId)` — returns active show or null; enforces one active show per artist
+- [ ] `getShowStats(showId)` — total captures, QR scans, page views, capture rate
+- [ ] Existing captures work with show_id = null (no breaking changes)
+
+### Phase 2 — Geolocation + Venue Lookup
+
+- [ ] `getCurrentPosition()` — wraps browser Geolocation API, returns lat/lng or structured error (denied, unavailable, timeout)
+- [ ] `suggestVenue(lat, lng)` — calls geocoding/places API, returns 1–3 nearest venue-like results (name, address, city, state, country, distance)
+- [ ] Evaluate providers: Google Places (most accurate, costs money), Mapbox (generous free tier), OSM/Nominatim (free, weaker on venue names)
+- [ ] Cache venue lookups by rounded lat/lng (3 decimal places ≈ 110m radius)
+
+### Phase 3 — "I'm at a Show" UI
+
+- [ ] One-tap flow: button → geolocation → venue suggestion card → confirm
+- [ ] Venue suggestion card: venue name (large), address (small), city/state. Actions: "That's right" / "Not quite" (edit)
+- [ ] On confirm → show record created, Tonight tab activates
+- [ ] On "Not quite" → inline edit fields pre-filled with geo results
+- [ ] Location denial fallback → manual entry with IP-based city suggestion
+- [ ] No venue found → show street address, let artist type name, pre-fill city/state
+- [ ] Dark theme: midnight bg, honey-gold confirm button
+
+### Phase 4 — Dashboard Wiring (Tonight / All Shows)
+
+- [ ] Tonight tab: show header from active show, KPIs scoped to active showId, capture rate, recent fan feed, email sequence status
+- [ ] All Shows tab: aggregate KPIs, fan growth chart (captures per show), show-by-show performance table
+- [ ] Show table columns: Date, Venue, City, Fans Captured, QR Scans, Capture Rate, Avg Open Rate
+- [ ] Row expand → email sequence performance for that show's fan cohort
+- [ ] Top cities / venues leaderboard
+
+### Phase 5 — Edge Cases, Empty States, Polish
+
+- [ ] No GPS → manual entry with IP-based city
+- [ ] Auto-close shows after 8 hours of inactivity; notification on next app open
+- [ ] Unattached captures (showId = null) → "Untagged captures" row in All Shows table
+- [ ] Allow starting new show after ending current one (one-active constraint)
+- [ ] Venue name correction on completed shows
+- [ ] Empty states: Tonight (no active show → large "I'm at a show" button), All Shows (no shows → illustration + message), single show (hide leaderboard)
+- [ ] Prompt "Were you at a show?" if captures come in without an active show
+
 ## Platform
 
 - [ ] **Light mode / theme toggle** — lighter palette option for the dashboard; persist preference in artist settings
