@@ -1,14 +1,5 @@
 import { createFileRoute, Link, Outlet, redirect, useMatchRoute } from "@tanstack/react-router";
-import {
-	BarChart3,
-	HelpCircle,
-	LayoutDashboard,
-	LogOut,
-	Mail,
-	QrCode,
-	Settings,
-	Users,
-} from "lucide-react";
+import { HelpCircle, LayoutDashboard, LogOut, Mail, QrCode, Settings, Users } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -70,7 +61,6 @@ const tabItems = [
 	{ to: "/pages", label: "Pages", icon: QrCode },
 	{ to: "/emails", label: "Emails", icon: Mail },
 	{ to: "/fans", label: "Fans", icon: Users },
-	{ to: "/analytics", label: "Analytics", icon: BarChart3 },
 ] as const;
 
 const sidebarItems = [

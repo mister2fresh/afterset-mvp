@@ -186,14 +186,25 @@ Examples: RIFFS, ENCORE, VIBE, your band name abbreviation.`,
 		description: "Understanding your fan capture and email performance data.",
 		topics: [
 			{
-				id: "dashboard-overview",
-				title: "Understanding your dashboard",
-				body: `The **Overview** tab shows your key metrics at a glance:
+				id: "dashboard-tonight",
+				title: "Tonight tab — live show stats",
+				body: `The **Tonight** tab is your between-sets glance view. It shows live data for your most recently updated capture page:
 
-- **Total fans** — All unique fans across all your capture pages.
-- **Total pages** — Number of active capture pages.
-- **This week** — New fan signups in the last 7 days.
-- **Daily chart** — Fan captures over the last 30 days.
+- **New Fans** — How many fans signed up today, with a comparison to your average per show.
+- **Avg per Show** — Your rolling average across all shows.
+- **Capture Methods** — Breakdown of QR, SMS, NFC, and direct signups.
+- **Recent Sign-ups** — A live feed of the last 20 fans who signed up.
+
+Data refreshes automatically every 30 seconds. Open this tab during a show to watch fans roll in.`,
+			},
+			{
+				id: "dashboard-all-shows",
+				title: "All Shows tab — historical analytics",
+				body: `The **All Shows** tab is your Sunday review. It shows aggregate data across all your shows:
+
+- **Captures by Show** — Select any show to see its capture methods, daily trend, and email stats.
+- **Daily Chart** — Fan captures over the last 30 days.
+- **Broadcast Engagement** — Performance of any email broadcasts you've sent.
 
 Use this to spot trends — if captures spike after a show, you know your setup is working.`,
 			},
@@ -207,7 +218,7 @@ Use this to spot trends — if captures spike after a show, you know your setup 
 - **Open rate** — Percentage of sent emails that were opened.
 - **Per-step breakdown** — See which steps in your sequence perform best.
 
-Check the **Analytics** tab for per-page details, or view page-level stats from the page card.
+Check the **All Shows** tab on the Dashboard for per-page details, or view page-level stats from the page card.
 
 Tip: If open rates drop on later steps, consider shortening your sequence or making later emails more compelling.`,
 			},
