@@ -315,7 +315,9 @@ export function CapturePagePreview({ form }: { form: FormData }) {
 	const btnRadius = BUTTON_RADIUS[form.button_style];
 	const title = form.title || "Your Page Title";
 	const subtitle = form.value_exchange_text || "Get exclusive updates and early access";
-	const streamingCount = Object.values(form.streaming_links).filter((v) => v.trim()).length;
+	const iconCount =
+		Object.values(form.streaming_links).filter((v) => v.trim()).length +
+		Object.values(form.social_links).filter((v) => v.trim()).length;
 	const fontFamily = FONT_STACK_PREVIEW[form.font_style];
 	const titleFontSize = TITLE_SIZE_PREVIEW[form.title_size];
 	const isStacked = form.layout_style === "stacked";
@@ -366,9 +368,9 @@ export function CapturePagePreview({ form }: { form: FormData }) {
 					</div>
 				</div>
 
-				{streamingCount > 0 && (
-					<div className="mt-1 flex gap-2">
-						{Array.from({ length: Math.min(streamingCount, 4) }).map((_, i) => (
+				{iconCount > 0 && (
+					<div className="mt-1 flex flex-wrap justify-center gap-2">
+						{Array.from({ length: Math.min(iconCount, 8) }).map((_, i) => (
 							<div
 								// biome-ignore lint/suspicious/noArrayIndexKey: static decorative placeholders
 								key={i}

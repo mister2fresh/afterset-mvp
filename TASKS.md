@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 27, 2026 (v57 — QA tasks + backlog updates)
+**Last updated:** March 27, 2026 (v58 — social icons grid layout fix)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
 **Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped, confirmation dialogs on all delete actions shipped, Tonight/All Shows tabbed dashboard shipped (all 3 sessions complete)
-**Next up:** Capture page social icons layout, manual QA pass, native platform generation on Mac
+**Next up:** Manual QA pass, follow-up email iPhone full-height fix, auto-incentive logic, native platform generation on Mac
 
 ---
 
@@ -15,7 +15,7 @@
 - [ ] **Redesign analytics captures + open rate data layout** — current layout of captures by show and email open rate data is confusing; improve hierarchy, grouping, and visual clarity of engagement metrics
 - [x] **Overview vs Analytics tab overlap** — combined into a single "Tonight / All Shows" tabbed dashboard. Analytics nav removed, `/analytics` redirects to `/dashboard`, help docs updated (completed March 26)
 - [x] **Confirmation dialogs on all delete actions** — AlertDialog-based confirmation before all 6 destructive actions: delete capture page, delete broadcast (card + compose dialog), delete email sequence step, remove incentive file, remove SMS keyword (fixed March 26)
-- [ ] **Capture page social icons layout** — icons currently stack vertically; redesign to a horizontal/grid layout that looks good when all social + streaming links are populated
+- [x] **Capture page social icons layout** — merged streaming + social into single flex-wrap grid; preview updated to show both (fixed March 27)
 - [ ] **Follow-up email doesn't fill screen on iPhone** — white space at the bottom of the follow-up sequence email (`renderFollowUpHtml()`); body/container needs full-height styling to eliminate gap on mobile
 - [ ] **Auto-include incentive file in first sequence email** — if a capture page has an incentive file and only one email in the sequence, auto-enable `include_incentive_link` on that email. If multiple sequence steps exist, let the artist choose which step delivers it. Need to handle: auto-enabling on file upload, auto-disabling on file removal, and the UX for multi-step selection
 - [ ] **QA: Capture page + email creation flow** — verify the current flow works well: page creation auto-creates welcome email, email dialog auto-opens after page creation, default email is active out of the box. Test: (1) create new page → email dialog opens automatically, (2) default welcome email is pre-populated and active, (3) artist can customize or dismiss without breaking anything, (4) editing existing page doesn't re-trigger email dialog. Determine if the two-step flow is smooth enough or needs further consolidation.

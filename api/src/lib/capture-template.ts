@@ -112,16 +112,14 @@ const SOCIAL_ICONS: Record<string, { label: string; svg: string }> = {
 	},
 };
 
-function renderIconLinks(
+function renderIconItems(
 	links: Record<string, string>,
 	icons: Record<string, { label: string; svg: string }>,
 	accentColor: string,
 	bgColor: string,
 ): string {
-	const entries = Object.entries(links).filter(([, url]) => url.trim());
-	if (entries.length === 0) return "";
-
-	const items = entries
+	return Object.entries(links)
+		.filter(([, url]) => url.trim())
 		.map(([key, url]) => {
 			const icon = icons[key];
 			if (!icon) return "";
@@ -130,8 +128,23 @@ function renderIconLinks(
 		})
 		.filter(Boolean)
 		.join("\n");
+}
 
-	return `<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px">${items}</div>`;
+function renderIconLinks(
+	streamingLinks: Record<string, string>,
+	socialLinks: Record<string, string>,
+	icons: {
+		streaming: Record<string, { label: string; svg: string }>;
+		social: Record<string, { label: string; svg: string }>;
+	},
+	accentColor: string,
+	bgColor: string,
+): string {
+	const items =
+		renderIconItems(streamingLinks, icons.streaming, accentColor, bgColor) +
+		renderIconItems(socialLinks, icons.social, accentColor, bgColor);
+	if (!items) return "";
+	return `<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px">${items}</div>`;
 }
 
 function incentiveLabel(contentType: string | null): string {
@@ -161,13 +174,13 @@ export function generateCaptureHtml(page: CapturePage): string {
 	const titleFontSize = TITLE_SIZES[titleSize];
 	const title = escapeHtml(page.title);
 	const subtitle = page.value_exchange_text ? escapeHtml(page.value_exchange_text) : "";
-	const streamingHtml = renderIconLinks(
+	const iconsHtml = renderIconLinks(
 		page.streaming_links,
-		STREAMING_ICONS,
+		page.social_links,
+		{ streaming: STREAMING_ICONS, social: SOCIAL_ICONS },
 		page.accent_color,
 		bgColor,
 	);
-	const socialHtml = renderIconLinks(page.social_links, SOCIAL_ICONS, page.accent_color, bgColor);
 
 	const hasIncentive = page.incentive_file_name && page.incentive_content_type;
 	const incentiveMsg = hasIncentive
@@ -220,8 +233,7 @@ ${subtitle ? `<p class="sub">${subtitle}</p>` : ""}
 </form>
 <div class="ok" id="ok"><p class="ok-h">You're in!</p><p class="ok-d">${incentiveMsg}</p></div>
 <p class="err" id="er"></p>
-${streamingHtml}
-${socialHtml}
+${iconsHtml}
 <p class="pw">Powered by <a href="https://afterset.net" target="_blank" rel="noopener">Afterset</a></p>
 </main>
 <script>

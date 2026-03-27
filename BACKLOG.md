@@ -11,6 +11,11 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **SES migration** — cost optimization at 500K–1M emails/month
 - [ ] **Dedicated-number-per-artist SMS** — Telnyx, triggers at 500+ Pro artists
 
+## Social & Streaming Links
+
+- [ ] **"Follow All" button on capture page** — single CTA that opens all streaming/social profiles, reducing friction vs tapping each icon individually
+- [ ] **Show social/streaming icons on all fan communications** — add the artist's icon grid to follow-up emails, incentive emails, and the download page. Every touchpoint should be an opportunity for fans to follow/subscribe
+
 ## Integrations
 
 - [ ] **Kit / Mailchimp CSV export + direct integration** (v1.1)
