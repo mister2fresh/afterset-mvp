@@ -4,7 +4,7 @@
 **Last updated:** March 27, 2026 (v59 — auto-expand email after page creation + auto-incentive on upload)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
 **Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped, confirmation dialogs on all delete actions shipped, Tonight/All Shows tabbed dashboard shipped (all 3 sessions complete)
-**Next up:** Manual QA pass, follow-up email iPhone full-height fix, auto-incentive logic, native platform generation on Mac
+**Next up:** Manual QA pass, analytics layout redesign, native platform generation on Mac
 
 ---
 
@@ -16,7 +16,7 @@
 - [x] **Overview vs Analytics tab overlap** — combined into a single "Tonight / All Shows" tabbed dashboard. Analytics nav removed, `/analytics` redirects to `/dashboard`, help docs updated (completed March 26)
 - [x] **Confirmation dialogs on all delete actions** — AlertDialog-based confirmation before all 6 destructive actions: delete capture page, delete broadcast (card + compose dialog), delete email sequence step, remove incentive file, remove SMS keyword (fixed March 26)
 - [x] **Capture page social icons layout** — merged streaming + social into single flex-wrap grid; preview updated to show both (fixed March 27)
-- [ ] **Follow-up email doesn't fill screen on iPhone** — white space at the bottom of the follow-up sequence email (`renderFollowUpHtml()`); body/container needs full-height styling to eliminate gap on mobile
+- [x] **Follow-up email doesn't fill screen on iPhone** — added height:100% on html, min-height:100% on body, min-height:100vh on content wrapper to eliminate white gap on mobile (fixed March 27)
 - [x] **Auto-include incentive file in first sequence email** — API auto-enables `include_incentive_link` on upload when exactly 1 email exists; multi-step pages left to artist choice. Email dialog auto-expands first step after page creation for discoverability (fixed March 27)
 - [ ] **QA: Capture page + email creation flow** — verify the current flow works well: page creation auto-creates welcome email, email dialog auto-opens after page creation, default email is active out of the box. Test: (1) create new page → email dialog opens automatically, (2) default welcome email is pre-populated and active, (3) artist can customize or dismiss without breaking anything, (4) editing existing page doesn't re-trigger email dialog. Determine if the two-step flow is smooth enough or needs further consolidation.
 - [x] **Duplicate emails on capture (9 emails sent)** — race condition in send-batch: non-atomic fetch+claim allowed overlapping pg_cron runs to double-send; also skipped emails looped back to pending forever (fixed March 26)

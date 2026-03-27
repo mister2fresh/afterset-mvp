@@ -61,10 +61,10 @@ export function renderFollowUpHtml(params: TemplateParams): string {
 		: "";
 
 	return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="height:100%;margin:0;">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background-color:${escapeHtml(t.bgColor)};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<div style="max-width:560px;margin:0 auto;padding:40px 24px;">
+<body style="margin:0;padding:0;min-height:100%;background-color:${escapeHtml(t.bgColor)};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:560px;margin:0 auto;padding:40px 24px;min-height:100vh;box-sizing:border-box;">
 <h1 style="margin:0 0 4px;font-size:20px;font-weight:700;color:${escapeHtml(t.textColor)};">${escapeHtml(artistName)}</h1>${subtitleBlock}
 ${paragraphs}
 ${incentiveBlock}
