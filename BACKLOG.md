@@ -5,6 +5,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 ## Email & Messaging
 
 - [x] **Broadcast campaigns** — shipped March 24, 2026. CRUD + send/schedule, segment filters, 4 preset templates, reply-to toggle, open tracking.
+- [ ] **Move follow-up sequences into capture pages, keep Emails tab for broadcasts only** — currently email sequences live in a separate dialog and the Emails tab mixes follow-up sequences with broadcasts. Proposal: embed the sequence editor directly in the capture page form/detail view (each page owns its sequence inline), and repurpose the Emails tab exclusively for broadcast campaigns. Benefits: tighter page↔sequence coupling in the UI matches the data model, reduces tab-switching for the most common flow, and gives broadcasts a dedicated home without clutter. Consider: inline accordion in page form vs. tab within page detail view, how to handle the post-creation email setup step.
 - [ ] **AI-powered "suggest email copy" button** — Hono API route, rate limited by tier
 - [ ] **Per-artist custom sending domains** — Resend Scale plan, triggers at ~200 artists
 - [ ] **SES migration** — cost optimization at 500K–1M emails/month

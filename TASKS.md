@@ -1,7 +1,7 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 26, 2026 (v56 — Dashboard restructure complete)
+**Last updated:** March 27, 2026 (v57 — QA tasks + backlog updates)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
 **Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped, confirmation dialogs on all delete actions shipped, Tonight/All Shows tabbed dashboard shipped (all 3 sessions complete)
 **Next up:** Capture page social icons layout, manual QA pass, native platform generation on Mac
@@ -18,7 +18,7 @@
 - [ ] **Capture page social icons layout** — icons currently stack vertically; redesign to a horizontal/grid layout that looks good when all social + streaming links are populated
 - [ ] **Follow-up email doesn't fill screen on iPhone** — white space at the bottom of the follow-up sequence email (`renderFollowUpHtml()`); body/container needs full-height styling to eliminate gap on mobile
 - [ ] **Auto-include incentive file in first sequence email** — if a capture page has an incentive file and only one email in the sequence, auto-enable `include_incentive_link` on that email. If multiple sequence steps exist, let the artist choose which step delivers it. Need to handle: auto-enabling on file upload, auto-disabling on file removal, and the UX for multi-step selection
-- [ ] **Unified capture page + follow-up email setup** — explore combining page creation and email setup into a single flow. Currently they feel like separate steps but are tightly coupled (page without email is broken). Could be: tabbed form (Page / Email sections), inline email editor below page settings, or a guided wizard. Dig into UX options and decide on approach before building.
+- [ ] **QA: Capture page + email creation flow** — verify the current flow works well: page creation auto-creates welcome email, email dialog auto-opens after page creation, default email is active out of the box. Test: (1) create new page → email dialog opens automatically, (2) default welcome email is pre-populated and active, (3) artist can customize or dismiss without breaking anything, (4) editing existing page doesn't re-trigger email dialog. Determine if the two-step flow is smooth enough or needs further consolidation.
 - [x] **Duplicate emails on capture (9 emails sent)** — race condition in send-batch: non-atomic fetch+claim allowed overlapping pg_cron runs to double-send; also skipped emails looped back to pending forever (fixed March 26)
 - [x] **Incentive file not included in emails** — send-batch queried nonexistent `incentive_uploads` table instead of `capture_pages.incentive_file_path` (fixed March 26)
 
