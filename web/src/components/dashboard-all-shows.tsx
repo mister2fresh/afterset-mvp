@@ -90,6 +90,8 @@ export function DashboardAllShows(): React.ReactElement {
 				<StatCard label="Capture Pages" value={overview.total_pages} />
 			</div>
 
+			<DailyChart daily={overview.daily} title="All Captures (Last 30 Days)" />
+
 			<CapturesByShow
 				pages={overview.pages}
 				totalFans={overview.total_fans}
@@ -99,8 +101,6 @@ export function DashboardAllShows(): React.ReactElement {
 				pageData={pageData}
 				pageLoading={pageLoading}
 			/>
-
-			<DailyChart daily={overview.daily} title="All Captures (Last 30 Days)" />
 
 			<BroadcastEngagement broadcasts={broadcasts} />
 		</div>
