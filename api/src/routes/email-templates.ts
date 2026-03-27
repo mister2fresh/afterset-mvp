@@ -101,13 +101,14 @@ app.post("/:id/email-template/preview", async (c) => {
 
 	const { data: page } = await supabase
 		.from("capture_pages")
-		.select("accent_color, bg_color, text_color, button_style")
+		.select("title, accent_color, bg_color, text_color, button_style")
 		.eq("id", pageId)
 		.eq("artist_id", artist.id)
 		.single();
 
 	const html = renderFollowUpHtml({
 		artistName: artist.name,
+		pageTitle: page?.title ?? undefined,
 		body: parsed.data.body,
 		incentiveUrl: body.include_incentive_link ? "https://example.com/download" : undefined,
 		theme: page ? toEmailTheme(page) : undefined,
@@ -227,13 +228,14 @@ app.post("/:id/email-sequence/:order/preview", async (c) => {
 
 	const { data: page } = await supabase
 		.from("capture_pages")
-		.select("accent_color, bg_color, text_color, button_style")
+		.select("title, accent_color, bg_color, text_color, button_style")
 		.eq("id", pageId)
 		.eq("artist_id", artist.id)
 		.single();
 
 	const html = renderFollowUpHtml({
 		artistName: artist.name,
+		pageTitle: page?.title ?? undefined,
 		body: parsed.data.body,
 		incentiveUrl: body.include_incentive_link ? "https://example.com/download" : undefined,
 		theme: page ? toEmailTheme(page) : undefined,

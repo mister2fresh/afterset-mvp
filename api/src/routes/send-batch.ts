@@ -134,15 +134,17 @@ app.post("/send-batch", async (c) => {
 	const baseUrl = process.env.API_BASE_URL ?? "https://api.afterset.net";
 	const incentiveUrlMap = new Map<string, string>();
 	const pageThemeMap = new Map<string, EmailTheme>();
+	const pageTitleMap = new Map<string, string>();
 
 	if (allPageIds.length > 0) {
 		const { data: pages } = await supabase
 			.from("capture_pages")
-			.select("id, incentive_file_path, accent_color, bg_color, text_color, button_style")
+			.select("id, title, incentive_file_path, accent_color, bg_color, text_color, button_style")
 			.in("id", allPageIds);
 
 		for (const page of pages ?? []) {
 			pageThemeMap.set(page.id, toEmailTheme(page));
+			if (page.title) pageTitleMap.set(page.id, page.title);
 			if (page.incentive_file_path) {
 				const token = createDownloadToken(page.id);
 				incentiveUrlMap.set(page.id, `${baseUrl}/download/${token}`);
@@ -237,8 +239,10 @@ app.post("/send-batch", async (c) => {
 				: undefined;
 
 		const theme = capturePageId ? pageThemeMap.get(capturePageId) : undefined;
+		const pageTitle = capturePageId ? pageTitleMap.get(capturePageId) : undefined;
 		const html = renderFollowUpHtml({
 			artistName: artist.name,
+			pageTitle,
 			body: template.body,
 			incentiveUrl,
 			theme,

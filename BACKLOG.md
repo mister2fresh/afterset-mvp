@@ -52,6 +52,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Team / band member accounts** — Band tier
 - [ ] **Mobile native app consideration**
 - [ ] **MCP task server** — build when file-based tracking outgrows itself
+- [ ] **Feature branch workflow for /ship** — update ship skill to create feature branch + PR by default instead of pushing directly to main; prevents parallel Claude Code sessions from conflicting on staging area
 
 ## Research
 

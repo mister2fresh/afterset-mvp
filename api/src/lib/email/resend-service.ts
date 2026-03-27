@@ -13,9 +13,10 @@ function getAddress(): string {
 	return process.env.CAN_SPAM_ADDRESS ?? "";
 }
 
-function buildFooter(address: string): string {
+function buildFooter(address: string, unsubscribeUrl: string): string {
 	return `<div style="margin-top:32px;padding-top:16px;border-top:1px solid #333;font-size:12px;color:#888;text-align:center;">
 <p>You received this because you signed up at a live event via Afterset.</p>
+<p><a href="${unsubscribeUrl}" style="color:#888;text-decoration:underline;">Unsubscribe</a></p>
 <p>${address}</p>
 </div>`;
 }
@@ -45,11 +46,12 @@ export class ResendEmailService implements EmailService {
 		}
 
 		const token = createUnsubscribeToken(params.to, params.artistId);
+		const unsubUrl = `${getBaseUrl()}/api/email/unsubscribe?token=${token}`;
 		const { data, error } = await this.resend.emails.send({
 			from: `${params.artistName} via Afterset <noreply@${FROM_DOMAIN}>`,
 			to: [params.to],
 			subject: params.subject,
-			html: params.html + buildFooter(getAddress()),
+			html: params.html + buildFooter(getAddress(), unsubUrl),
 			headers: buildHeaders(token),
 			...(params.replyTo && { reply_to: [params.replyTo] }),
 		});
@@ -72,11 +74,12 @@ export class ResendEmailService implements EmailService {
 
 		const payload = unsuppressed.map((p) => {
 			const token = createUnsubscribeToken(p.to, p.artistId);
+			const unsubUrl = `${getBaseUrl()}/api/email/unsubscribe?token=${token}`;
 			return {
 				from: `${p.artistName} via Afterset <noreply@${FROM_DOMAIN}>`,
 				to: [p.to],
 				subject: p.subject,
-				html: p.html + buildFooter(getAddress()),
+				html: p.html + buildFooter(getAddress(), unsubUrl),
 				headers: buildHeaders(token),
 				...(p.replyTo && { reply_to: [p.replyTo] }),
 			};

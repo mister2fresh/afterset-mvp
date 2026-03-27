@@ -27,16 +27,18 @@ function isLightColor(hex: string): boolean {
 
 type TemplateParams = {
 	artistName: string;
+	pageTitle?: string;
 	body: string;
 	incentiveUrl?: string;
 	theme?: EmailTheme;
 };
 
 export function renderFollowUpHtml(params: TemplateParams): string {
-	const { artistName, body, incentiveUrl } = params;
+	const { artistName, pageTitle, body, incentiveUrl } = params;
 	const t = params.theme ?? DEFAULT_THEME;
 	const bodyColor = isLightColor(t.bgColor) ? "#374151" : "#e5e7eb";
 	const btnTextColor = isLightColor(t.accentColor) ? "#0a0e1a" : "#f9fafb";
+	const mutedColor = isLightColor(t.bgColor) ? "#6b7280" : "#9ca3af";
 	const radius = BUTTON_RADIUS[t.buttonStyle] ?? "6px";
 
 	const paragraphs = body
@@ -54,12 +56,16 @@ export function renderFollowUpHtml(params: TemplateParams): string {
 </div>`
 		: "";
 
+	const subtitleBlock = pageTitle
+		? `\n<p style="margin:0 0 24px;font-size:13px;color:${mutedColor};">${escapeHtml(pageTitle)}</p>`
+		: "";
+
 	return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background-color:${escapeHtml(t.bgColor)};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:560px;margin:0 auto;padding:40px 24px;">
-<h1 style="margin:0 0 24px;font-size:20px;font-weight:700;color:${escapeHtml(t.textColor)};">${escapeHtml(artistName)}</h1>
+<h1 style="margin:0 0 4px;font-size:20px;font-weight:700;color:${escapeHtml(t.textColor)};">${escapeHtml(artistName)}</h1>${subtitleBlock}
 ${paragraphs}
 ${incentiveBlock}
 </div>
