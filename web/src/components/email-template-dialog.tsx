@@ -15,6 +15,7 @@ import {
 	Zap,
 } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,6 +110,7 @@ function SequenceStepEditor({
 	const [form, setForm] = useState<StepForm>(existing ? formFromTemplate(existing) : EMPTY_STEP);
 	const [previewHtml, setPreviewHtml] = useState("");
 	const [showPreview, setShowPreview] = useState(false);
+	const [deleteOpen, setDeleteOpen] = useState(false);
 
 	const saveMutation = useMutation({
 		mutationFn: (data: StepForm) =>
@@ -266,17 +268,26 @@ function SequenceStepEditor({
 
 			<div className="flex flex-wrap items-center gap-2">
 				{existing && (
-					<Button
-						type="button"
-						variant="ghost"
-						size="sm"
-						className="text-destructive hover:text-destructive"
-						onClick={() => deleteMutation.mutate()}
-						disabled={deleteMutation.isPending}
-					>
-						{deleteMutation.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
-						Delete
-					</Button>
+					<>
+						<Button
+							type="button"
+							variant="ghost"
+							size="sm"
+							className="text-destructive hover:text-destructive"
+							onClick={() => setDeleteOpen(true)}
+							disabled={deleteMutation.isPending}
+						>
+							{deleteMutation.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
+							Delete
+						</Button>
+						<ConfirmDialog
+							open={deleteOpen}
+							onOpenChange={setDeleteOpen}
+							title="Delete email step?"
+							description={`This will permanently delete "${form.subject || "this email"}" from the sequence. Any pending sends for this step will be cancelled.`}
+							onConfirm={() => deleteMutation.mutate()}
+						/>
+					</>
 				)}
 				<div className="flex-1" />
 				<Button

@@ -16,6 +16,7 @@ import {
 	X,
 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -505,6 +506,7 @@ export function PageForm({
 	const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 	const [uploadError, setUploadError] = useState<string | null>(null);
 	const [fileRemoved, setFileRemoved] = useState(false);
+	const [removeFileOpen, setRemoveFileOpen] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [streamingOpen, setStreamingOpen] = useState(hasAnyLink(initialForm.streaming_links));
 	const [socialOpen, setSocialOpen] = useState(hasAnyLink(initialForm.social_links));
@@ -1008,13 +1010,23 @@ export function PageForm({
 						}}
 					/>
 				) : hasExistingFile ? (
-					<IncentiveFileDisplay
-						name={page?.incentive_file_name ?? ""}
-						size={page?.incentive_file_size ?? 0}
-						contentType={page?.incentive_content_type ?? ""}
-						onRemove={() => removeMutation.mutate()}
-						isRemoving={removeMutation.isPending}
-					/>
+					<>
+						<IncentiveFileDisplay
+							name={page?.incentive_file_name ?? ""}
+							size={page?.incentive_file_size ?? 0}
+							contentType={page?.incentive_content_type ?? ""}
+							onRemove={() => setRemoveFileOpen(true)}
+							isRemoving={removeMutation.isPending}
+						/>
+						<ConfirmDialog
+							open={removeFileOpen}
+							onOpenChange={setRemoveFileOpen}
+							title="Remove incentive file?"
+							description={`This will delete "${page?.incentive_file_name}". Fans who already received a download link can still access it until it expires.`}
+							confirmLabel="Remove"
+							onConfirm={() => removeMutation.mutate()}
+						/>
+					</>
 				) : (
 					<label
 						className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed p-6 transition-colors ${isDragging ? "border-honey-gold bg-honey-gold/10" : "border-border hover:border-honey-gold/50 hover:bg-muted/50"}`}

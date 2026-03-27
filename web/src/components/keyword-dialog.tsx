@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Check, Loader2, MessageSquare, Trash2, X } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -45,11 +46,14 @@ export function KeywordDialog({
 	const [checking, setChecking] = useState(false);
 	const [debouncing, setDebouncing] = useState(false);
 
+	const [removeOpen, setRemoveOpen] = useState(false);
+
 	useEffect(() => {
 		if (open) {
 			setValue(currentKeyword ?? "");
 			setCheck(null);
 			setDebouncing(false);
+			setRemoveOpen(false);
 		}
 	}, [open, currentKeyword]);
 
@@ -172,17 +176,27 @@ export function KeywordDialog({
 
 					<DialogFooter className="gap-2 sm:gap-0">
 						{currentKeyword && (
-							<Button
-								type="button"
-								variant="ghost"
-								size="sm"
-								className="mr-auto text-destructive hover:text-destructive"
-								onClick={() => removeMutation.mutate()}
-								disabled={removeMutation.isPending}
-							>
-								{removeMutation.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
-								Remove
-							</Button>
+							<>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									className="mr-auto text-destructive hover:text-destructive"
+									onClick={() => setRemoveOpen(true)}
+									disabled={removeMutation.isPending}
+								>
+									{removeMutation.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}
+									Remove
+								</Button>
+								<ConfirmDialog
+									open={removeOpen}
+									onOpenChange={setRemoveOpen}
+									title="Remove keyword?"
+									description={`Fans will no longer be able to text "${currentKeyword}" to join. The keyword will become available for other artists.`}
+									confirmLabel="Remove"
+									onConfirm={() => removeMutation.mutate()}
+								/>
+							</>
 						)}
 						<Button type="submit" disabled={!canSave || saveMutation.isPending}>
 							{saveMutation.isPending ? <Loader2 className="animate-spin" /> : <Check />}

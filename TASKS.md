@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 26, 2026 (v52 — Auto-create default email template on page creation)
+**Last updated:** March 26, 2026 (v53 — Confirmation dialogs on all delete actions)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
-**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped
-**Next up:** Redesign analytics captures + open rate layout, overview vs analytics tab overlap, manual QA pass, native platform generation on Mac
+**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped, confirmation dialogs on all delete actions shipped
+**Next up:** Redesign analytics captures + open rate layout, overview vs analytics tab overlap, capture page social icons layout, manual QA pass, native platform generation on Mac
 
 ---
 
@@ -14,7 +14,7 @@
 - [x] **No visible unsubscribe link in email body** — added clickable "Unsubscribe" link in email footer alongside existing RFC 8058 List-Unsubscribe headers; CAN-SPAM compliant (fixed March 26)
 - [ ] **Redesign analytics captures + open rate data layout** — current layout of captures by show and email open rate data is confusing; improve hierarchy, grouping, and visual clarity of engagement metrics
 - [ ] **Overview vs Analytics tab overlap** — the two tabs have unclear distinction; evaluate whether to differentiate their purposes more sharply or combine into a single view
-- [ ] **Confirmation dialogs on all delete actions** — add "Are you sure?" confirmation before any destructive action (delete page, delete template, delete broadcast, remove keyword, etc.)
+- [x] **Confirmation dialogs on all delete actions** — AlertDialog-based confirmation before all 6 destructive actions: delete capture page, delete broadcast (card + compose dialog), delete email sequence step, remove incentive file, remove SMS keyword (fixed March 26)
 - [ ] **Capture page social icons layout** — icons currently stack vertically; redesign to a horizontal/grid layout that looks good when all social + streaming links are populated
 - [ ] **Auto-include incentive file in first sequence email** — if a capture page has an incentive file and only one email in the sequence, auto-enable `include_incentive_link` on that email. If multiple sequence steps exist, let the artist choose which step delivers it. Need to handle: auto-enabling on file upload, auto-disabling on file removal, and the UX for multi-step selection
 - [ ] **Unified capture page + follow-up email setup** — explore combining page creation and email setup into a single flow. Currently they feel like separate steps but are tightly coupled (page without email is broken). Could be: tabbed form (Page / Email sections), inline email editor below page settings, or a guided wizard. Dig into UX options and decide on approach before building.

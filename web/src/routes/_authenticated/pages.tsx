@@ -14,6 +14,7 @@ import {
 	Users,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmailTemplateBadge, EmailTemplateDialog } from "@/components/email-template-dialog";
 import { KeywordDialog } from "@/components/keyword-dialog";
 import { type CapturePage, fileTypeIcon, PageForm } from "@/components/page-form";
@@ -220,6 +221,7 @@ function PageCard({
 	const qrUrl = useQrPreview(page.id);
 	const [emailOpen, setEmailOpen] = useState(false);
 	const [keywordOpen, setKeywordOpen] = useState(false);
+	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [editingTitle, setEditingTitle] = useState(false);
 	const [titleDraft, setTitleDraft] = useState(page.title);
 
@@ -320,7 +322,7 @@ function PageCard({
 						<DropdownMenuItem
 							className="text-destructive"
 							disabled={deleteMutation.isPending}
-							onClick={() => deleteMutation.mutate()}
+							onClick={() => setDeleteOpen(true)}
 						>
 							<Trash2 />
 							{deleteMutation.isPending ? "Deleting..." : "Delete"}
@@ -328,6 +330,13 @@ function PageCard({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</CardHeader>
+			<ConfirmDialog
+				open={deleteOpen}
+				onOpenChange={setDeleteOpen}
+				title="Delete capture page?"
+				description={`This will permanently delete "${page.title}". Fan data and capture history will be preserved, but the page link, QR code, SMS keyword, and NFC tap will all stop working.`}
+				onConfirm={() => deleteMutation.mutate()}
+			/>
 			<EmailTemplateDialog
 				pageId={page.id}
 				pageTitle={page.title}

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -129,6 +130,7 @@ export function BroadcastComposeDialog({
 	const [sending, setSending] = useState(false);
 	const [sendError, setSendError] = useState("");
 	const [showConfirm, setShowConfirm] = useState(false);
+	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
 	const broadcastId = broadcast?.id;
 
@@ -145,6 +147,7 @@ export function BroadcastComposeDialog({
 			setFilterMethod(broadcast.filter_method ?? "");
 			setSendError("");
 			setShowConfirm(false);
+			setShowDeleteConfirm(false);
 			setShowPreview(false);
 		} else {
 			setSubject("");
@@ -157,6 +160,7 @@ export function BroadcastComposeDialog({
 			setFilterMethod("");
 			setSendError("");
 			setShowConfirm(false);
+			setShowDeleteConfirm(false);
 			setShowPreview(false);
 		}
 	}, [broadcast]);
@@ -655,7 +659,7 @@ export function BroadcastComposeDialog({
 								<Button
 									variant="ghost"
 									size="sm"
-									onClick={handleDelete}
+									onClick={() => setShowDeleteConfirm(true)}
 									className="w-fit text-red-400 hover:text-red-300"
 								>
 									<Trash2 className="mr-1.5 size-4" />
@@ -688,6 +692,13 @@ export function BroadcastComposeDialog({
 					</div>
 				)}
 			</DialogContent>
+			<ConfirmDialog
+				open={showDeleteConfirm}
+				onOpenChange={setShowDeleteConfirm}
+				title="Delete broadcast?"
+				description={`This will permanently delete the draft "${subject || "Untitled broadcast"}".`}
+				onConfirm={handleDelete}
+			/>
 		</Dialog>
 	);
 }

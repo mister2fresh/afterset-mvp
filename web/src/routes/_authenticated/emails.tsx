@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { BroadcastCard, BroadcastComposeDialog } from "@/components/broadcast-compose-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmailTemplateDialog } from "@/components/email-template-dialog";
 import { QueryError } from "@/components/query-error";
 import { Badge } from "@/components/ui/badge";
@@ -123,6 +124,7 @@ function EmailsPage() {
 	const [editingBroadcast, setEditingBroadcast] = useState<Broadcast | null>(null);
 	const [composeOpen, setComposeOpen] = useState(false);
 	const [creating, setCreating] = useState(false);
+	const [deletingBroadcast, setDeletingBroadcast] = useState<Broadcast | null>(null);
 
 	const isLoading = pagesLoading || seqLoading || broadcastsLoading;
 	const editingPage = pages?.find((p) => p.id === editingPageId);
@@ -150,8 +152,14 @@ function EmailsPage() {
 	}
 
 	async function handleDeleteBroadcast(broadcast: Broadcast) {
-		await api.delete(`/broadcasts/${broadcast.id}`);
+		setDeletingBroadcast(broadcast);
+	}
+
+	async function confirmDeleteBroadcast() {
+		if (!deletingBroadcast) return;
+		await api.delete(`/broadcasts/${deletingBroadcast.id}`);
 		queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
+		setDeletingBroadcast(null);
 	}
 
 	async function handleArchiveBroadcast(broadcast: Broadcast) {
@@ -409,6 +417,16 @@ function EmailsPage() {
 						queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
 					}
 				}}
+			/>
+
+			<ConfirmDialog
+				open={!!deletingBroadcast}
+				onOpenChange={(open) => {
+					if (!open) setDeletingBroadcast(null);
+				}}
+				title="Delete broadcast?"
+				description={`This will permanently delete the draft "${deletingBroadcast?.subject || "Untitled broadcast"}".`}
+				onConfirm={confirmDeleteBroadcast}
 			/>
 		</div>
 	);
