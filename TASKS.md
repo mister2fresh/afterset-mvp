@@ -16,6 +16,8 @@
 - [ ] **Overview vs Analytics tab overlap** — the two tabs have unclear distinction; evaluate whether to differentiate their purposes more sharply or combine into a single view
 - [ ] **Confirmation dialogs on all delete actions** — add "Are you sure?" confirmation before any destructive action (delete page, delete template, delete broadcast, remove keyword, etc.)
 - [ ] **Capture page social icons layout** — icons currently stack vertically; redesign to a horizontal/grid layout that looks good when all social + streaming links are populated
+- [ ] **Auto-include incentive file in first sequence email** — if a capture page has an incentive file and only one email in the sequence, auto-enable `include_incentive_link` on that email. If multiple sequence steps exist, let the artist choose which step delivers it. Need to handle: auto-enabling on file upload, auto-disabling on file removal, and the UX for multi-step selection
+- [ ] **Unified capture page + follow-up email setup** — explore combining page creation and email setup into a single flow. Currently they feel like separate steps but are tightly coupled (page without email is broken). Could be: tabbed form (Page / Email sections), inline email editor below page settings, or a guided wizard. Dig into UX options and decide on approach before building.
 - [x] **Duplicate emails on capture (9 emails sent)** — race condition in send-batch: non-atomic fetch+claim allowed overlapping pg_cron runs to double-send; also skipped emails looped back to pending forever (fixed March 26)
 - [x] **Incentive file not included in emails** — send-batch queried nonexistent `incentive_uploads` table instead of `capture_pages.incentive_file_path` (fixed March 26)
 
