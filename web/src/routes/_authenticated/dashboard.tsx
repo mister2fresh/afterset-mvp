@@ -10,16 +10,16 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage(): React.ReactElement {
 	return (
 		<div className="space-y-6">
-			<Tabs defaultValue="tonight">
+			<Tabs defaultValue="all-shows">
 				<TabsList>
-					<TabsTrigger value="tonight">Tonight</TabsTrigger>
 					<TabsTrigger value="all-shows">All Shows</TabsTrigger>
+					<TabsTrigger value="tonight">Tonight</TabsTrigger>
 				</TabsList>
-				<TabsContent value="tonight">
-					<DashboardTonight />
-				</TabsContent>
 				<TabsContent value="all-shows">
 					<DashboardAllShows />
+				</TabsContent>
+				<TabsContent value="tonight">
+					<DashboardTonight />
 				</TabsContent>
 			</Tabs>
 		</div>

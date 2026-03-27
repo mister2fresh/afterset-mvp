@@ -312,25 +312,19 @@ app.get("/", async (c) => {
 			: { data: [] };
 	const pageSlugMap = new Map((pageDetails ?? []).map((p) => [p.id, p.slug]));
 
-	// Email open stats per page_title
+	// Email open stats per page_title — join through capture_event to get the correct title
 	const { data: emailRows } = await supabase
 		.from("pending_emails")
-		.select("fan_capture_id, opened_at")
+		.select("opened_at, capture_events!inner(page_title)")
 		.eq("artist_id", artist.id)
 		.eq("status", "sent");
-
-	// Map fan_capture_id -> page_title
-	const fanToTitle = new Map<string, string>();
-	for (const row of rows) {
-		fanToTitle.set(row.fan_capture_id, row.page_title ?? "Unknown");
-	}
 
 	// Aggregate email stats per title
 	const titleEmailSent = new Map<string, number>();
 	const titleEmailOpened = new Map<string, number>();
 	for (const email of emailRows ?? []) {
-		const title = fanToTitle.get(email.fan_capture_id);
-		if (!title) continue;
+		const event = email.capture_events as unknown as { page_title: string | null };
+		const title = event?.page_title ?? "Unknown";
 		titleEmailSent.set(title, (titleEmailSent.get(title) ?? 0) + 1);
 		if (email.opened_at) {
 			titleEmailOpened.set(title, (titleEmailOpened.get(title) ?? 0) + 1);

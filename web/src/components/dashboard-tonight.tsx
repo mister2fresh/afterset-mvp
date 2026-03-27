@@ -35,7 +35,7 @@ function formatComparison(
 	const diff = current - avg;
 	const pct = Math.round((Math.abs(diff) / avg) * 100);
 	if (diff > 0) return { value: `${pct}% above avg`, direction: "up" };
-	if (diff < 0) return { value: `${pct}% below avg`, direction: "down" };
+	if (diff < 0) return undefined;
 	return { value: "at average", direction: "neutral" };
 }
 
