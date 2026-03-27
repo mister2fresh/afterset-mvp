@@ -70,6 +70,10 @@ export function ShowDrillDown({
 							<p className="text-xs text-muted-foreground">Emails Sent</p>
 						</div>
 						<div>
+							<p className="text-lg tabular-nums">{show.emails_opened}</p>
+							<p className="text-xs text-muted-foreground">Emails Opened</p>
+						</div>
+						<div>
 							<p className="text-lg tabular-nums">{Math.round(show.open_rate * 100)}%</p>
 							<p className="text-xs text-muted-foreground">Open Rate</p>
 						</div>

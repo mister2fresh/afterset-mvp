@@ -133,6 +133,13 @@ function CapturesByShow({
 				</p>
 			</CardHeader>
 			<CardContent className="space-y-4">
+				<div className="mb-1 flex items-center px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+					<span className="min-w-0 flex-1">Show</span>
+					<span className="w-16 shrink-0 text-center">Date</span>
+					<span className="w-12 shrink-0 text-center">Fans</span>
+					<span className="w-14 shrink-0 text-center">Opens</span>
+					<span className="w-20 shrink-0" />
+				</div>
 				<div className="space-y-1">
 					{pages.map((p) => {
 						const pct = totalFans > 0 ? (p.captures / totalFans) * 100 : 0;
@@ -142,26 +149,26 @@ function CapturesByShow({
 								type="button"
 								onClick={() => onSelectTitle(p.title === selectedTitle ? null : p.title)}
 								className={cn(
-									"flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors",
+									"flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors",
 									p.title === selectedTitle ? "bg-honey-gold/10 text-honey-gold" : "hover:bg-muted",
 								)}
 							>
 								<span className="min-w-0 flex-1 truncate">{p.title}</span>
-								{p.latest_capture && (
-									<span className="shrink-0 text-xs text-muted-foreground">
-										{new Date(p.latest_capture).toLocaleDateString("en-US", {
-											month: "numeric",
-											day: "numeric",
-											year: "2-digit",
-										})}
-									</span>
-								)}
-								<span className="shrink-0 tabular-nums text-muted-foreground">{p.captures}</span>
-								{p.emails_sent > 0 && (
-									<span className="shrink-0 text-xs text-muted-foreground">
-										{Math.round(p.open_rate * 100)}% opens
-									</span>
-								)}
+								<span className="w-16 shrink-0 text-center text-xs tabular-nums text-muted-foreground">
+									{p.latest_capture
+										? new Date(p.latest_capture).toLocaleDateString("en-US", {
+												month: "numeric",
+												day: "numeric",
+												year: "2-digit",
+											})
+										: "—"}
+								</span>
+								<span className="w-12 shrink-0 text-center tabular-nums text-muted-foreground">
+									{p.captures}
+								</span>
+								<span className="w-14 shrink-0 text-center text-xs tabular-nums text-muted-foreground">
+									{p.emails_sent > 0 ? `${Math.round(p.open_rate * 100)}%` : "—"}
+								</span>
 								<div className="h-2 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
 									<div
 										className="h-full rounded-full bg-honey-gold transition-[width]"
