@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 26, 2026 (v51 — Email page title subtitle + visible unsubscribe link)
+**Last updated:** March 26, 2026 (v52 — Auto-create default email template on page creation)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
-**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped
-**Next up:** Redesign analytics captures + open rate layout, manual QA pass, native platform generation on Mac
+**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped
+**Next up:** Redesign analytics captures + open rate layout, overview vs analytics tab overlap, manual QA pass, native platform generation on Mac
 
 ---
 
@@ -13,6 +13,9 @@
 - [x] **Email heading now shows artist name + page title subtitle** — was working correctly (artist name was "hello"); added page title as muted subtitle below artist name for show context (fixed March 26)
 - [x] **No visible unsubscribe link in email body** — added clickable "Unsubscribe" link in email footer alongside existing RFC 8058 List-Unsubscribe headers; CAN-SPAM compliant (fixed March 26)
 - [ ] **Redesign analytics captures + open rate data layout** — current layout of captures by show and email open rate data is confusing; improve hierarchy, grouping, and visual clarity of engagement metrics
+- [ ] **Overview vs Analytics tab overlap** — the two tabs have unclear distinction; evaluate whether to differentiate their purposes more sharply or combine into a single view
+- [ ] **Confirmation dialogs on all delete actions** — add "Are you sure?" confirmation before any destructive action (delete page, delete template, delete broadcast, remove keyword, etc.)
+- [ ] **Capture page social icons layout** — icons currently stack vertically; redesign to a horizontal/grid layout that looks good when all social + streaming links are populated
 - [x] **Duplicate emails on capture (9 emails sent)** — race condition in send-batch: non-atomic fetch+claim allowed overlapping pg_cron runs to double-send; also skipped emails looped back to pending forever (fixed March 26)
 - [x] **Incentive file not included in emails** — send-batch queried nonexistent `incentive_uploads` table instead of `capture_pages.incentive_file_path` (fixed March 26)
 

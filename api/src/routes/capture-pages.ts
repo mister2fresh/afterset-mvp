@@ -120,6 +120,17 @@ app.post("/", async (c) => {
 
 	if (error) return c.json({ error: error.message }, 500);
 
+	// Auto-create default follow-up email (sequence step 0) so every page has one
+	await supabase.from("email_templates").insert({
+		artist_id: artist.id,
+		capture_page_id: data.id,
+		sequence_order: 0,
+		subject: `Thanks for signing up!`,
+		body: `Hey! Thanks so much for coming out tonight and signing up. It means the world.\n\nStay tuned — I'll be sending updates about upcoming shows, new music, and more.`,
+		delay_mode: "immediate",
+		is_active: true,
+	});
+
 	buildPage(data.id, artist.id).catch(() => {});
 
 	return c.json(data, 201);

@@ -78,6 +78,7 @@ function PagesPage() {
 	const { data: keywords } = useKeywords();
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editingPage, setEditingPage] = useState<CapturePage | null>(null);
+	const [newPageEmailId, setNewPageEmailId] = useState<string | null>(null);
 
 	if (isLoading) {
 		return (
@@ -97,7 +98,12 @@ function PagesPage() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<p className="text-muted-foreground">Create and manage your fan capture pages.</p>
-				<PageFormDialog mode="create" open={createOpen} onOpenChange={setCreateOpen} />
+				<PageFormDialog
+					mode="create"
+					open={createOpen}
+					onOpenChange={setCreateOpen}
+					onCreated={(p) => setNewPageEmailId(p.id)}
+				/>
 			</div>
 
 			{hasPages ? (
@@ -138,6 +144,18 @@ function PagesPage() {
 					open={!!editingPage}
 					onOpenChange={(open) => {
 						if (!open) setEditingPage(null);
+					}}
+				/>
+			)}
+
+			{newPageEmailId && (
+				<EmailTemplateDialog
+					pageId={newPageEmailId}
+					pageTitle={pages?.find((p) => p.id === newPageEmailId)?.title ?? ""}
+					hasIncentive={!!pages?.find((p) => p.id === newPageEmailId)?.incentive_file_name}
+					open={!!newPageEmailId}
+					onOpenChange={(open) => {
+						if (!open) setNewPageEmailId(null);
 					}}
 				/>
 			)}
@@ -416,10 +434,16 @@ function PageCard({
 }
 
 type PageFormDialogProps =
-	| { mode: "create"; open: boolean; onOpenChange: (open: boolean) => void; page?: undefined }
+	| {
+			mode: "create";
+			open: boolean;
+			onOpenChange: (open: boolean) => void;
+			onCreated?: (page: CapturePage) => void;
+			page?: undefined;
+	  }
 	| { mode: "edit"; page: CapturePage; open: boolean; onOpenChange: (open: boolean) => void };
 
-function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps) {
+function PageFormDialog({ mode, page, open, onOpenChange, ...rest }: PageFormDialogProps) {
 	const isCreate = mode === "create";
 
 	const { data: keywords } = useKeywords();
@@ -452,7 +476,12 @@ function PageFormDialog({ mode, page, open, onOpenChange }: PageFormDialogProps)
 				page={page}
 				currentKeyword={keyword?.keyword ?? null}
 				defaultLinks={defaultLinks}
-				onSuccess={() => onOpenChange(false)}
+				onSuccess={(created) => {
+					onOpenChange(false);
+					if (mode === "create" && "onCreated" in rest && rest.onCreated) {
+						rest.onCreated(created);
+					}
+				}}
 				onCancel={() => onOpenChange(false)}
 			/>
 		</DialogContent>
