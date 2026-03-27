@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { type CaptureRow, CapturesTable } from "@/components/captures-table";
 import { QueryError } from "@/components/query-error";
+import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
@@ -113,18 +114,15 @@ function DashboardPage() {
 
 	return (
 		<div className="space-y-6">
-			{/* Stat cards */}
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 				<StatCard label="Total Fans" value={overview.total_fans} icon={Users} />
 				<StatCard label="Capture Pages" value={overview.total_pages} icon={QrCode} />
 				<StatCard label="This Week" value={overview.this_week} icon={BarChart3} />
 			</div>
 
-			{/* Growth chart */}
 			<GrowthChart daily={overview.daily} />
 
 			<div className="grid gap-6 lg:grid-cols-2">
-				{/* Top pages */}
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between">
 						<CardTitle className="text-sm font-medium">Top Pages</CardTitle>
@@ -202,37 +200,17 @@ function DashboardPage() {
 	);
 }
 
-function StatCard({
-	label,
-	value,
-	icon: Icon,
+function GrowthChart({
+	daily,
 }: {
-	label: string;
-	value: number;
-	icon: React.ComponentType<{ className?: string }>;
-}) {
-	return (
-		<Card>
-			<CardHeader className="flex flex-row items-center justify-between pb-2">
-				<CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-				<Icon className="size-4 text-muted-foreground" />
-			</CardHeader>
-			<CardContent>
-				<p className="font-display text-2xl font-bold sm:text-3xl">{value.toLocaleString()}</p>
-			</CardContent>
-		</Card>
-	);
-}
-
-function GrowthChart({ daily }: { daily: { date: string; count: number }[] }) {
+	daily: { date: string; count: number }[];
+}): React.ReactElement | null {
 	const data = daily.map((d) => ({
 		date: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
 		count: d.count,
 	}));
 
-	const hasActivity = daily.some((d) => d.count > 0);
-
-	if (!hasActivity) return null;
+	if (!daily.some((d) => d.count > 0)) return null;
 
 	return (
 		<Card>

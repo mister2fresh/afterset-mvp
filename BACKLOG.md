@@ -39,6 +39,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Best time to capture heatmap** — captures by day-of-week and hour; helps artists understand when fans engage
 - [ ] **Page comparison** — select 2-3 pages side-by-side to compare theme/incentive/sequence performance
 - [ ] **Cohort view** — group fans by capture date (e.g., "March 15 show"), track email engagement over time per cohort
+- [ ] **Page view tracking + capture rate** — track page loads in the Cloudflare Worker (lightweight counter or `page_views` table); enables "X% of visitors became fans" capture rate KPI on the Tonight dashboard tab
 - [ ] **Capture method effectiveness** — conversion rates per method (QR scans vs completions, SMS clicks vs completions)
 - [ ] **Geography breakdown** — approximate city from IP at Worker level; map or top-cities list
 - [ ] **Device breakdown** — mobile vs desktop from User-Agent; informs signage placement decisions

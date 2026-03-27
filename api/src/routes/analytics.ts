@@ -14,6 +14,133 @@ type DailyCount = {
 	count: number;
 };
 
+type TonightMethods = { qr: number; sms: number; nfc: number; direct: number };
+
+type TonightEmailStatus = {
+	entered: number;
+	sent: number;
+	opened: number;
+	open_rate: number;
+};
+
+/** Returns UTC ISO boundaries for "today" in a given timezone. */
+function getTodayRange(tz: string): { start: string; end: string } {
+	const now = new Date();
+	const todayStr = now.toLocaleDateString("en-CA", { timeZone: tz });
+	const utcStr = now.toLocaleString("en-US", { timeZone: "UTC" });
+	const tzStr = now.toLocaleString("en-US", { timeZone: tz });
+	const offsetMs = new Date(utcStr).getTime() - new Date(tzStr).getTime();
+	const startMs = new Date(`${todayStr}T00:00:00Z`).getTime() + offsetMs;
+	return {
+		start: new Date(startMs).toISOString(),
+		end: new Date(startMs + 86_400_000).toISOString(),
+	};
+}
+
+/** Fetch email delivery status for a set of fan capture IDs. */
+async function fetchEmailStatus(fanCaptureIds: string[]): Promise<TonightEmailStatus> {
+	if (fanCaptureIds.length === 0) {
+		return { entered: 0, sent: 0, opened: 0, open_rate: 0 };
+	}
+	const { data: emails } = await supabase
+		.from("pending_emails")
+		.select("status, opened_at")
+		.in("fan_capture_id", fanCaptureIds);
+
+	const all = emails ?? [];
+	const sent = all.filter((e) => e.status === "sent" || e.status === "sending");
+	const opened = sent.filter((e) => e.opened_at !== null);
+	return {
+		entered: fanCaptureIds.length,
+		sent: sent.length,
+		opened: opened.length,
+		open_rate: sent.length > 0 ? opened.length / sent.length : 0,
+	};
+}
+
+// GET /analytics/tonight — today's captures scoped to most recently updated page
+app.get("/tonight", async (c) => {
+	const artist = c.get("artist");
+
+	const { data: artistRow } = await supabase
+		.from("artists")
+		.select("timezone")
+		.eq("id", artist.id)
+		.single();
+
+	const tz = artistRow?.timezone ?? "America/New_York";
+	const { start, end } = getTodayRange(tz);
+
+	const { data: latestPage } = await supabase
+		.from("capture_pages")
+		.select("id, title")
+		.eq("artist_id", artist.id)
+		.order("updated_at", { ascending: false })
+		.limit(1)
+		.maybeSingle();
+
+	if (!latestPage) {
+		return c.json({
+			page_title: null,
+			page_id: null,
+			new_fans: 0,
+			methods: { qr: 0, sms: 0, nfc: 0, direct: 0 } satisfies TonightMethods,
+			avg_per_show: 0,
+			recent: [],
+			email_status: { entered: 0, sent: 0, opened: 0, open_rate: 0 },
+		});
+	}
+
+	const { data: todayEvents } = await supabase
+		.from("capture_events")
+		.select("id, fan_capture_id, entry_method, captured_at, fan_captures!inner(email, name)")
+		.eq("capture_page_id", latestPage.id)
+		.gte("captured_at", start)
+		.lt("captured_at", end)
+		.order("captured_at", { ascending: false });
+
+	const events = todayEvents ?? [];
+
+	const methods: TonightMethods = { qr: 0, sms: 0, nfc: 0, direct: 0 };
+	for (const e of events) {
+		if (e.entry_method in methods) methods[e.entry_method as keyof TonightMethods]++;
+	}
+
+	const recent = events.slice(0, 20).map((e) => {
+		const fan = e.fan_captures as unknown as { email: string; name: string | null };
+		return {
+			id: e.id,
+			fan_name: fan.name,
+			email: fan.email,
+			entry_method: e.entry_method,
+			captured_at: e.captured_at,
+		};
+	});
+
+	// Avg captures per show (unique page_titles)
+	const { data: allCE } = await supabase
+		.from("capture_events")
+		.select("page_title, fan_captures!inner(artist_id)")
+		.eq("fan_captures.artist_id", artist.id);
+
+	const allRows = allCE ?? [];
+	const uniqueTitles = new Set(allRows.map((r) => r.page_title)).size;
+	const avgPerShow = uniqueTitles > 0 ? Math.round((allRows.length / uniqueTitles) * 10) / 10 : 0;
+
+	const fanCaptureIds = [...new Set(events.map((e) => e.fan_capture_id))];
+	const emailStatus = await fetchEmailStatus(fanCaptureIds);
+
+	return c.json({
+		page_title: latestPage.title,
+		page_id: latestPage.id,
+		new_fans: events.length,
+		methods,
+		avg_per_show: avgPerShow,
+		recent,
+		email_status: emailStatus,
+	});
+});
+
 // GET /capture-pages/:id/analytics
 app.get("/:id/analytics", async (c) => {
 	const artist = c.get("artist");
