@@ -158,6 +158,7 @@ function PagesPage() {
 					onOpenChange={(open) => {
 						if (!open) setNewPageEmailId(null);
 					}}
+					autoExpandFirst
 				/>
 			)}
 		</div>

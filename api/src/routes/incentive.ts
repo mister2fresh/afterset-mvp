@@ -101,6 +101,19 @@ app.post("/:id/incentive/upload-url", async (c) => {
 
 	if (updateError) return c.json({ error: updateError.message }, 500);
 
+	// Auto-enable incentive link on the sole follow-up email (if exactly one exists)
+	const { data: templates } = await supabase
+		.from("email_templates")
+		.select("id")
+		.eq("capture_page_id", pageId);
+
+	if (templates && templates.length === 1) {
+		await supabase
+			.from("email_templates")
+			.update({ include_incentive_link: true })
+			.eq("id", templates[0].id);
+	}
+
 	return c.json({
 		signed_url: data.signedUrl,
 		token: data.token,

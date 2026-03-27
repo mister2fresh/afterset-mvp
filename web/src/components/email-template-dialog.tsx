@@ -343,12 +343,14 @@ export function EmailTemplateDialog({
 	hasIncentive,
 	open,
 	onOpenChange,
+	autoExpandFirst,
 }: {
 	pageId: string;
 	pageTitle: string;
 	hasIncentive: boolean;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	autoExpandFirst?: boolean;
 }) {
 	const queryClient = useQueryClient();
 	const queryKey = ["email-sequence", pageId];
@@ -359,7 +361,7 @@ export function EmailTemplateDialog({
 		enabled: open,
 	});
 
-	const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
+	const [expandedOrder, setExpandedOrder] = useState<number | null>(autoExpandFirst ? 0 : null);
 	const [addingNew, setAddingNew] = useState(false);
 
 	function invalidateAll() {
