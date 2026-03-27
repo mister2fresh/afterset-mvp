@@ -58,6 +58,16 @@ async function findUniqueSlug(base: string): Promise<string> {
 	}
 }
 
+// Check slug availability
+app.get("/check-slug/:slug", async (c) => {
+	const slug = c.req.param("slug").toLowerCase();
+	if (!slugPattern.test(slug) || slug.length > 40) {
+		return c.json({ available: false }, 200);
+	}
+	const { data } = await supabase.from("capture_pages").select("id").eq("slug", slug).maybeSingle();
+	return c.json({ available: !data });
+});
+
 // List
 app.get("/", async (c) => {
 	const artist = c.get("artist");

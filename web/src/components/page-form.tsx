@@ -15,7 +15,7 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +55,7 @@ export type CapturePage = {
 };
 
 export type FormData = {
+	slug: string;
 	title: string;
 	value_exchange_text: string;
 	accent_color: string;
@@ -71,6 +72,7 @@ export type FormData = {
 };
 
 export const EMPTY_FORM: FormData = {
+	slug: "",
 	title: "",
 	value_exchange_text: "",
 	accent_color: "#E8C547",
@@ -88,6 +90,7 @@ export const EMPTY_FORM: FormData = {
 
 export function formFromPage(page: CapturePage): FormData {
 	return {
+		slug: page.slug,
 		title: page.title,
 		value_exchange_text: page.value_exchange_text ?? "",
 		accent_color: page.accent_color,
@@ -512,6 +515,34 @@ export function PageForm({
 	const [socialOpen, setSocialOpen] = useState(hasAnyLink(initialForm.social_links));
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	// Slug availability state (create mode only)
+	const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
+	const [slugChecking, setSlugChecking] = useState(false);
+
+	useEffect(() => {
+		if (mode !== "create") return;
+		const slug = form.slug;
+		if (slug.length < 1) {
+			setSlugAvailable(null);
+			return;
+		}
+		setSlugChecking(true);
+		const timer = setTimeout(async () => {
+			try {
+				const res = await api.get<{ available: boolean }>(`/capture-pages/check-slug/${slug}`);
+				setSlugAvailable(res.available);
+			} catch {
+				setSlugAvailable(null);
+			} finally {
+				setSlugChecking(false);
+			}
+		}, 300);
+		return () => {
+			clearTimeout(timer);
+			setSlugChecking(false);
+		};
+	}, [form.slug, mode]);
+
 	// Keyword state
 	const [keyword, setKeyword] = useState(currentKeyword ?? "");
 	const [kwCheck, setKwCheck] = useState<KeywordCheckResult | null>(null);
@@ -560,8 +591,10 @@ export function PageForm({
 
 	const mutation = useMutation({
 		mutationFn: async (data: FormData) => {
+			const { slug: rawSlug, ...rest } = data;
 			const payload = {
-				...data,
+				...rest,
+				...(mode === "create" && rawSlug ? { slug: rawSlug } : {}),
 				value_exchange_text: data.value_exchange_text || undefined,
 				streaming_links: stripEmpty(data.streaming_links),
 				social_links: stripEmpty(data.social_links),
@@ -649,13 +682,57 @@ export function PageForm({
 	}
 
 	const isCreate = mode === "create";
-	const slugPreview = useMemo(() => slugify(form.title), [form.title]);
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-6">
+			{isCreate && (
+				<div className="space-y-2">
+					<Label htmlFor="slug">Page URL</Label>
+					<div className="relative">
+						<Input
+							id="slug"
+							placeholder="e.g. your-band-name"
+							value={form.slug}
+							onChange={(e) => {
+								const slugged = slugify(e.target.value);
+								setForm((f) => ({ ...f, slug: slugged }));
+							}}
+							maxLength={40}
+							className="pr-10"
+							autoFocus
+						/>
+						{form.slug.length >= 1 && (
+							<div className="absolute inset-y-0 right-3 flex items-center">
+								{slugChecking ? (
+									<Loader2 className="size-4 animate-spin text-muted-foreground" />
+								) : slugAvailable === true ? (
+									<Check className="size-4 text-green-500" />
+								) : slugAvailable === false ? (
+									<X className="size-4 text-destructive" />
+								) : null}
+							</div>
+						)}
+					</div>
+					<p className="font-mono text-xs text-muted-foreground">
+						afterset.net/c/
+						{form.slug ? (
+							<span className="text-electric-blue">{form.slug}</span>
+						) : (
+							<span className="italic">your-page-url</span>
+						)}
+					</p>
+					{slugAvailable === false && (
+						<p className="text-xs text-destructive">This URL is already taken.</p>
+					)}
+					<p className="text-xs text-muted-foreground/70">
+						This URL is permanent — you can always create additional pages later.
+					</p>
+				</div>
+			)}
+
 			<div className="space-y-2">
 				<div className="flex items-center justify-between">
-					<Label htmlFor="title">Page Title</Label>
+					<Label htmlFor="title">Show Title</Label>
 					<span className="text-xs text-muted-foreground">{form.title.length}/100</span>
 				</div>
 				<Input
@@ -665,22 +742,12 @@ export function PageForm({
 					onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
 					required
 					maxLength={100}
-					autoFocus
+					autoFocus={!isCreate}
 				/>
 				{isCreate && (
-					<div className="space-y-1">
-						<p className="font-mono text-xs text-muted-foreground">
-							afterset.net/c/
-							{slugPreview ? (
-								<span className="text-electric-blue">{slugPreview}</span>
-							) : (
-								<span className="italic">your-page-url</span>
-							)}
-						</p>
-						<p className="text-xs text-muted-foreground/70">
-							This link is permanent — update the title before each show, the URL stays the same.
-						</p>
-					</div>
+					<p className="text-xs text-muted-foreground/70">
+						Update this before each gig — it's what fans see, not part of the URL.
+					</p>
 				)}
 			</div>
 

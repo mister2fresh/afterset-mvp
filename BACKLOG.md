@@ -24,6 +24,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 ## Onboarding
 
 - [x] **Add email setup step to onboarding wizard** — shipped March 24, 2026. New step 3 "Follow-Up Email" between page creation and ready screen; inline editor with subject, body, delay mode, incentive toggle, preview, and skip option.
+- [ ] **Interactive onboarding tutorial** — guided walkthrough of the capture page form with tooltip arrows pointing to each section (theme, links, keyword, incentive) explaining what it does. Tutorial-style, step-by-step progression with dismissible overlays. Makes onboarding educational without blocking artists who want to skip ahead.
 
 ## Dashboard & Analytics
 
