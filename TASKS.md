@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 26, 2026 (v54 — Tonight API + shared dashboard components)
+**Last updated:** March 26, 2026 (v55 — Tonight/All Shows tabbed dashboard UI)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
 **Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped, confirmation dialogs on all delete actions shipped, Tonight API endpoint + shared component extraction shipped
-**Next up:** Build Tonight/All Shows tabbed dashboard UI (Session B), nav cleanup (Session C), capture page social icons layout, manual QA pass, native platform generation on Mac
+**Next up:** Nav cleanup — remove Analytics tab, redirect to /dashboard (Session C), capture page social icons layout, manual QA pass, native platform generation on Mac
 
 ---
 
@@ -13,7 +13,7 @@
 - [x] **Email heading now shows artist name + page title subtitle** — was working correctly (artist name was "hello"); added page title as muted subtitle below artist name for show context (fixed March 26)
 - [x] **No visible unsubscribe link in email body** — added clickable "Unsubscribe" link in email footer alongside existing RFC 8058 List-Unsubscribe headers; CAN-SPAM compliant (fixed March 26)
 - [ ] **Redesign analytics captures + open rate data layout** — current layout of captures by show and email open rate data is confusing; improve hierarchy, grouping, and visual clarity of engagement metrics
-- [~] **Overview vs Analytics tab overlap** — combining into a single "Tonight / All Shows" tabbed dashboard. Session A (API + component extraction) complete. Session B builds the tabbed UI. Session C removes the Analytics tab.
+- [~] **Overview vs Analytics tab overlap** — combining into a single "Tonight / All Shows" tabbed dashboard. Session A (API + component extraction) complete. Session B (tabbed UI) complete. Session C remaining: remove Analytics tab from nav, redirect `/analytics` → `/dashboard`, cleanup dead code.
 - [x] **Confirmation dialogs on all delete actions** — AlertDialog-based confirmation before all 6 destructive actions: delete capture page, delete broadcast (card + compose dialog), delete email sequence step, remove incentive file, remove SMS keyword (fixed March 26)
 - [ ] **Capture page social icons layout** — icons currently stack vertically; redesign to a horizontal/grid layout that looks good when all social + streaming links are populated
 - [ ] **Follow-up email doesn't fill screen on iPhone** — white space at the bottom of the follow-up sequence email (`renderFollowUpHtml()`); body/container needs full-height styling to eliminate gap on mobile
