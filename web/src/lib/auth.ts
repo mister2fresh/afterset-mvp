@@ -13,14 +13,18 @@ function toAuthUser(user: User): AuthUser {
 let currentUser: AuthUser | null = null;
 
 export async function initAuth(onAuthChange?: () => void): Promise<void> {
-	const {
-		data: { session },
-	} = await supabase.auth.getSession();
-	currentUser = session?.user ? toAuthUser(session.user) : null;
-
-	supabase.auth.onAuthStateChange((_event, session) => {
-		currentUser = session?.user ? toAuthUser(session.user) : null;
-		onAuthChange?.();
+	return new Promise<void>((resolve) => {
+		const {
+			data: { subscription },
+		} = supabase.auth.onAuthStateChange((event, session) => {
+			currentUser = session?.user ? toAuthUser(session.user) : null;
+			if (event === "INITIAL_SESSION") {
+				resolve();
+			} else {
+				onAuthChange?.();
+			}
+		});
+		void subscription;
 	});
 }
 
