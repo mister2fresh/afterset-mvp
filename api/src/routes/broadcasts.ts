@@ -181,7 +181,7 @@ app.post("/:id/preview", async (c) => {
 
 	const { data: latestPage } = await supabase
 		.from("capture_pages")
-		.select("accent_color, bg_color, text_color, button_style")
+		.select("accent_color, bg_color, text_color, button_style, streaming_links, social_links")
 		.eq("artist_id", artist.id)
 		.order("updated_at", { ascending: false })
 		.limit(1)
@@ -191,6 +191,8 @@ app.post("/:id/preview", async (c) => {
 		artistName: artist.name,
 		body: parsed.data.body,
 		theme: latestPage ? toEmailTheme(latestPage) : undefined,
+		streamingLinks: (latestPage?.streaming_links as Record<string, string>) ?? undefined,
+		socialLinks: (latestPage?.social_links as Record<string, string>) ?? undefined,
 	});
 
 	return c.html(html);

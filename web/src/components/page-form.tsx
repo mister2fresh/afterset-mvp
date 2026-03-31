@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { InlineSequenceEditor } from "@/components/inline-sequence-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1198,6 +1199,13 @@ export function PageForm({
 						</div>
 					))}
 			</div>
+
+			{!isCreate && page?.id && (
+				<InlineSequenceEditor
+					pageId={page.id}
+					hasIncentive={!!(page.incentive_file_name && !fileRemoved)}
+				/>
+			)}
 
 			<div className="flex gap-2">
 				{onCancel && (

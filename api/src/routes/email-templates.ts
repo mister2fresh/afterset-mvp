@@ -101,7 +101,9 @@ app.post("/:id/email-template/preview", async (c) => {
 
 	const { data: page } = await supabase
 		.from("capture_pages")
-		.select("title, accent_color, bg_color, text_color, button_style")
+		.select(
+			"title, accent_color, bg_color, text_color, button_style, streaming_links, social_links",
+		)
 		.eq("id", pageId)
 		.eq("artist_id", artist.id)
 		.single();
@@ -112,6 +114,8 @@ app.post("/:id/email-template/preview", async (c) => {
 		body: parsed.data.body,
 		incentiveUrl: body.include_incentive_link ? "https://example.com/download" : undefined,
 		theme: page ? toEmailTheme(page) : undefined,
+		streamingLinks: (page?.streaming_links as Record<string, string>) ?? undefined,
+		socialLinks: (page?.social_links as Record<string, string>) ?? undefined,
 	});
 
 	return c.html(html);
@@ -228,7 +232,9 @@ app.post("/:id/email-sequence/:order/preview", async (c) => {
 
 	const { data: page } = await supabase
 		.from("capture_pages")
-		.select("title, accent_color, bg_color, text_color, button_style")
+		.select(
+			"title, accent_color, bg_color, text_color, button_style, streaming_links, social_links",
+		)
 		.eq("id", pageId)
 		.eq("artist_id", artist.id)
 		.single();
@@ -239,6 +245,8 @@ app.post("/:id/email-sequence/:order/preview", async (c) => {
 		body: parsed.data.body,
 		incentiveUrl: body.include_incentive_link ? "https://example.com/download" : undefined,
 		theme: page ? toEmailTheme(page) : undefined,
+		streamingLinks: (page?.streaming_links as Record<string, string>) ?? undefined,
+		socialLinks: (page?.social_links as Record<string, string>) ?? undefined,
 	});
 
 	return c.html(html);

@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** March 27, 2026 (v60 — dashboard UX fixes: default to All Shows, hide negative %, fix emails_sent attribution)
+**Last updated:** March 31, 2026 (v61 — inline sequence editor in page form, social/streaming icons on emails + download page, Emails tab broadcasts-only)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
-**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped, confirmation dialogs on all delete actions shipped, Tonight/All Shows tabbed dashboard shipped (all 3 sessions complete), dashboard default tab switched to All Shows, emails_sent per-show attribution bug fixed
-**Next up:** Manual QA pass, analytics layout redesign, native platform generation on Mac
+**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped, confirmation dialogs on all delete actions shipped, Tonight/All Shows tabbed dashboard shipped (all 3 sessions complete), dashboard default tab switched to All Shows, emails_sent per-show attribution bug fixed, email sequence editor moved inline into page form, social/streaming icons added to all emails + download page, Emails tab refactored to broadcasts-only
+**Next up:** Manual QA pass, analytics layout redesign, native platform generation on Mac, show location tagging research
 
 ---
 

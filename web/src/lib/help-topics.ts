@@ -110,11 +110,11 @@ You can delete a page from the page card dropdown menu.`,
 				title: "Setting up a follow-up email sequence",
 				body: `A follow-up sequence is a series of emails that automatically send to fans after they sign up. To set one up:
 
-1. Go to **Emails** tab or click the email icon on a page card.
+1. Open a capture page in edit mode — the **Follow-Up Emails** section is at the bottom.
 2. Add your first email (Step 1). Choose when it sends: immediately, 1 hour later, or next morning.
 3. Add more steps (up to 5 total). Steps 2–5 send on a delay measured in days, always at 9am in your timezone.
 
-Each step has its own subject line and body. Emails are plain text — keep them personal and conversational.`,
+Each step has its own subject line and body. Emails are plain text — keep them personal and conversational. A default welcome email is automatically created when you make a new page.`,
 			},
 			{
 				id: "email-templates",
