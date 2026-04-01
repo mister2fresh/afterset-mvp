@@ -20,6 +20,8 @@ type PageRow = {
 	text_color: string;
 	button_style: "rounded" | "pill" | "sharp";
 	background_style: "solid" | "gradient" | "glow";
+	streaming_links: Record<string, string>;
+	social_links: Record<string, string>;
 	artists: { name: string };
 };
 
@@ -33,6 +35,8 @@ const PAGE_COLUMNS = [
 	"text_color",
 	"button_style",
 	"background_style",
+	"streaming_links",
+	"social_links",
 	"artists(name)",
 ].join(",");
 
@@ -85,6 +89,8 @@ app.get("/:token", async (c) => {
 				fileName: page.incentive_file_name,
 				contentType: page.incentive_content_type,
 				signedUrl: signed.signedUrl,
+				streamingLinks: page.streaming_links,
+				socialLinks: page.social_links,
 			},
 			toStyle(page),
 		),

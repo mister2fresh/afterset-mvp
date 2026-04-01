@@ -1,8 +1,12 @@
+import { renderIconGrid } from "./icons.js";
+
 export type DownloadPageParams = {
 	artistName: string;
 	fileName: string;
 	contentType: string;
 	signedUrl: string;
+	streamingLinks?: Record<string, string>;
+	socialLinks?: Record<string, string>;
 };
 
 export type DownloadPageStyle = {
@@ -133,6 +137,12 @@ export function renderDownloadPage(params: DownloadPageParams, style: DownloadPa
 	const escapedName = escapeHtml(params.fileName);
 	const escapedArtist = escapeHtml(params.artistName);
 	const escapedUrl = escapeHtml(params.signedUrl);
+	const iconsBlock = renderIconGrid(
+		params.streamingLinks ?? {},
+		params.socialLinks ?? {},
+		style.accentColor,
+		style.bgColor,
+	);
 
 	return pageShell(
 		style,
@@ -141,7 +151,8 @@ export function renderDownloadPage(params: DownloadPageParams, style: DownloadPa
 <p class="file">${escapedName}</p>
 <p class="type">${escapeHtml(label)}</p>
 <a class="btn" href="${escapedUrl}" download="${escapedName}">Download</a>
-<p class="hint" id="ios-hint">On iPhone, tap and hold the button, then choose &ldquo;Download Linked File&rdquo;</p>`,
+<p class="hint" id="ios-hint">On iPhone, tap and hold the button, then choose &ldquo;Download Linked File&rdquo;</p>
+${iconsBlock}`,
 	);
 }
 

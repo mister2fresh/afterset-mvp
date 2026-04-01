@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { EmailTemplateBadge, EmailTemplateDialog } from "@/components/email-template-dialog";
+import { EmailTemplateBadge } from "@/components/email-template-dialog";
 import { KeywordDialog } from "@/components/keyword-dialog";
 import { type CapturePage, fileTypeIcon, PageForm } from "@/components/page-form";
 import { QueryError } from "@/components/query-error";
@@ -79,7 +79,6 @@ function PagesPage() {
 	const { data: keywords } = useKeywords();
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editingPage, setEditingPage] = useState<CapturePage | null>(null);
-	const [newPageEmailId, setNewPageEmailId] = useState<string | null>(null);
 
 	if (isLoading) {
 		return (
@@ -103,7 +102,7 @@ function PagesPage() {
 					mode="create"
 					open={createOpen}
 					onOpenChange={setCreateOpen}
-					onCreated={(p) => setNewPageEmailId(p.id)}
+					onCreated={(p) => setEditingPage(p)}
 				/>
 			</div>
 
@@ -146,19 +145,6 @@ function PagesPage() {
 					onOpenChange={(open) => {
 						if (!open) setEditingPage(null);
 					}}
-				/>
-			)}
-
-			{newPageEmailId && (
-				<EmailTemplateDialog
-					pageId={newPageEmailId}
-					pageTitle={pages?.find((p) => p.id === newPageEmailId)?.title ?? ""}
-					hasIncentive={!!pages?.find((p) => p.id === newPageEmailId)?.incentive_file_name}
-					open={!!newPageEmailId}
-					onOpenChange={(open) => {
-						if (!open) setNewPageEmailId(null);
-					}}
-					autoExpandFirst
 				/>
 			)}
 		</div>
@@ -220,7 +206,6 @@ function PageCard({
 }) {
 	const queryClient = useQueryClient();
 	const qrUrl = useQrPreview(page.id);
-	const [emailOpen, setEmailOpen] = useState(false);
 	const [keywordOpen, setKeywordOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [editingTitle, setEditingTitle] = useState(false);
@@ -308,9 +293,9 @@ function PageCard({
 							<Pencil />
 							Edit
 						</DropdownMenuItem>
-						<DropdownMenuItem onClick={() => setEmailOpen(true)}>
+						<DropdownMenuItem onClick={onEdit}>
 							<Mail />
-							Follow-Up Email
+							Follow-Up Emails
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => setKeywordOpen(true)}>
 							<MessageSquare />
@@ -337,13 +322,6 @@ function PageCard({
 				title="Delete capture page?"
 				description={`This will permanently delete "${page.title}". Fan data and capture history will be preserved, but the page link, QR code, SMS keyword, and NFC tap will all stop working.`}
 				onConfirm={() => deleteMutation.mutate()}
-			/>
-			<EmailTemplateDialog
-				pageId={page.id}
-				pageTitle={page.title}
-				hasIncentive={!!page.incentive_file_name}
-				open={emailOpen}
-				onOpenChange={setEmailOpen}
 			/>
 			<KeywordDialog
 				pageId={page.id}
@@ -420,7 +398,7 @@ function PageCard({
 						<Badge variant={page.is_active ? "default" : "secondary"}>
 							{page.is_active ? "Active" : "Inactive"}
 						</Badge>
-						<EmailTemplateBadge pageId={page.id} onClick={() => setEmailOpen(true)} />
+						<EmailTemplateBadge pageId={page.id} onClick={onEdit} />
 					</div>
 					<div className="flex items-center gap-2">
 						<div className="flex gap-0.5">

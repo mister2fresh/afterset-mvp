@@ -5,7 +5,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 ## Email & Messaging
 
 - [x] **Broadcast campaigns** — shipped March 24, 2026. CRUD + send/schedule, segment filters, 4 preset templates, reply-to toggle, open tracking.
-- [ ] **Move follow-up sequences into capture pages, keep Emails tab for broadcasts only** — currently email sequences live in a separate dialog and the Emails tab mixes follow-up sequences with broadcasts. Proposal: embed the sequence editor directly in the capture page form/detail view (each page owns its sequence inline), and repurpose the Emails tab exclusively for broadcast campaigns. Benefits: tighter page↔sequence coupling in the UI matches the data model, reduces tab-switching for the most common flow, and gives broadcasts a dedicated home without clutter. Consider: inline accordion in page form vs. tab within page detail view, how to handle the post-creation email setup step.
+- [x] **Move follow-up sequences into capture pages, keep Emails tab for broadcasts only** — shipped March 31, 2026. Inline sequence editor in PageForm (edit mode), Emails tab refactored to broadcasts-only.
 - [ ] **AI-powered "suggest email copy" button** — Hono API route, rate limited by tier
 - [ ] **Per-artist custom sending domains** — Resend Scale plan, triggers at ~200 artists
 - [ ] **SES migration** — cost optimization at 500K–1M emails/month
@@ -14,7 +14,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 ## Social & Streaming Links
 
 - [ ] **"Follow All" button on capture page** — single CTA that opens all streaming/social profiles, reducing friction vs tapping each icon individually
-- [ ] **Show social/streaming icons on all fan communications** — add the artist's icon grid to follow-up emails, incentive emails, and the download page. Every touchpoint should be an opportunity for fans to follow/subscribe
+- [x] **Show social/streaming icons on all fan communications** — shipped March 31, 2026. Icons added to follow-up emails, broadcast emails, and download page via shared `api/src/lib/icons.ts` module.
 
 ## Integrations
 

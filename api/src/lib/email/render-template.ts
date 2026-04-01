@@ -1,3 +1,5 @@
+import { renderTextLinkGrid } from "../icons.js";
+
 export type EmailTheme = {
 	accentColor: string;
 	bgColor: string;
@@ -31,10 +33,12 @@ type TemplateParams = {
 	body: string;
 	incentiveUrl?: string;
 	theme?: EmailTheme;
+	streamingLinks?: Record<string, string>;
+	socialLinks?: Record<string, string>;
 };
 
 export function renderFollowUpHtml(params: TemplateParams): string {
-	const { artistName, pageTitle, body, incentiveUrl } = params;
+	const { artistName, pageTitle, body, incentiveUrl, streamingLinks, socialLinks } = params;
 	const t = params.theme ?? DEFAULT_THEME;
 	const bodyColor = isLightColor(t.bgColor) ? "#374151" : "#e5e7eb";
 	const btnTextColor = isLightColor(t.accentColor) ? "#0a0e1a" : "#f9fafb";
@@ -60,6 +64,11 @@ export function renderFollowUpHtml(params: TemplateParams): string {
 		? `\n<p style="margin:0 0 24px;font-size:13px;color:${mutedColor};">${escapeHtml(pageTitle)}</p>`
 		: "";
 
+	const iconsBlock =
+		streamingLinks || socialLinks
+			? renderTextLinkGrid(streamingLinks ?? {}, socialLinks ?? {}, t.accentColor)
+			: "";
+
 	return `<!DOCTYPE html>
 <html lang="en" style="height:100%;margin:0;">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -68,6 +77,7 @@ export function renderFollowUpHtml(params: TemplateParams): string {
 <h1 style="margin:0 0 4px;font-size:20px;font-weight:700;color:${escapeHtml(t.textColor)};">${escapeHtml(artistName)}</h1>${subtitleBlock}
 ${paragraphs}
 ${incentiveBlock}
+${iconsBlock}
 </div>
 </body>
 </html>`;

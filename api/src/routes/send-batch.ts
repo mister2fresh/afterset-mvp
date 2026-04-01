@@ -135,11 +135,17 @@ app.post("/send-batch", async (c) => {
 	const incentiveUrlMap = new Map<string, string>();
 	const pageThemeMap = new Map<string, EmailTheme>();
 	const pageTitleMap = new Map<string, string>();
+	const pageLinksMap = new Map<
+		string,
+		{ streaming: Record<string, string>; social: Record<string, string> }
+	>();
 
 	if (allPageIds.length > 0) {
 		const { data: pages } = await supabase
 			.from("capture_pages")
-			.select("id, title, incentive_file_path, accent_color, bg_color, text_color, button_style")
+			.select(
+				"id, title, incentive_file_path, accent_color, bg_color, text_color, button_style, streaming_links, social_links",
+			)
 			.in("id", allPageIds);
 
 		for (const page of pages ?? []) {
@@ -149,6 +155,10 @@ app.post("/send-batch", async (c) => {
 				const token = createDownloadToken(page.id);
 				incentiveUrlMap.set(page.id, `${baseUrl}/download/${token}`);
 			}
+			pageLinksMap.set(page.id, {
+				streaming: (page.streaming_links as Record<string, string>) ?? {},
+				social: (page.social_links as Record<string, string>) ?? {},
+			});
 		}
 	}
 
@@ -173,11 +183,15 @@ app.post("/send-batch", async (c) => {
 	];
 
 	const artistThemeMap = new Map<string, EmailTheme>();
+	const artistLinksMap = new Map<
+		string,
+		{ streaming: Record<string, string>; social: Record<string, string> }
+	>();
 	if (broadcastArtistIds.length > 0) {
 		for (const artistId of broadcastArtistIds) {
 			const { data: latestPage } = await supabase
 				.from("capture_pages")
-				.select("accent_color, bg_color, text_color, button_style")
+				.select("accent_color, bg_color, text_color, button_style, streaming_links, social_links")
 				.eq("artist_id", artistId)
 				.order("updated_at", { ascending: false })
 				.limit(1)
@@ -185,6 +199,10 @@ app.post("/send-batch", async (c) => {
 
 			if (latestPage) {
 				artistThemeMap.set(artistId, toEmailTheme(latestPage));
+				artistLinksMap.set(artistId, {
+					streaming: (latestPage.streaming_links as Record<string, string>) ?? {},
+					social: (latestPage.social_links as Record<string, string>) ?? {},
+				});
 			}
 		}
 	}
@@ -204,7 +222,14 @@ app.post("/send-batch", async (c) => {
 				continue;
 			}
 			const theme = artistThemeMap.get(row.artist_id);
-			const html = renderFollowUpHtml({ artistName: artist.name, body: broadcast.body, theme });
+			const links = artistLinksMap.get(row.artist_id);
+			const html = renderFollowUpHtml({
+				artistName: artist.name,
+				body: broadcast.body,
+				theme,
+				streamingLinks: links?.streaming,
+				socialLinks: links?.social,
+			});
 			sendable.push({
 				pendingId: row.id,
 				params: {
@@ -240,12 +265,15 @@ app.post("/send-batch", async (c) => {
 
 		const theme = capturePageId ? pageThemeMap.get(capturePageId) : undefined;
 		const pageTitle = capturePageId ? pageTitleMap.get(capturePageId) : undefined;
+		const links = capturePageId ? pageLinksMap.get(capturePageId) : undefined;
 		const html = renderFollowUpHtml({
 			artistName: artist.name,
 			pageTitle,
 			body: template.body,
 			incentiveUrl,
 			theme,
+			streamingLinks: links?.streaming,
+			socialLinks: links?.social,
 		});
 
 		sendable.push({
