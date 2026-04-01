@@ -157,7 +157,7 @@ export function SequenceStepEditor({
 					<iframe
 						title="Email preview"
 						srcDoc={previewHtml}
-						className="h-[300px] w-full bg-[#0a0e1a]"
+						className="h-[500px] w-full bg-[#0a0e1a]"
 						sandbox=""
 					/>
 				</div>

@@ -1,4 +1,4 @@
-import { renderIconGrid } from "../icons.js";
+import { renderTextLinkGrid } from "../icons.js";
 
 export type EmailTheme = {
 	accentColor: string;
@@ -66,7 +66,7 @@ export function renderFollowUpHtml(params: TemplateParams): string {
 
 	const iconsBlock =
 		streamingLinks || socialLinks
-			? renderIconGrid(streamingLinks ?? {}, socialLinks ?? {}, t.accentColor, t.bgColor)
+			? renderTextLinkGrid(streamingLinks ?? {}, socialLinks ?? {}, t.accentColor)
 			: "";
 
 	return `<!DOCTYPE html>

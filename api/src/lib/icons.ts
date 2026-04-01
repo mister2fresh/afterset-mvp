@@ -87,3 +87,30 @@ export function renderIconGrid(
 	if (!items) return "";
 	return `<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px">${items}</div>`;
 }
+
+function renderTextLinks(
+	links: Record<string, string>,
+	icons: Record<string, { label: string; svg: string }>,
+): string[] {
+	return Object.entries(links)
+		.filter(([, url]) => url.trim())
+		.map(([key, url]) => {
+			const icon = icons[key];
+			if (!icon) return "";
+			return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">${icon.label}</a>`;
+		})
+		.filter(Boolean);
+}
+
+export function renderTextLinkGrid(
+	streamingLinks: Record<string, string>,
+	socialLinks: Record<string, string>,
+	accentColor: string,
+): string {
+	const allLinks = [
+		...renderTextLinks(streamingLinks, STREAMING_ICONS),
+		...renderTextLinks(socialLinks, SOCIAL_ICONS),
+	];
+	if (!allLinks.length) return "";
+	return `<div style="text-align:center;margin-top:24px;font-size:14px;color:${accentColor};">${allLinks.join(`<span style="margin:0 6px;opacity:.4;">·</span>`)}</div>`;
+}
