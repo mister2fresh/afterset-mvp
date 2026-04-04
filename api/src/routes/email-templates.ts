@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.js";
 import { supabase } from "../lib/supabase.js";
@@ -91,12 +91,13 @@ app.delete("/:id/email-template", async (c) => {
 	return c.body(null, 204);
 });
 
-// POST /capture-pages/:id/email-template/preview — returns rendered HTML
-app.post("/:id/email-template/preview", async (c) => {
+const previewSchema = upsertSchema.pick({ subject: true, body: true });
+
+async function renderPreview(c: Context<AuthEnv>): Promise<Response> {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 	const body = await c.req.json();
-	const parsed = upsertSchema.pick({ subject: true, body: true }).safeParse(body);
+	const parsed = previewSchema.safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
 	const { data: page } = await supabase
@@ -119,7 +120,9 @@ app.post("/:id/email-template/preview", async (c) => {
 	});
 
 	return c.html(html);
-});
+}
+
+app.post("/:id/email-template/preview", renderPreview);
 
 // GET /capture-pages/:id/email-sequence
 app.get("/:id/email-sequence", async (c) => {
@@ -222,35 +225,7 @@ app.delete("/:id/email-sequence/:order", async (c) => {
 	return c.body(null, 204);
 });
 
-// POST /capture-pages/:id/email-sequence/:order/preview
-app.post("/:id/email-sequence/:order/preview", async (c) => {
-	const artist = c.get("artist");
-	const pageId = c.req.param("id");
-	const body = await c.req.json();
-	const parsed = sequenceUpsertSchema.pick({ subject: true, body: true }).safeParse(body);
-	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
-
-	const { data: page } = await supabase
-		.from("capture_pages")
-		.select(
-			"title, accent_color, bg_color, text_color, button_style, streaming_links, social_links",
-		)
-		.eq("id", pageId)
-		.eq("artist_id", artist.id)
-		.single();
-
-	const html = renderFollowUpHtml({
-		artistName: artist.name,
-		pageTitle: page?.title ?? undefined,
-		body: parsed.data.body,
-		incentiveUrl: body.include_incentive_link ? "https://example.com/download" : undefined,
-		theme: page ? toEmailTheme(page) : undefined,
-		streamingLinks: (page?.streaming_links as Record<string, string>) ?? undefined,
-		socialLinks: (page?.social_links as Record<string, string>) ?? undefined,
-	});
-
-	return c.html(html);
-});
+app.post("/:id/email-sequence/:order/preview", renderPreview);
 
 async function renumberStepsAfterDelete(
 	pageId: string,

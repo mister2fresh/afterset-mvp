@@ -141,7 +141,7 @@ app.post("/", async (c) => {
 		is_active: true,
 	});
 
-	buildPage(data.id, artist.id).catch(() => {});
+	buildPage(data.id, artist.id).catch((e) => console.error("build failed", e));
 
 	return c.json(data, 201);
 });
@@ -214,7 +214,7 @@ app.patch("/:id", async (c) => {
 	if (error) return c.json({ error: error.message }, 500);
 	if (!data) return c.json({ error: "Not found" }, 404);
 
-	buildPage(data.id, artist.id).catch(() => {});
+	buildPage(data.id, artist.id).catch((e) => console.error("build failed", e));
 
 	return c.json(data);
 });
