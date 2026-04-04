@@ -7,8 +7,8 @@ Fan-capture SaaS for gigging musicians.
 ```
 web/                      # Vite + React SPA (artist dashboard)
   src/routes/             # TanStack Router file-based routes
-  src/components/         # Shared components (captures-table, stat-card, show-drill-down, daily-chart, broadcast-engagement, dashboard-tonight, dashboard-all-shows, email-template-badge, sequence-step-editor, inline-sequence-editor, keyword-dialog, page-form, pwa-*)
-  src/lib/                # Shared utilities (supabase client, api client, auth)
+  src/components/         # Shared components (captures-table, stat-card, show-drill-down, daily-chart, broadcast-engagement, dashboard-tonight, dashboard-all-shows, email-template-badge, sequence-step-editor, inline-sequence-editor, keyword-dialog, page-form, theme-editor, broadcast-compose-dialog, pwa-*)
+  src/lib/                # Shared utilities (supabase client, api client, auth, types, timezones)
   public/                 # Static assets (SVG logo, PNG icons for PWA)
 api/                      # Hono API server (Node.js)
   src/routes/             # Hono route modules (capture-pages, email-templates, captures, email, etc.)

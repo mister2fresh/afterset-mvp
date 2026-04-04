@@ -15,6 +15,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 
 - [ ] **"Follow All" button on capture page** — single CTA that opens all streaming/social profiles, reducing friction vs tapping each icon individually
 - [x] **Show social/streaming icons on all fan communications** — shipped March 31, 2026. Icons added to follow-up emails, broadcast emails, and download page via shared `api/src/lib/icons.ts` module.
+- [ ] **Move social/streaming text links to email footer** — currently positioned directly under the CTA button, looks tacky. Move to bottom of email with more spacing/separation from body content.
 
 ## Integrations
 
@@ -103,6 +104,12 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] Venue name correction on completed shows
 - [ ] Empty states: Tonight (no active show → large "I'm at a show" button), All Shows (no shows → illustration + message), single show (hide leaderboard)
 - [ ] Prompt "Were you at a show?" if captures come in without an active show
+
+## Auth & Account Recovery
+
+- [ ] **Google / Apple OAuth login** — add as linked auth method via Supabase `signInWithOAuth()`; doubles as recovery path if artist loses email access and reduces magic-link friction
+- [ ] **Phone number as backup login** — let artists link a phone number in settings; use Supabase `signInWithOtp({ phone })` via Telnyx as fallback auth method
+- [ ] **Admin account recovery process** — document manual identity verification + email change workflow via Supabase dashboard for support escalations
 
 ## Platform
 
