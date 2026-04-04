@@ -201,6 +201,83 @@ async function downloadQr(pageId: string, slug: string) {
 	}
 }
 
+function InlineTitleEdit({
+	title,
+	editingTitle,
+	setEditingTitle,
+	titleDraft,
+	setTitleDraft,
+	saveTitle,
+	isPending,
+}: {
+	title: string;
+	editingTitle: boolean;
+	setEditingTitle: (v: boolean) => void;
+	titleDraft: string;
+	setTitleDraft: (v: string) => void;
+	saveTitle: () => void;
+	isPending: boolean;
+}) {
+	if (editingTitle) {
+		return (
+			<div className="flex items-center gap-1">
+				<input
+					ref={(el) => el?.focus()}
+					value={titleDraft}
+					onChange={(e) => setTitleDraft(e.target.value)}
+					onKeyDown={(e) => {
+						if (e.key === "Enter") saveTitle();
+						if (e.key === "Escape") {
+							setTitleDraft(title);
+							setEditingTitle(false);
+						}
+					}}
+					onBlur={saveTitle}
+					disabled={isPending}
+					maxLength={100}
+					className="h-7 w-full min-w-0 rounded border border-input bg-transparent px-1.5 font-display text-base outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50"
+				/>
+			</div>
+		);
+	}
+
+	return (
+		<button
+			type="button"
+			onClick={() => {
+				setTitleDraft(title);
+				setEditingTitle(true);
+			}}
+			className="group flex max-w-full items-center gap-1.5"
+			title="What's tonight's show? Click to update."
+		>
+			<CardTitle className="truncate font-display text-base">{title}</CardTitle>
+			<Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+		</button>
+	);
+}
+
+function QrSection({ qrUrl, pageId, slug }: { qrUrl: string; pageId: string; slug: string }) {
+	return (
+		<div className="flex items-center gap-3">
+			<img
+				src={qrUrl}
+				alt={`QR code for ${slug}`}
+				className="size-20 rounded border border-border bg-white p-1"
+			/>
+			<Button
+				variant="outline"
+				size="sm"
+				className="gap-1.5"
+				onClick={() => downloadQr(pageId, slug)}
+			>
+				<Download className="size-3.5" />
+				Download QR
+			</Button>
+		</div>
+	);
+}
+
 function PageCard({
 	page,
 	captureCount,
@@ -248,38 +325,15 @@ function PageCard({
 		<Card>
 			<CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
 				<div className="min-w-0 flex-1 space-y-1">
-					{editingTitle ? (
-						<div className="flex items-center gap-1">
-							<input
-								ref={(el) => el?.focus()}
-								value={titleDraft}
-								onChange={(e) => setTitleDraft(e.target.value)}
-								onKeyDown={(e) => {
-									if (e.key === "Enter") saveTitle();
-									if (e.key === "Escape") {
-										setTitleDraft(page.title);
-										setEditingTitle(false);
-									}
-								}}
-								onBlur={saveTitle}
-								maxLength={100}
-								className="h-7 w-full min-w-0 rounded border border-input bg-transparent px-1.5 font-display text-base outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50"
-							/>
-						</div>
-					) : (
-						<button
-							type="button"
-							onClick={() => {
-								setTitleDraft(page.title);
-								setEditingTitle(true);
-							}}
-							className="group flex max-w-full items-center gap-1.5"
-							title="What's tonight's show? Click to update."
-						>
-							<CardTitle className="truncate font-display text-base">{page.title}</CardTitle>
-							<Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-						</button>
-					)}
+					<InlineTitleEdit
+						title={page.title}
+						editingTitle={editingTitle}
+						setEditingTitle={setEditingTitle}
+						titleDraft={titleDraft}
+						setTitleDraft={setTitleDraft}
+						saveTitle={saveTitle}
+						isPending={titleMutation.isPending}
+					/>
 					<a
 						href={`https://afterset.net/c/${page.slug}`}
 						target="_blank"
@@ -339,24 +393,7 @@ function PageCard({
 				onOpenChange={setKeywordOpen}
 			/>
 			<CardContent className="space-y-3">
-				{qrUrl && (
-					<div className="flex items-center gap-3">
-						<img
-							src={qrUrl}
-							alt={`QR code for ${page.slug}`}
-							className="size-20 rounded border border-border bg-white p-1"
-						/>
-						<Button
-							variant="outline"
-							size="sm"
-							className="gap-1.5"
-							onClick={() => downloadQr(page.id, page.slug)}
-						>
-							<Download className="size-3.5" />
-							Download QR
-						</Button>
-					</div>
-				)}
+				{qrUrl && <QrSection qrUrl={qrUrl} pageId={page.id} slug={page.slug} />}
 				{keyword ? (
 					<button
 						type="button"

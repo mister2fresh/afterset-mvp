@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
 
 export type EmailTemplate = {
 	id: string;
@@ -120,24 +119,12 @@ export function SequenceStepEditor({
 	});
 
 	const previewMutation = useMutation({
-		mutationFn: async () => {
-			const {
-				data: { session },
-			} = await supabase.auth.getSession();
-			const res = await fetch(`/api/capture-pages/${pageId}/email-sequence/${order}/preview`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${session?.access_token}`,
-				},
-				body: JSON.stringify({
-					subject: form.subject,
-					body: form.body,
-					include_incentive_link: form.include_incentive_link,
-				}),
-			});
-			return res.text();
-		},
+		mutationFn: () =>
+			api.postText(`/capture-pages/${pageId}/email-sequence/${order}/preview`, {
+				subject: form.subject,
+				body: form.body,
+				include_incentive_link: form.include_incentive_link,
+			}),
 		onSuccess: (html) => {
 			setPreviewHtml(html);
 			setShowPreview(true);

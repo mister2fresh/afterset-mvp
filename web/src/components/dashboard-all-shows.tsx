@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { BarChart3, Loader2, QrCode } from "lucide-react";
 import { useState } from "react";
-import { type Broadcast, BroadcastEngagement } from "@/components/broadcast-engagement";
+import { BroadcastEngagement } from "@/components/broadcast-engagement";
 import { DailyChart } from "@/components/daily-chart";
 import { QueryError } from "@/components/query-error";
 import { type PageAnalytics, ShowDrillDown, type ShowStats } from "@/components/show-drill-down";
@@ -10,6 +10,7 @@ import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import type { Broadcast } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type OverviewData = {

@@ -18,7 +18,7 @@ import {
 	Trash2,
 	X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -43,27 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
-
-type Broadcast = {
-	id: string;
-	artist_id: string;
-	subject: string;
-	body: string;
-	reply_to: string | null;
-	status: "draft" | "scheduled" | "sending" | "sent" | "failed";
-	scheduled_at: string | null;
-	filter_page_ids: string[] | null;
-	filter_date_from: string | null;
-	filter_date_to: string | null;
-	filter_method: string | null;
-	recipient_count: number;
-	sent_count: number;
-	opened_count: number;
-	archived_at: string | null;
-	created_at: string;
-	updated_at: string;
-};
+import type { Broadcast } from "@/lib/types";
 
 type CapturePage = {
 	id: string;
@@ -103,6 +83,54 @@ const PRESETS = [
 	},
 ];
 
+type FormState = {
+	subject: string;
+	body: string;
+	replyTo: string | null;
+	scheduledAt: Date | null;
+	filterPageIds: string[];
+	filterDateFrom: string;
+	filterDateTo: string;
+	filterMethod: string;
+};
+
+const EMPTY_FORM: FormState = {
+	subject: "",
+	body: "",
+	replyTo: null,
+	scheduledAt: null,
+	filterPageIds: [],
+	filterDateFrom: "",
+	filterDateTo: "",
+	filterMethod: "",
+};
+
+function formFromBroadcast(b: Broadcast): FormState {
+	return {
+		subject: b.subject,
+		body: b.body,
+		replyTo: b.reply_to,
+		scheduledAt: b.scheduled_at ? new Date(b.scheduled_at) : null,
+		filterPageIds: b.filter_page_ids ?? [],
+		filterDateFrom: b.filter_date_from?.slice(0, 10) ?? "",
+		filterDateTo: b.filter_date_to?.slice(0, 10) ?? "",
+		filterMethod: b.filter_method ?? "",
+	};
+}
+
+function formToPayload(f: FormState) {
+	return {
+		subject: f.subject,
+		body: f.body,
+		reply_to: f.replyTo,
+		scheduled_at: f.scheduledAt ? f.scheduledAt.toISOString() : null,
+		filter_page_ids: f.filterPageIds.length > 0 ? f.filterPageIds : null,
+		filter_date_from: f.filterDateFrom ? `${f.filterDateFrom}T00:00:00Z` : null,
+		filter_date_to: f.filterDateTo ? `${f.filterDateTo}T23:59:59Z` : null,
+		filter_method: f.filterMethod || null,
+	};
+}
+
 type BroadcastComposeDialogProps = {
 	broadcast: Broadcast | null;
 	open: boolean;
@@ -115,14 +143,13 @@ export function BroadcastComposeDialog({
 	onOpenChange,
 }: BroadcastComposeDialogProps) {
 	const queryClient = useQueryClient();
-	const [subject, setSubject] = useState("");
-	const [body, setBody] = useState("");
-	const [replyTo, setReplyTo] = useState<string | null>(null);
-	const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
-	const [filterPageIds, setFilterPageIds] = useState<string[]>([]);
-	const [filterDateFrom, setFilterDateFrom] = useState("");
-	const [filterDateTo, setFilterDateTo] = useState("");
-	const [filterMethod, setFilterMethod] = useState("");
+	const [form, setForm] = useState<FormState>(EMPTY_FORM);
+	const set = useCallback(
+		(updates: Partial<FormState>) => setForm((f) => ({ ...f, ...updates })),
+		[],
+	);
+
+	// UI state
 	const [showFilters, setShowFilters] = useState(false);
 	const [showPreview, setShowPreview] = useState(false);
 	const [previewHtml, setPreviewHtml] = useState("");
@@ -136,33 +163,11 @@ export function BroadcastComposeDialog({
 
 	// Load broadcast data into form
 	useEffect(() => {
-		if (broadcast) {
-			setSubject(broadcast.subject);
-			setBody(broadcast.body);
-			setReplyTo(broadcast.reply_to);
-			setScheduledAt(broadcast.scheduled_at ? new Date(broadcast.scheduled_at) : null);
-			setFilterPageIds(broadcast.filter_page_ids ?? []);
-			setFilterDateFrom(broadcast.filter_date_from?.slice(0, 10) ?? "");
-			setFilterDateTo(broadcast.filter_date_to?.slice(0, 10) ?? "");
-			setFilterMethod(broadcast.filter_method ?? "");
-			setSendError("");
-			setShowConfirm(false);
-			setShowDeleteConfirm(false);
-			setShowPreview(false);
-		} else {
-			setSubject("");
-			setBody("");
-			setReplyTo(null);
-			setScheduledAt(null);
-			setFilterPageIds([]);
-			setFilterDateFrom("");
-			setFilterDateTo("");
-			setFilterMethod("");
-			setSendError("");
-			setShowConfirm(false);
-			setShowDeleteConfirm(false);
-			setShowPreview(false);
-		}
+		setForm(broadcast ? formFromBroadcast(broadcast) : EMPTY_FORM);
+		setSendError("");
+		setShowConfirm(false);
+		setShowDeleteConfirm(false);
+		setShowPreview(false);
 	}, [broadcast]);
 
 	const { data: pages } = useQuery({
@@ -174,57 +179,24 @@ export function BroadcastComposeDialog({
 		queryKey: [
 			"broadcast-recipients",
 			broadcastId,
-			filterPageIds,
-			filterDateFrom,
-			filterDateTo,
-			filterMethod,
+			form.filterPageIds,
+			form.filterDateFrom,
+			form.filterDateTo,
+			form.filterMethod,
 		],
 		queryFn: () => api.post<RecipientCount>(`/broadcasts/${broadcastId}/recipients`, {}),
 		enabled: !!broadcastId,
 		staleTime: 10_000,
 	});
 
-	function applyPreset(preset: (typeof PRESETS)[number]) {
-		setSubject(preset.subject);
-		setBody(preset.body);
-	}
-
-	// Keep a ref to the latest field values so the debounced save always reads current state
-	const fieldsRef = useRef({
-		subject,
-		body,
-		replyTo,
-		scheduledAt,
-		filterPageIds,
-		filterDateFrom,
-		filterDateTo,
-		filterMethod,
-	});
-	fieldsRef.current = {
-		subject,
-		body,
-		replyTo,
-		scheduledAt,
-		filterPageIds,
-		filterDateFrom,
-		filterDateTo,
-		filterMethod,
-	};
+	// Ref for latest form values (debounced save reads from this)
+	const formRef = useRef(form);
+	formRef.current = form;
 
 	async function saveCurrentFields(showToast = false) {
 		if (!broadcastId) return;
-		const f = fieldsRef.current;
 		try {
-			await api.put(`/broadcasts/${broadcastId}`, {
-				subject: f.subject,
-				body: f.body,
-				reply_to: f.replyTo,
-				scheduled_at: f.scheduledAt ? f.scheduledAt.toISOString() : null,
-				filter_page_ids: f.filterPageIds.length > 0 ? f.filterPageIds : null,
-				filter_date_from: f.filterDateFrom ? `${f.filterDateFrom}T00:00:00Z` : null,
-				filter_date_to: f.filterDateTo ? `${f.filterDateTo}T23:59:59Z` : null,
-				filter_method: f.filterMethod || null,
-			});
+			await api.put(`/broadcasts/${broadcastId}`, formToPayload(formRef.current));
 			if (showToast) toast.success("Draft saved");
 		} catch (err) {
 			if (showToast) toast.error(err instanceof Error ? err.message : "Failed to save");
@@ -240,23 +212,17 @@ export function BroadcastComposeDialog({
 	}
 
 	async function handlePreview() {
-		if (!broadcastId || !subject || !body) return;
-		const {
-			data: { session },
-		} = await supabase.auth.getSession();
-		if (!session) return;
-
-		const res = await fetch(`/api/broadcasts/${broadcastId}/preview`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${session.access_token}`,
-			},
-			body: JSON.stringify({ subject, body }),
-		});
-		if (!res.ok) return;
-		setPreviewHtml(await res.text());
-		setShowPreview(true);
+		if (!broadcastId || !form.subject || !form.body) return;
+		try {
+			const html = await api.postText(`/broadcasts/${broadcastId}/preview`, {
+				subject: form.subject,
+				body: form.body,
+			});
+			setPreviewHtml(html);
+			setShowPreview(true);
+		} catch {
+			// Preview is non-critical
+		}
 	}
 
 	async function handleSend() {
@@ -278,11 +244,11 @@ export function BroadcastComposeDialog({
 
 	const isDraft = !broadcast || broadcast.status === "draft";
 
-	// Auto-save all draft fields (debounced) — uses ref so the effect only re-fires on value changes
+	// Auto-save draft fields (debounced)
 	const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const autoSaveInitialized = useRef(false);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: saveCurrentFields reads from ref, doesn't need to be a dep
+	// biome-ignore lint/correctness/useExhaustiveDependencies: saveCurrentFields reads from ref
 	useEffect(() => {
 		if (!autoSaveInitialized.current) {
 			autoSaveInitialized.current = true;
@@ -299,27 +265,13 @@ export function BroadcastComposeDialog({
 		return () => {
 			if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
 		};
-	}, [
-		broadcastId,
-		isDraft,
-		subject,
-		body,
-		replyTo,
-		scheduledAt,
-		filterPageIds,
-		filterDateFrom,
-		filterDateTo,
-		filterMethod,
-		queryClient,
-	]);
+	}, [broadcastId, isDraft, form, queryClient]);
 
-	// Reset initialized flag when dialog opens with new broadcast
 	// biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when broadcastId changes
 	useEffect(() => {
 		autoSaveInitialized.current = false;
 	}, [broadcastId]);
 
-	// Save on dialog close
 	function handleOpenChange(nextOpen: boolean) {
 		if (!nextOpen && broadcastId && isDraft) {
 			if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
@@ -330,9 +282,11 @@ export function BroadcastComposeDialog({
 	}
 
 	function togglePageFilter(pageId: string) {
-		setFilterPageIds((prev) =>
-			prev.includes(pageId) ? prev.filter((id) => id !== pageId) : [...prev, pageId],
-		);
+		set({
+			filterPageIds: form.filterPageIds.includes(pageId)
+				? form.filterPageIds.filter((id) => id !== pageId)
+				: [...form.filterPageIds, pageId],
+		});
 	}
 
 	async function handleDelete() {
@@ -342,7 +296,7 @@ export function BroadcastComposeDialog({
 		onOpenChange(false);
 	}
 
-	const isScheduled = !!scheduledAt;
+	const isScheduled = !!form.scheduledAt;
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
@@ -390,12 +344,12 @@ export function BroadcastComposeDialog({
 								<div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
 									{PRESETS.map((p) => {
 										const Icon = p.icon;
-										const isActive = subject === p.subject && body === p.body;
+										const isActive = form.subject === p.subject && form.body === p.body;
 										return (
 											<button
 												key={p.name}
 												type="button"
-												onClick={() => applyPreset(p)}
+												onClick={() => set({ subject: p.subject, body: p.body })}
 												className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs transition-colors hover:border-honey-gold/50 hover:bg-muted ${isActive ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border"}`}
 											>
 												<Icon className="size-5 text-muted-foreground" />
@@ -411,12 +365,12 @@ export function BroadcastComposeDialog({
 						<div className="space-y-1.5">
 							<div className="flex items-center justify-between">
 								<Label htmlFor="broadcast-subject">Subject</Label>
-								<span className="text-xs text-muted-foreground">{subject.length}/200</span>
+								<span className="text-xs text-muted-foreground">{form.subject.length}/200</span>
 							</div>
 							<Input
 								id="broadcast-subject"
-								value={subject}
-								onChange={(e) => setSubject(e.target.value)}
+								value={form.subject}
+								onChange={(e) => set({ subject: e.target.value })}
 								maxLength={200}
 								placeholder="Email subject line"
 								disabled={!isDraft}
@@ -427,12 +381,12 @@ export function BroadcastComposeDialog({
 						<div className="space-y-1.5">
 							<div className="flex items-center justify-between">
 								<Label htmlFor="broadcast-body">Message</Label>
-								<span className="text-xs text-muted-foreground">{body.length}/5000</span>
+								<span className="text-xs text-muted-foreground">{form.body.length}/5000</span>
 							</div>
 							<Textarea
 								id="broadcast-body"
-								value={body}
-								onChange={(e) => setBody(e.target.value)}
+								value={form.body}
+								onChange={(e) => set({ body: e.target.value })}
 								maxLength={5000}
 								rows={8}
 								placeholder="Write your message..."
@@ -445,17 +399,17 @@ export function BroadcastComposeDialog({
 							<Label>Reply-to</Label>
 							<div className="flex gap-2">
 								<Button
-									variant={replyTo === null ? "default" : "outline"}
+									variant={form.replyTo === null ? "default" : "outline"}
 									size="sm"
-									onClick={() => setReplyTo(null)}
+									onClick={() => set({ replyTo: null })}
 									disabled={!isDraft}
 								>
 									No-reply
 								</Button>
 								<Button
-									variant={replyTo !== null ? "default" : "outline"}
+									variant={form.replyTo !== null ? "default" : "outline"}
 									size="sm"
-									onClick={() => setReplyTo("")}
+									onClick={() => set({ replyTo: "" })}
 									disabled={!isDraft}
 								>
 									My email
@@ -500,7 +454,7 @@ export function BroadcastComposeDialog({
 																// Debounced save happens on blur or explicit save
 															}}
 															className={`rounded-md border px-2 py-1 text-xs transition-colors ${
-																filterPageIds.includes(page.id)
+																form.filterPageIds.includes(page.id)
 																	? "border-honey-gold bg-honey-gold/10 text-honey-gold"
 																	: "border-border text-muted-foreground hover:border-honey-gold/50"
 															}`}
@@ -519,8 +473,8 @@ export function BroadcastComposeDialog({
 												<Label className="text-xs">Captured after</Label>
 												<Input
 													type="date"
-													value={filterDateFrom}
-													onChange={(e) => setFilterDateFrom(e.target.value)}
+													value={form.filterDateFrom}
+													onChange={(e) => set({ filterDateFrom: e.target.value })}
 													disabled={!isDraft}
 												/>
 											</div>
@@ -528,8 +482,8 @@ export function BroadcastComposeDialog({
 												<Label className="text-xs">Captured before</Label>
 												<Input
 													type="date"
-													value={filterDateTo}
-													onChange={(e) => setFilterDateTo(e.target.value)}
+													value={form.filterDateTo}
+													onChange={(e) => set({ filterDateTo: e.target.value })}
 													disabled={!isDraft}
 												/>
 											</div>
@@ -539,8 +493,8 @@ export function BroadcastComposeDialog({
 										<div className="space-y-1">
 											<Label className="text-xs">Entry method</Label>
 											<select
-												value={filterMethod}
-												onChange={(e) => setFilterMethod(e.target.value)}
+												value={form.filterMethod}
+												onChange={(e) => set({ filterMethod: e.target.value })}
 												className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 												disabled={!isDraft}
 											>
@@ -573,11 +527,11 @@ export function BroadcastComposeDialog({
 											<Button
 												variant="outline"
 												className="w-full justify-start text-left font-normal sm:w-[260px]"
-												data-empty={!scheduledAt}
+												data-empty={!form.scheduledAt}
 											>
 												<CalendarDays className="mr-2 size-4" />
-												{scheduledAt ? (
-													format(scheduledAt, "MMM d, yyyy 'at' h:mm a")
+												{form.scheduledAt ? (
+													format(form.scheduledAt, "MMM d, yyyy 'at' h:mm a")
 												) : (
 													<span className="text-muted-foreground">Pick date & time</span>
 												)}
@@ -586,12 +540,12 @@ export function BroadcastComposeDialog({
 										<PopoverContent className="w-auto p-0" align="start">
 											<Calendar
 												mode="single"
-												selected={scheduledAt ?? undefined}
+												selected={form.scheduledAt ?? undefined}
 												onSelect={(date) => {
-													if (!date) return setScheduledAt(null);
-													const hours = scheduledAt?.getHours() ?? 9;
-													const mins = scheduledAt?.getMinutes() ?? 0;
-													setScheduledAt(setMinutes(setHours(date, hours), mins));
+													if (!date) return set({ scheduledAt: null });
+													const hours = form.scheduledAt?.getHours() ?? 9;
+													const mins = form.scheduledAt?.getMinutes() ?? 0;
+													set({ scheduledAt: setMinutes(setHours(date, hours), mins) });
 												}}
 												disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
 												className="border-b"
@@ -601,26 +555,26 @@ export function BroadcastComposeDialog({
 												<Input
 													type="time"
 													value={
-														scheduledAt
-															? `${String(scheduledAt.getHours()).padStart(2, "0")}:${String(scheduledAt.getMinutes()).padStart(2, "0")}`
+														form.scheduledAt
+															? `${String(form.scheduledAt.getHours()).padStart(2, "0")}:${String(form.scheduledAt.getMinutes()).padStart(2, "0")}`
 															: "09:00"
 													}
 													onChange={(e) => {
 														const [h, m] = e.target.value.split(":").map(Number);
-														const base = scheduledAt ?? new Date();
-														setScheduledAt(setMinutes(setHours(base, h), m));
+														const base = form.scheduledAt ?? new Date();
+														set({ scheduledAt: setMinutes(setHours(base, h), m) });
 													}}
 													className="w-[120px]"
 												/>
 											</div>
 										</PopoverContent>
 									</Popover>
-									{scheduledAt && (
+									{form.scheduledAt && (
 										<Button
 											variant="ghost"
 											size="icon"
 											className="size-8"
-											onClick={() => setScheduledAt(null)}
+											onClick={() => set({ scheduledAt: null })}
 										>
 											<X className="size-4" />
 										</Button>
@@ -670,7 +624,7 @@ export function BroadcastComposeDialog({
 										variant="outline"
 										size="sm"
 										onClick={handlePreview}
-										disabled={!subject || !body}
+										disabled={!form.subject || !form.body}
 									>
 										Preview
 									</Button>
@@ -681,7 +635,7 @@ export function BroadcastComposeDialog({
 									<Button
 										size="sm"
 										onClick={() => setShowConfirm(true)}
-										disabled={!subject || !body}
+										disabled={!form.subject || !form.body}
 									>
 										<Send className="mr-1.5 size-4" />
 										{isScheduled ? "Schedule" : "Send Now"}
@@ -696,7 +650,7 @@ export function BroadcastComposeDialog({
 				open={showDeleteConfirm}
 				onOpenChange={setShowDeleteConfirm}
 				title="Delete broadcast?"
-				description={`This will permanently delete the draft "${subject || "Untitled broadcast"}".`}
+				description={`This will permanently delete the draft "${form.subject || "Untitled broadcast"}".`}
 				onConfirm={handleDelete}
 			/>
 		</Dialog>

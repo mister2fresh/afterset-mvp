@@ -1,3 +1,4 @@
+import { useId } from "react";
 import {
 	Area,
 	AreaChart,
@@ -32,6 +33,7 @@ export function DailyChart({
 	daily: { date: string; count: number }[];
 	title?: string;
 }): React.ReactElement {
+	const gradientId = useId();
 	const filled = fillLast30Days(daily);
 	const data = filled.map((d) => ({
 		date: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
@@ -47,7 +49,7 @@ export function DailyChart({
 				<ResponsiveContainer width="100%" height={200}>
 					<AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
 						<defs>
-							<linearGradient id="captureGradient" x1="0" y1="0" x2="0" y2="1">
+							<linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
 								<stop offset="0%" stopColor="#E8C547" stopOpacity={0.3} />
 								<stop offset="100%" stopColor="#E8C547" stopOpacity={0} />
 							</linearGradient>
@@ -79,7 +81,7 @@ export function DailyChart({
 							dataKey="count"
 							stroke="#E8C547"
 							strokeWidth={2}
-							fill="url(#captureGradient)"
+							fill={`url(#${gradientId})`}
 						/>
 					</AreaChart>
 				</ResponsiveContainer>
