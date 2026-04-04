@@ -146,7 +146,7 @@ h1{font-size:${titleFontSize};font-weight:700;letter-spacing:-.025em;line-height
 .ok-d{color:${mutedColor};font-size:.875rem;line-height:1.5}
 .err{display:none;color:#f87171;font-size:.875rem;margin-top:8px}
 .pw{font-size:.7rem;color:${isLightColor(bgColor) ? "#9ca3af" : "#4b5563"};margin-top:24px}
-.pw a{color:${isLightColor(bgColor) ? "#6b7280" : "#6b7280"}}
+.pw a{color:${isLightColor(bgColor) ? "#4b5563" : "#9ca3af"}}
 @keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 </style>
 </head>

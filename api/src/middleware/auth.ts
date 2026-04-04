@@ -1,7 +1,7 @@
 import { createMiddleware } from "hono/factory";
 import { supabase } from "../lib/supabase.js";
 
-export type Artist = {
+type Artist = {
 	id: string;
 	auth_id: string;
 	email: string;

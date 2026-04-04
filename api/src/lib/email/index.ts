@@ -1,10 +1,8 @@
 import { ResendEmailService } from "./resend-service.js";
 import type { EmailService } from "./types.js";
 
-export { ResendEmailService } from "./resend-service.js";
-export { addSuppression, isSuppressed } from "./suppression.js";
-export type { EmailService, SendParams, SendResult } from "./types.js";
-export { createUnsubscribeToken, verifyUnsubscribeToken } from "./unsubscribe-token.js";
+export { addSuppression } from "./suppression.js";
+export { verifyUnsubscribeToken } from "./unsubscribe-token.js";
 
 let instance: EmailService | null = null;
 
