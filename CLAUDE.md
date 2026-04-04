@@ -22,6 +22,8 @@ afterset/docs/adr/        # Architecture Decision Records (001–006)
 afterset/docs/research/   # Research that informed ADRs
 TASKS.md                  # Sprint tracker and task breakdown
 BACKLOG.md                # Future feature requests and ideas
+CRASHCOURSE.md            # Quick-start crash course for new developers
+QA-CHECKLIST.md           # Manual QA checklist for page + email flow
 biome.json                # Shared Biome config (linter + formatter)
 pnpm-workspace.yaml       # pnpm workspace definition
 ```

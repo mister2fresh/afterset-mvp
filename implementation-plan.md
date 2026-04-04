@@ -99,16 +99,15 @@ The codebase is architecturally sound — clean package separation, consistent a
 
 ---
 
-### Phase G: Documentation
+### Phase G: Documentation ✅
 
-- **Why last:** Documents the stabilized codebase after structural changes are complete. Updating docs before refactoring would create stale documentation.
-- **Scope:** Root `README.md` (new), `CLAUDE.md`, targeted inline comments
+- **Completed 2026-04-04**
 - **Tasks:**
-  - [ ] Create `README.md` with prerequisites (Node.js, pnpm, Supabase CLI, Wrangler), first-run setup (`pnpm install`, `.env` creation, Supabase local, migrations), local dev flow (which services + ports + auth), and deployment overview — **Moderate** — (source: phase 4 — no README exists)
-  - [ ] Add comment to `sequence-step-editor.tsx` explaining step 0 special behavior (`delay_mode` vs `delay_days`) and `validateDelayMonotonic()` purpose — **Moderate** — (source: phase 4 hidden business rules)
-  - [ ] Update `CLAUDE.md` project structure: add `api/src/lib/sms/` directory, reference `CRASHCOURSE.md` and `QA-CHECKLIST.md` — **Low** — (source: phase 4 accuracy gaps)
-  - [ ] Add overview comment to worker capture-to-drip flow (how fan capture triggers email sequence scheduling) — **Low** — (source: phase 4)
-  - [ ] Add comment to `capture-template.ts` inline `<script>` explaining the offline-queue logic (~1200 chars of minified JS) — **Low** — (source: phase 1)
+  - [x] Created `README.md` with prerequisites, first-run setup, env var reference, local dev flow, deployment overview
+  - [x] Added comment to `sequence-step-editor.tsx` explaining step 0 `delay_mode` vs steps 1+ `delay_days` and `validateDelayMonotonic()` monotonicity enforcement
+  - [x] Updated `CLAUDE.md` project structure: added `CRASHCOURSE.md` and `QA-CHECKLIST.md` references (note: `api/src/lib/sms/` dir doesn't exist — SMS is in `api/src/routes/sms-keywords.ts`)
+  - [x] Added capture-to-drip flow overview comment to `worker/src/index.ts` above `handleCapture()`
+  - [x] Added offline-queue logic comment to `capture-template.ts` inline `<script>` (localStorage queue, retry-on-load, dedup, 10s timeout)
 
 ---
 

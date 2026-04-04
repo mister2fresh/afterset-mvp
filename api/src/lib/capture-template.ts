@@ -135,6 +135,14 @@ ${iconsHtml}
 <p class="pw">Powered by <a href="https://afterset.net" target="_blank" rel="noopener">Afterset</a></p>
 </main>
 <script>
+// Offline-resilient form submission with localStorage queue:
+// - On submit: immediately show success UI, then POST to /api/capture as JSON
+// - If the fetch fails (offline, timeout, server error), the submission is enqueued
+//   in localStorage under "afterset_q" as [{email, slug, entry_method}, ...]
+// - On next page load, retry() replays all queued submissions
+// - Successful sends dequeue the entry; dedup prevents duplicate queue entries
+// - The ?v= query param sets entry_method (d=direct, q=qr, n=nfc, s=sms)
+// - 10s AbortController timeout prevents hanging requests on slow connections
 (function(){var K="afterset_q",S="${page.slug}",f=document.getElementById("cf"),ok=document.getElementById("ok"),er=document.getElementById("er"),p=new URLSearchParams(location.search),v=p.get("v")||"d";f.entry_method.value=v;function send(d){var ac=new AbortController;var t=setTimeout(function(){ac.abort()},10000);return fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d),signal:ac.signal,keepalive:true}).then(function(r){clearTimeout(t);if(!r.ok)throw new Error();dequeue(d.email);return true}).catch(function(){clearTimeout(t);enqueue(d);return false})}function enqueue(d){try{var q=JSON.parse(localStorage.getItem(K)||"[]");if(!q.some(function(x){return x.email===d.email&&x.slug===d.slug}))q.push(d);localStorage.setItem(K,JSON.stringify(q))}catch(e){}}function dequeue(email){try{var q=JSON.parse(localStorage.getItem(K)||"[]");q=q.filter(function(x){return x.email!==email||x.slug!==S});q.length?localStorage.setItem(K,JSON.stringify(q)):localStorage.removeItem(K)}catch(e){}}function showOk(){f.style.display="none";ok.style.display="block"}function retry(){try{var q=JSON.parse(localStorage.getItem(K)||"[]");q.forEach(function(d){send(d)})}catch(e){}}retry();f.addEventListener("submit",function(e){e.preventDefault();var email=f.email.value;var d={email:email,slug:S,entry_method:v};showOk();send(d)})})()
 </script>
 <!-- built: ${new Date().toISOString()} -->

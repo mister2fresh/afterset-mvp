@@ -87,6 +87,11 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
 	);
 }
 
+// Step 0 (the welcome email) uses `delay_mode` to control send timing relative to
+// capture: immediate, 1 hour later, or next morning at 9am artist-local-time.
+// Steps 1+ ignore delay_mode and instead use `delay_days` — sent at 9am on day N.
+// The API enforces monotonically increasing delay_days across steps via
+// validateDelayMonotonic() so fans always receive emails in sequence order.
 export function SequenceStepEditor({
 	pageId,
 	order,
