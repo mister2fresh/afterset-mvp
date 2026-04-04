@@ -14,88 +14,81 @@ const requestSchema = z.object({
 	ids: z.array(z.string().uuid()).min(1).max(BATCH_LIMIT).optional(),
 });
 
-/**
- * POST /api/emails/send-batch
- *
- * Called by pg_cron via pg_net. Fetches pending emails ready to send,
- * resolves their templates, sends via Resend batch API, updates status.
- *
- * Accepts optional { ids: [...] } body. If no IDs provided, polls for
- * pending emails where send_at <= NOW().
- */
-app.post("/send-batch", async (c) => {
-	const start = performance.now();
-	const secret = c.req.header("X-Batch-Secret");
-	const expected = process.env.BATCH_SEND_SECRET;
-	if (!expected || secret !== expected) {
-		return c.json({ error: "Unauthorized" }, 401);
-	}
+type PendingRow = {
+	id: string;
+	fan_capture_id: string;
+	artist_id: string;
+	email: string;
+	retry_count: number;
+	email_template_id: string | null;
+	broadcast_id: string | null;
+};
 
-	const body = await c.req.json().catch(() => ({}));
-	const parsed = requestSchema.safeParse(body);
-	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
-
-	// Atomically claim pending emails (SELECT + UPDATE in one step to prevent race conditions)
-	let pendingRows: {
-		id: string;
-		fan_capture_id: string;
-		artist_id: string;
-		email: string;
-		retry_count: number;
-		email_template_id: string | null;
-		broadcast_id: string | null;
-	}[];
-
-	if (parsed.data?.ids) {
-		// Specific IDs requested — claim only those
+async function claimPendingRows(ids?: string[]): Promise<PendingRow[] | { error: string }> {
+	if (ids) {
 		const { data, error } = await supabase
 			.from("pending_emails")
 			.update({ status: "sending" })
-			.in("id", parsed.data.ids)
+			.in("id", ids)
 			.eq("status", "pending")
 			.lte("send_at", new Date().toISOString())
 			.select("id, fan_capture_id, artist_id, email, retry_count, email_template_id, broadcast_id");
-		if (error) return c.json({ error: error.message }, 500);
-		pendingRows = data ?? [];
-	} else {
-		// Normal poll — use atomic claim RPC (FOR UPDATE SKIP LOCKED)
-		const { data, error } = await supabase.rpc("claim_pending_emails", {
-			batch_limit: BATCH_LIMIT,
-		});
-		if (error) return c.json({ error: error.message }, 500);
-		pendingRows = data ?? [];
+		if (error) return { error: error.message };
+		return data ?? [];
 	}
+	const { data, error } = await supabase.rpc("claim_pending_emails", {
+		batch_limit: BATCH_LIMIT,
+	});
+	if (error) return { error: error.message };
+	return data ?? [];
+}
 
-	if (pendingRows.length === 0) {
-		return c.json({ sent: 0, failed: 0, skipped: 0 });
-	}
+type SendContext = {
+	artistMap: Map<string, { id: string; name: string }>;
+	fanToPage: Map<string, string>;
+	templateById: Map<string, TemplateRow>;
+	templateByPage: Map<string, TemplateRow>;
+	incentiveUrlMap: Map<string, string>;
+	pageThemeMap: Map<string, EmailTheme>;
+	pageTitleMap: Map<string, string>;
+	pageLinksMap: Map<string, { streaming: Record<string, string>; social: Record<string, string> }>;
+	broadcastMap: Map<string, { id: string; subject: string; body: string; reply_to: string | null }>;
+	artistThemeMap: Map<string, EmailTheme>;
+	artistLinksMap: Map<
+		string,
+		{ streaming: Record<string, string>; social: Record<string, string> }
+	>;
+};
 
-	// Collect unique artist IDs to batch-fetch artist info
-	const artistIds = [...new Set(pendingRows.map((r) => r.artist_id))];
+type TemplateRow = {
+	id: string;
+	capture_page_id: string;
+	subject: string;
+	body: string;
+	include_incentive_link: boolean;
+	is_active: boolean;
+};
 
+async function resolveSendContext(rows: PendingRow[]): Promise<SendContext> {
+	// Batch-fetch artist info
+	const artistIds = [...new Set(rows.map((r) => r.artist_id))];
 	const { data: artists } = await supabase.from("artists").select("id, name").in("id", artistIds);
-
 	const artistMap = new Map((artists ?? []).map((a) => [a.id, a as { id: string; name: string }]));
 
-	// Get fan_capture_ids to find which capture_page each fan came from (needed for legacy rows + incentive URLs)
-	const fanCaptureIds = [...new Set(pendingRows.map((r) => r.fan_capture_id))];
-
+	// Map fan_capture_id → capture_page_id
+	const fanCaptureIds = [...new Set(rows.map((r) => r.fan_capture_id))];
 	const { data: captureEvents } = await supabase
 		.from("capture_events")
 		.select("fan_capture_id, capture_page_id")
 		.in("fan_capture_id", fanCaptureIds);
-
 	const fanToPage = new Map(
 		(captureEvents ?? []).map((e) => [e.fan_capture_id, e.capture_page_id]),
 	);
 
-	// Fetch templates by ID for rows that have email_template_id
+	// Fetch templates by ID
 	const templateIds = [
-		...new Set(
-			pendingRows.map((r) => r.email_template_id).filter((id): id is string => id != null),
-		),
+		...new Set(rows.map((r) => r.email_template_id).filter((id): id is string => id != null)),
 	];
-
 	const { data: templatesById } =
 		templateIds.length > 0
 			? await supabase
@@ -103,19 +96,17 @@ app.post("/send-batch", async (c) => {
 					.select("id, capture_page_id, subject, body, include_incentive_link, is_active")
 					.in("id", templateIds)
 			: { data: [] };
-
 	const templateById = new Map((templatesById ?? []).map((t) => [t.id, t]));
 
-	// Fetch legacy templates by page for rows without email_template_id or broadcast_id
+	// Legacy templates (rows without email_template_id or broadcast_id)
 	const legacyPageIds = [
 		...new Set(
-			pendingRows
+			rows
 				.filter((r) => r.email_template_id == null && r.broadcast_id == null)
 				.map((r) => fanToPage.get(r.fan_capture_id))
 				.filter((id): id is string => id != null),
 		),
 	];
-
 	const { data: legacyTemplates } =
 		legacyPageIds.length > 0
 			? await supabase
@@ -124,13 +115,11 @@ app.post("/send-batch", async (c) => {
 					.in("capture_page_id", legacyPageIds)
 					.eq("sequence_order", 0)
 			: { data: [] };
-
 	const templateByPage = new Map((legacyTemplates ?? []).map((t) => [t.capture_page_id, t]));
 
-	// Collect all page IDs referenced by templates (for incentive URLs + theming)
+	// Page themes, incentive URLs, titles, links
 	const allTemplates = [...(templatesById ?? []), ...(legacyTemplates ?? [])];
 	const allPageIds = [...new Set(allTemplates.map((t) => t.capture_page_id).filter(Boolean))];
-
 	const baseUrl = process.env.API_BASE_URL ?? "https://api.afterset.net";
 	const incentiveUrlMap = new Map<string, string>();
 	const pageThemeMap = new Map<string, EmailTheme>();
@@ -162,11 +151,10 @@ app.post("/send-batch", async (c) => {
 		}
 	}
 
-	// Fetch broadcasts for rows that have broadcast_id
+	// Broadcasts
 	const broadcastIds = [
-		...new Set(pendingRows.map((r) => r.broadcast_id).filter((id): id is string => id != null)),
+		...new Set(rows.map((r) => r.broadcast_id).filter((id): id is string => id != null)),
 	];
-
 	const { data: broadcastsData } =
 		broadcastIds.length > 0
 			? await supabase
@@ -174,14 +162,12 @@ app.post("/send-batch", async (c) => {
 					.select("id, subject, body, reply_to")
 					.in("id", broadcastIds)
 			: { data: [] };
-
 	const broadcastMap = new Map((broadcastsData ?? []).map((b) => [b.id, b]));
 
-	// For broadcast emails, fetch each artist's most recently updated page for theming
+	// Broadcast artist themes (most recently updated page per artist)
 	const broadcastArtistIds = [
-		...new Set(pendingRows.filter((r) => r.broadcast_id != null).map((r) => r.artist_id)),
+		...new Set(rows.filter((r) => r.broadcast_id != null).map((r) => r.artist_id)),
 	];
-
 	const artistThemeMap = new Map<string, EmailTheme>();
 	const artistLinksMap = new Map<
 		string,
@@ -207,22 +193,40 @@ app.post("/send-batch", async (c) => {
 		}
 	}
 
-	// Build send params for each pending email
+	return {
+		artistMap,
+		fanToPage,
+		templateById,
+		templateByPage,
+		incentiveUrlMap,
+		pageThemeMap,
+		pageTitleMap,
+		pageLinksMap,
+		broadcastMap,
+		artistThemeMap,
+		artistLinksMap,
+	};
+}
+
+function buildSendParams(
+	rows: PendingRow[],
+	ctx: SendContext,
+): { sendable: { pendingId: string; params: SendParams }[]; skippedIds: string[] } {
 	const sendable: { pendingId: string; params: SendParams }[] = [];
 	const skippedIds: string[] = [];
 
-	for (const row of pendingRows) {
-		const artist = artistMap.get(row.artist_id);
+	for (const row of rows) {
+		const artist = ctx.artistMap.get(row.artist_id);
 
-		// Broadcast emails — resolve from broadcasts table
+		// Broadcast emails
 		if (row.broadcast_id) {
-			const broadcast = broadcastMap.get(row.broadcast_id);
+			const broadcast = ctx.broadcastMap.get(row.broadcast_id);
 			if (!artist || !broadcast) {
 				skippedIds.push(row.id);
 				continue;
 			}
-			const theme = artistThemeMap.get(row.artist_id);
-			const links = artistLinksMap.get(row.artist_id);
+			const theme = ctx.artistThemeMap.get(row.artist_id);
+			const links = ctx.artistLinksMap.get(row.artist_id);
 			const html = renderFollowUpHtml({
 				artistName: artist.name,
 				body: broadcast.body,
@@ -244,12 +248,12 @@ app.post("/send-batch", async (c) => {
 			continue;
 		}
 
-		// Sequence/legacy emails — resolve from templates
-		const pageId = fanToPage.get(row.fan_capture_id);
+		// Sequence/legacy emails
+		const pageId = ctx.fanToPage.get(row.fan_capture_id);
 		const template = row.email_template_id
-			? templateById.get(row.email_template_id)
+			? ctx.templateById.get(row.email_template_id)
 			: pageId
-				? templateByPage.get(pageId)
+				? ctx.templateByPage.get(pageId)
 				: undefined;
 
 		if (!artist || !template || !template.is_active) {
@@ -260,12 +264,12 @@ app.post("/send-batch", async (c) => {
 		const capturePageId = template.capture_page_id ?? pageId;
 		const incentiveUrl =
 			template.include_incentive_link && capturePageId
-				? incentiveUrlMap.get(capturePageId)
+				? ctx.incentiveUrlMap.get(capturePageId)
 				: undefined;
 
-		const theme = capturePageId ? pageThemeMap.get(capturePageId) : undefined;
-		const pageTitle = capturePageId ? pageTitleMap.get(capturePageId) : undefined;
-		const links = capturePageId ? pageLinksMap.get(capturePageId) : undefined;
+		const theme = capturePageId ? ctx.pageThemeMap.get(capturePageId) : undefined;
+		const pageTitle = capturePageId ? ctx.pageTitleMap.get(capturePageId) : undefined;
+		const links = capturePageId ? ctx.pageLinksMap.get(capturePageId) : undefined;
 		const html = renderFollowUpHtml({
 			artistName: artist.name,
 			pageTitle,
@@ -287,6 +291,66 @@ app.post("/send-batch", async (c) => {
 			},
 		});
 	}
+
+	return { sendable, skippedIds };
+}
+
+async function updateBroadcastStats(broadcastIds: string[]): Promise<void> {
+	for (const bId of broadcastIds) {
+		const { count } = await supabase
+			.from("pending_emails")
+			.select("id", { count: "exact", head: true })
+			.eq("broadcast_id", bId)
+			.eq("status", "sent");
+
+		await supabase
+			.from("broadcasts")
+			.update({ sent_count: count ?? 0 })
+			.eq("id", bId);
+
+		const { count: pendingCount } = await supabase
+			.from("pending_emails")
+			.select("id", { count: "exact", head: true })
+			.eq("broadcast_id", bId)
+			.in("status", ["pending", "sending"]);
+
+		if ((pendingCount ?? 0) === 0) {
+			await supabase
+				.from("broadcasts")
+				.update({ status: "sent" })
+				.eq("id", bId)
+				.in("status", ["sending", "scheduled"]);
+		}
+	}
+}
+
+/**
+ * POST /api/emails/send-batch
+ *
+ * Called by pg_cron via pg_net. Fetches pending emails ready to send,
+ * resolves their templates, sends via Resend batch API, updates status.
+ *
+ * Accepts optional { ids: [...] } body. If no IDs provided, polls for
+ * pending emails where send_at <= NOW().
+ */
+app.post("/send-batch", async (c) => {
+	const start = performance.now();
+	const secret = c.req.header("X-Batch-Secret");
+	const expected = process.env.BATCH_SEND_SECRET;
+	if (!expected || secret !== expected) {
+		return c.json({ error: "Unauthorized" }, 401);
+	}
+
+	const body = await c.req.json().catch(() => ({}));
+	const parsed = requestSchema.safeParse(body);
+	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
+
+	const claimed = await claimPendingRows(parsed.data?.ids);
+	if ("error" in claimed) return c.json({ error: claimed.error }, 500);
+	if (claimed.length === 0) return c.json({ sent: 0, failed: 0, skipped: 0 });
+
+	const ctx = await resolveSendContext(claimed);
+	const { sendable, skippedIds } = buildSendParams(claimed, ctx);
 
 	// Mark skipped emails as failed (no template / inactive — retrying won't help)
 	if (skippedIds.length > 0) {
@@ -320,62 +384,37 @@ app.post("/send-batch", async (c) => {
 				providerUpdates.push({ id: pendingId, provider_message_id: result.id });
 				sentCount++;
 			} else {
-				// suppressed — mark as failed so it doesn't retry
 				failedIds.push(pendingId);
 				failedCount++;
 			}
 		}
 
-		// Update sent emails with provider_message_id
-		for (const update of providerUpdates) {
-			await supabase
-				.from("pending_emails")
-				.update({ status: "sent", provider_message_id: update.provider_message_id })
-				.eq("id", update.id);
-		}
+		// Update sent emails with provider_message_id (parallel, not sequential)
+		await Promise.all(
+			providerUpdates.map((update) =>
+				supabase
+					.from("pending_emails")
+					.update({ status: "sent", provider_message_id: update.provider_message_id })
+					.eq("id", update.id),
+			),
+		);
 
-		// Mark suppressed as failed
 		if (failedIds.length > 0) {
 			await supabase.from("pending_emails").update({ status: "failed" }).in("id", failedIds);
 		}
 	} catch (err) {
-		// Batch send failed entirely — increment retry_count, reset to pending
 		failedCount = sendable.length;
 		const ids = sendable.map((s) => s.pendingId);
 		await supabase.rpc("increment_retry_count", { pending_ids: ids });
-
 		console.error("[send-batch] Batch send failed:", err);
 	}
 
-	// Update broadcast sent_count for any broadcasts in this batch
+	// Update broadcast stats
+	const broadcastIds = [
+		...new Set(claimed.map((r) => r.broadcast_id).filter((id): id is string => id != null)),
+	];
 	if (broadcastIds.length > 0) {
-		for (const bId of broadcastIds) {
-			const { count } = await supabase
-				.from("pending_emails")
-				.select("id", { count: "exact", head: true })
-				.eq("broadcast_id", bId)
-				.eq("status", "sent");
-
-			await supabase
-				.from("broadcasts")
-				.update({ sent_count: count ?? 0 })
-				.eq("id", bId);
-
-			// If all pending emails for this broadcast are done, mark broadcast as sent
-			const { count: pendingCount } = await supabase
-				.from("pending_emails")
-				.select("id", { count: "exact", head: true })
-				.eq("broadcast_id", bId)
-				.in("status", ["pending", "sending"]);
-
-			if ((pendingCount ?? 0) === 0) {
-				await supabase
-					.from("broadcasts")
-					.update({ status: "sent" })
-					.eq("id", bId)
-					.in("status", ["sending", "scheduled"]);
-			}
-		}
+		await updateBroadcastStats(broadcastIds);
 	}
 
 	const elapsed = Math.round(performance.now() - start);

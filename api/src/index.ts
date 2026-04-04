@@ -52,33 +52,32 @@ app.route("/download", download);
 app.route("/api/email", email);
 app.route("/api/emails", sendBatch);
 
-app.use("/api/settings", auth);
-app.use("/api/settings/*", auth);
+// Auth: protect all authenticated API routes (public: /api/health, /api/email, /api/emails)
+for (const path of [
+	"/api/settings",
+	"/api/capture-pages",
+	"/api/analytics",
+	"/api/broadcasts",
+	"/api/captures",
+	"/api/device-tokens",
+]) {
+	app.use(path, auth);
+	app.use(`${path}/*`, auth);
+}
+
 app.route("/api/settings", settings);
 
-app.use("/api/capture-pages", auth);
-app.use("/api/capture-pages/*", auth);
-app.route("/api/capture-pages", capturePages);
-app.route("/api/capture-pages", incentive);
-app.route("/api/capture-pages", build);
-app.route("/api/capture-pages", emailTemplates);
-app.route("/api/capture-pages", smsKeywords);
-app.route("/api/capture-pages", analytics);
+// /api/capture-pages — 6 route modules share this base path:
+app.route("/api/capture-pages", capturePages); // CRUD + QR (capture-pages.ts)
+app.route("/api/capture-pages", incentive); // /:id/incentive (incentive.ts)
+app.route("/api/capture-pages", build); // /:id/build (build.ts)
+app.route("/api/capture-pages", emailTemplates); // /:id/email-template, /:id/email-sequence (email-templates.ts)
+app.route("/api/capture-pages", smsKeywords); // /:id/keyword (sms-keywords.ts)
+app.route("/api/capture-pages", analytics); // /:id/analytics (analytics.ts)
 
-app.use("/api/analytics", auth);
-app.use("/api/analytics/*", auth);
-app.route("/api/analytics", analytics);
-
-app.use("/api/broadcasts", auth);
-app.use("/api/broadcasts/*", auth);
+app.route("/api/analytics", analytics); // /tonight, / (overview)
 app.route("/api/broadcasts", broadcasts);
-
-app.use("/api/captures", auth);
-app.use("/api/captures/*", auth);
 app.route("/api/captures", captures);
-
-app.use("/api/device-tokens", auth);
-app.use("/api/device-tokens/*", auth);
 app.route("/api/device-tokens", deviceTokens);
 
 const port = Number(process.env.PORT) || 3000;

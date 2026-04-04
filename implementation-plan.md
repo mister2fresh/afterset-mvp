@@ -84,19 +84,18 @@ The codebase is architecturally sound — clean package separation, consistent a
 
 ---
 
-### Phase F: API & Worker Function Extraction
+### Phase F: API & Worker Function Extraction ✅
 
-- **Why sixth:** Breaks apart oversized API route handlers. Could run in parallel with Phase E since they touch different packages.
-- **Scope:** `api/src/routes/` (5 files), `api/src/index.ts`, `worker/src/index.ts`
+- **Completed 2026-04-04**
 - **Tasks:**
-  - [ ] Decompose `send-batch.ts` POST handler (~360 lines) into named functions: `claimPendingRows()`, `resolveSendParams()`, `updateBroadcastStats()` — **Critical** — (source: phase 1 oversized)
-  - [ ] Batch provider message ID updates in `send-batch.ts` (lines 330-335) into a single query instead of sequential per-email DB calls (50 serial queries at batch limit) — **Critical** — (source: phase 1)
-  - [ ] Extract `groupEventsByTitle(rows)` from analytics overview handler (lines 259-388, 6 Maps in one loop) — **Moderate** — (source: phase 1)
-  - [ ] Extract `renderPreview()` helper from `email-templates.ts` to deduplicate legacy (lines 94-122) and sequence (lines 226-253) preview handlers — **Moderate** — (source: phase 1)
-  - [ ] Split worker `handleCapture` (132 lines) into `parseSubmission()`, `lookupPage()`, `persistCapture()` — **Moderate** — (source: phase 1)
-  - [ ] Replace `.catch(() => {})` on `buildPage()` calls in `capture-pages.ts` (lines 144, 239, 269) with `.catch((e) => console.error("build failed", e))` — **Moderate** — (source: phase 1 silent failures)
-  - [ ] Add inline route-ownership comments to `api/src/index.ts` for the 6 modules all mounted at `/api/capture-pages` — **Low** — (source: phase 1)
-  - [ ] Consolidate repeated auth middleware mounting in `api/src/index.ts` (6 separate `.use()` calls) into grouped sub-app or wildcard — **Low** — (source: phase 1)
+  - [x] Decomposed `send-batch.ts` POST handler into `claimPendingRows()`, `resolveSendContext()`, `buildSendParams()`, `updateBroadcastStats()` — handler body now ~60 lines
+  - [x] Batch provider message ID updates via `Promise.all()` instead of sequential loop (50 parallel vs 50 serial)
+  - [x] Extracted `groupEventsByTitle()` from analytics overview — replaces 5 separate Maps with single `TitleGroup` Map
+  - [x] Extracted `renderPreview()` in `email-templates.ts` — both legacy and sequence preview routes share one handler
+  - [x] Split worker `handleCapture` into `parseSubmission()`, `lookupPage()`, `persistCapture()` — orchestrator now ~30 lines
+  - [x] Replaced `.catch(() => {})` on `buildPage()` calls with `.catch((e) => console.error("build failed", e))` in capture-pages.ts
+  - [x] Added route-ownership comments for all 6 modules mounted at `/api/capture-pages` in index.ts
+  - [x] Consolidated 12 auth middleware lines into `for` loop over protected paths in index.ts
 
 ---
 

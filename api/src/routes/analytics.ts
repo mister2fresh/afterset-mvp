@@ -3,6 +3,47 @@ import { supabase } from "../lib/supabase.js";
 import { getTodayRange } from "../lib/timezone.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
+type TitleGroup = {
+	page_id: string | null;
+	count: number;
+	latest_capture: string;
+	methods: Map<string, number>;
+	daily: Map<string, number>;
+};
+
+function groupEventsByTitle(
+	rows: {
+		capture_page_id: string | null;
+		page_title: string | null;
+		entry_method: string;
+		captured_at: string;
+	}[],
+): Map<string, TitleGroup> {
+	const groups = new Map<string, TitleGroup>();
+	for (const row of rows) {
+		const title = row.page_title ?? "Unknown";
+		let group = groups.get(title);
+		if (!group) {
+			group = {
+				page_id: row.capture_page_id,
+				count: 0,
+				latest_capture: row.captured_at,
+				methods: new Map(),
+				daily: new Map(),
+			};
+			groups.set(title, group);
+		}
+		group.count++;
+		if (row.captured_at > group.latest_capture) {
+			group.latest_capture = row.captured_at;
+		}
+		group.methods.set(row.entry_method, (group.methods.get(row.entry_method) ?? 0) + 1);
+		const date = row.captured_at.slice(0, 10);
+		group.daily.set(date, (group.daily.get(date) ?? 0) + 1);
+	}
+	return groups;
+}
+
 const app = new Hono<AuthEnv>();
 
 type MethodBreakdown = {
@@ -265,32 +306,7 @@ app.get("/", async (c) => {
 	const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 	const thisWeek = rows.filter((r) => r.captured_at >= sevenDaysAgo).length;
 
-	// Group by page_title snapshot — each unique title is a "page" in top pages
-	const titleCounts = new Map<string, number>();
-	const titleToPageId = new Map<string, string | null>();
-	const titleLatestDate = new Map<string, string>();
-	const titleMethods = new Map<string, Map<string, number>>();
-	const titleDaily = new Map<string, Map<string, number>>();
-	for (const row of rows) {
-		const title = row.page_title ?? "Unknown";
-		titleCounts.set(title, (titleCounts.get(title) ?? 0) + 1);
-		if (!titleToPageId.has(title)) {
-			titleToPageId.set(title, row.capture_page_id);
-		}
-		const prev = titleLatestDate.get(title);
-		if (!prev || row.captured_at > prev) {
-			titleLatestDate.set(title, row.captured_at);
-		}
-		// Method breakdown per title
-		if (!titleMethods.has(title)) titleMethods.set(title, new Map());
-		const methods = titleMethods.get(title)!;
-		methods.set(row.entry_method, (methods.get(row.entry_method) ?? 0) + 1);
-		// Daily counts per title
-		const date = row.captured_at.slice(0, 10);
-		if (!titleDaily.has(title)) titleDaily.set(title, new Map());
-		const daily = titleDaily.get(title)!;
-		daily.set(date, (daily.get(date) ?? 0) + 1);
-	}
+	const titleGroups = groupEventsByTitle(rows);
 
 	// Look up slugs for active pages
 	const { data: pageDetails } =
@@ -318,23 +334,22 @@ app.get("/", async (c) => {
 		}
 	}
 
-	const pageStats = [...titleCounts.entries()]
-		.map(([title, captures]) => {
-			const pid = titleToPageId.get(title);
+	const pageStats = [...titleGroups.entries()]
+		.map(([title, group]) => {
 			const sent = titleEmailSent.get(title) ?? 0;
 			const opened = titleEmailOpened.get(title) ?? 0;
-			const methods = [...(titleMethods.get(title) ?? new Map()).entries()]
+			const methods = [...group.methods.entries()]
 				.map(([method, count]) => ({ method, count }))
 				.sort((a, b) => b.count - a.count);
-			const daily = [...(titleDaily.get(title) ?? new Map()).entries()]
+			const daily = [...group.daily.entries()]
 				.map(([date, count]) => ({ date, count }))
 				.sort((a, b) => a.date.localeCompare(b.date));
 			return {
-				id: pid,
+				id: group.page_id,
 				title,
-				slug: pid ? (pageSlugMap.get(pid) ?? null) : null,
-				latest_capture: titleLatestDate.get(title) ?? null,
-				captures,
+				slug: group.page_id ? (pageSlugMap.get(group.page_id) ?? null) : null,
+				latest_capture: group.latest_capture,
+				captures: group.count,
 				methods,
 				daily,
 				emails_sent: sent,

@@ -161,15 +161,9 @@ async function supabaseRpc(
 	});
 }
 
-async function handleCapture(request: Request, env: Env): Promise<Response> {
-	if (request.method === "OPTIONS") {
-		return new Response(null, { status: 204, headers: CORS_HEADERS });
-	}
+type Submission = { email: string; slug: string; method: string };
 
-	if (request.method !== "POST") {
-		return json({ error: "Method not allowed" }, 405);
-	}
-
+async function parseSubmission(request: Request): Promise<Submission | Response> {
 	let fields: Record<string, unknown>;
 	const contentType = request.headers.get("Content-Type") ?? "";
 	if (contentType.includes("application/json")) {
@@ -186,77 +180,48 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	}
 
 	const { email, slug, entry_method } = fields;
-
 	if (typeof email !== "string" || !EMAIL_RE.test(email)) {
 		return json({ error: "Invalid email" }, 400);
 	}
 	if (typeof slug !== "string" || slug.length === 0) {
 		return json({ error: "Missing slug" }, 400);
 	}
-
-	// Rate limit by IP + slug
-	cleanupRateLimits();
-	const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
-	if (isRateLimited(clientIp, slug)) {
-		return json({ error: "Too many submissions. Please wait a minute and try again." }, 429);
-	}
-
 	const method =
 		typeof entry_method === "string" && entry_method in ENTRY_METHOD_MAP ? entry_method : "d";
+	return { email: email.toLowerCase().trim(), slug, method };
+}
 
-	// Look up capture page by slug to get artist_id and page id
+type PageInfo = { id: string; artist_id: string; title: string };
+
+async function lookupPage(env: Env, slug: string): Promise<PageInfo | Response> {
 	const pageRes = await supabaseRpc(
 		env,
 		`capture_pages?slug=eq.${encodeURIComponent(slug)}&is_active=eq.true&select=id,artist_id,title`,
 		{},
 	);
-	if (!pageRes.ok) {
-		return json({ error: "Lookup failed" }, 502);
-	}
+	if (!pageRes.ok) return json({ error: "Lookup failed" }, 502);
 
-	const pages = (await pageRes.json()) as { id: string; artist_id: string; title: string }[];
-	if (pages.length === 0) {
-		return json({ error: "Page not found" }, 404);
-	}
+	const pages = (await pageRes.json()) as PageInfo[];
+	if (pages.length === 0) return json({ error: "Page not found" }, 404);
+	return pages[0];
+}
 
-	const page = pages[0];
-	const normalizedEmail = email.toLowerCase().trim();
-
-	// Fetch all active templates + artist timezone for sequence scheduling
-	const [templateRes, tzRes] = await Promise.all([
-		supabaseRpc(
-			env,
-			`email_templates?capture_page_id=eq.${page.id}&is_active=eq.true&select=id,delay_mode,delay_days,sequence_order&order=sequence_order.asc`,
-			{},
-		),
-		supabaseRpc(env, `artists?id=eq.${page.artist_id}&select=timezone`, {}),
-	]);
-
-	const templates = templateRes.ok ? ((await templateRes.json()) as SequenceTemplate[]) : [];
-	const tzRows = tzRes.ok ? ((await tzRes.json()) as { timezone: string }[]) : [];
-	const timezone = tzRows[0]?.timezone ?? "America/New_York";
-
-	// Upsert fan_captures — insert or update last_captured_at on conflict (artist_id, email)
+async function persistCapture(
+	env: Env,
+	page: PageInfo,
+	email: string,
+	method: string,
+): Promise<{ fanCaptureId: string; captureEventId: string } | Response> {
 	const upsertRes = await supabaseRpc(env, "fan_captures?on_conflict=artist_id,email", {
 		method: "POST",
-		headers: {
-			Prefer: "return=representation,resolution=merge-duplicates",
-		},
-		body: {
-			artist_id: page.artist_id,
-			email: normalizedEmail,
-			last_captured_at: new Date().toISOString(),
-		},
+		headers: { Prefer: "return=representation,resolution=merge-duplicates" },
+		body: { artist_id: page.artist_id, email, last_captured_at: new Date().toISOString() },
 	});
-
-	if (!upsertRes.ok) {
-		return json({ error: "Capture failed" }, 502);
-	}
+	if (!upsertRes.ok) return json({ error: "Capture failed" }, 502);
 
 	const captures = (await upsertRes.json()) as { id: string }[];
 	const fanCaptureId = captures[0].id;
 
-	// Insert capture event and get its ID
 	const eventRes = await supabaseRpc(env, "capture_events", {
 		method: "POST",
 		headers: { Prefer: "return=representation" },
@@ -267,20 +232,50 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 			page_title: page.title,
 		},
 	});
-
-	if (!eventRes.ok) {
-		return json({ error: "Event creation failed" }, 502);
-	}
+	if (!eventRes.ok) return json({ error: "Event creation failed" }, 502);
 
 	const events = (await eventRes.json()) as { id: string }[];
-	const captureEventId = events[0].id;
+	return { fanCaptureId, captureEventId: events[0].id };
+}
 
-	// Queue all sequence emails (one per active template per capture event)
+async function handleCapture(request: Request, env: Env): Promise<Response> {
+	if (request.method === "OPTIONS") {
+		return new Response(null, { status: 204, headers: CORS_HEADERS });
+	}
+	if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+
+	const submission = await parseSubmission(request);
+	if (submission instanceof Response) return submission;
+
+	cleanupRateLimits();
+	const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
+	if (isRateLimited(clientIp, submission.slug)) {
+		return json({ error: "Too many submissions. Please wait a minute and try again." }, 429);
+	}
+
+	const page = await lookupPage(env, submission.slug);
+	if (page instanceof Response) return page;
+
+	const [templateRes, tzRes] = await Promise.all([
+		supabaseRpc(
+			env,
+			`email_templates?capture_page_id=eq.${page.id}&is_active=eq.true&select=id,delay_mode,delay_days,sequence_order&order=sequence_order.asc`,
+			{},
+		),
+		supabaseRpc(env, `artists?id=eq.${page.artist_id}&select=timezone`, {}),
+	]);
+	const templates = templateRes.ok ? ((await templateRes.json()) as SequenceTemplate[]) : [];
+	const tzRows = tzRes.ok ? ((await tzRes.json()) as { timezone: string }[]) : [];
+	const timezone = tzRows[0]?.timezone ?? "America/New_York";
+
+	const capture = await persistCapture(env, page, submission.email, submission.method);
+	if (capture instanceof Response) return capture;
+
 	await queueSequenceEmails(env, templates, {
-		fanCaptureId,
-		captureEventId,
+		fanCaptureId: capture.fanCaptureId,
+		captureEventId: capture.captureEventId,
 		artistId: page.artist_id,
-		email: normalizedEmail,
+		email: submission.email,
 		timezone,
 	});
 
