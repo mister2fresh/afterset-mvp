@@ -1,3 +1,4 @@
+import { BUTTON_RADIUS, escapeHtml, isLightColor } from "../html-utils.js";
 import { renderTextLinkGrid } from "../icons.js";
 
 export type EmailTheme = {
@@ -13,19 +14,6 @@ const DEFAULT_THEME: EmailTheme = {
 	textColor: "#f9fafb",
 	buttonStyle: "rounded",
 };
-
-const BUTTON_RADIUS: Record<string, string> = {
-	rounded: "6px",
-	pill: "9999px",
-	sharp: "0",
-};
-
-function isLightColor(hex: string): boolean {
-	const r = Number.parseInt(hex.slice(1, 3), 16);
-	const g = Number.parseInt(hex.slice(3, 5), 16);
-	const b = Number.parseInt(hex.slice(5, 7), 16);
-	return r * 0.299 + g * 0.587 + b * 0.114 > 150;
-}
 
 type TemplateParams = {
 	artistName: string;
@@ -95,12 +83,4 @@ export function toEmailTheme(page: {
 		textColor: page.text_color ?? DEFAULT_THEME.textColor,
 		buttonStyle: (page.button_style as EmailTheme["buttonStyle"]) ?? DEFAULT_THEME.buttonStyle,
 	};
-}
-
-function escapeHtml(text: string): string {
-	return text
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;");
 }

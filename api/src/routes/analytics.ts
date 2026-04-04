@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase.js";
+import { getTodayRange } from "../lib/timezone.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const app = new Hono<AuthEnv>();
@@ -22,20 +23,6 @@ type TonightEmailStatus = {
 	opened: number;
 	open_rate: number;
 };
-
-/** Returns UTC ISO boundaries for "today" in a given timezone. */
-function getTodayRange(tz: string): { start: string; end: string } {
-	const now = new Date();
-	const todayStr = now.toLocaleDateString("en-CA", { timeZone: tz });
-	const utcStr = now.toLocaleString("en-US", { timeZone: "UTC" });
-	const tzStr = now.toLocaleString("en-US", { timeZone: tz });
-	const offsetMs = new Date(utcStr).getTime() - new Date(tzStr).getTime();
-	const startMs = new Date(`${todayStr}T00:00:00Z`).getTime() + offsetMs;
-	return {
-		start: new Date(startMs).toISOString(),
-		end: new Date(startMs + 86_400_000).toISOString(),
-	};
-}
 
 /** Fetch email delivery status for a set of fan capture IDs. */
 async function fetchEmailStatus(fanCaptureIds: string[]): Promise<TonightEmailStatus> {

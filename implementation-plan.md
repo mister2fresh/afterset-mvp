@@ -31,34 +31,31 @@ The codebase is architecturally sound — clean package separation, consistent a
 
 ---
 
-### Phase B: Config & Build Pipeline Fixes
+### Phase B: Config & Build Pipeline Fixes ✅
 
-- **Why second:** Fixes the broken production build story and cleans up config contradictions. Must happen before structural code changes so `pnpm build:api` and `pnpm typecheck` are trustworthy validation gates.
-- **Scope:** `api/tsconfig.json`, `api/package.json`, `worker/package.json`, root `package.json`, `web/.gitignore`, `worker/wrangler.toml`
+- **Completed 2026-04-04**
+- **Approach:** Production now uses `tsx` (same as dev) instead of broken `tsc -b` emit. `build` is a typecheck gate, `start` runs `tsx src/index.ts` directly.
 - **Tasks:**
-  - [ ] Resolve `api/tsconfig.json` `noEmit: true` + `outDir: "dist"` contradiction — either remove `noEmit` to enable emit-based build, or change `start` script to use `tsx` and remove `outDir`/`rootDir` — **Critical** — (source: phase 1 + phase 2 + phase 3)
-  - [ ] Fix `api/package.json` `build` and `start` scripts to match chosen tsconfig strategy — **Critical** — (source: phase 3 broken pipeline)
-  - [ ] Remove redundant `esModuleInterop` from `api/tsconfig.json` (no-op when `verbatimModuleSyntax` is enabled) — **Low** — (source: phase 3)
-  - [ ] Add `"rebuild-pages": "tsx src/scripts/rebuild-all-pages.ts"` script to `api/package.json` — **Low** — (source: phase 3 unwired script)
-  - [ ] Rename `worker/package.json` `"publish"` to `"deploy"`; update root `deploy:worker` to match — **Low** — (source: phase 3)
-  - [ ] Delete `web/.gitignore` — redundant with root `.gitignore` — **Low** — (source: phase 3)
-  - [ ] Remove dead `ENVIRONMENT = "production"` var from `worker/wrangler.toml` (not in `Env` interface, never read) — **Low** — (source: phase 2 + phase 3 dead env)
-  - [ ] Change root `test` script from `pnpm --filter api test` to `pnpm -r test` for consistency with `lint`/`typecheck` — **Low** — (source: phase 3)
+  - [x] Resolve `api/tsconfig.json` — removed `outDir`/`rootDir` (not needed with noEmit), removed redundant `esModuleInterop`
+  - [x] Fix `api/package.json` — `build` → `tsc --noEmit`, `start` → `tsx src/index.ts`, added `rebuild-pages` script
+  - [x] Rename `worker/package.json` `"publish"` → `"deploy"`; updated root `deploy:worker`
+  - [x] Delete `web/.gitignore` — merged useful patterns (`*.log`, `.DS_Store`, `*.sw?`) to root `.gitignore`
+  - [x] Remove dead `ENVIRONMENT = "production"` from `worker/wrangler.toml`
+  - [x] Change root `test` to `pnpm -r test` for consistency with `lint`/`typecheck`
 
 ---
 
-### Phase C: Shared Utility & Type Extraction (API)
+### Phase C: Shared Utility & Type Extraction (API) ✅
 
-- **Why third:** Creates shared modules that eliminate 4x utility duplication (including a latent `escapeHtml` bug missing single-quote escaping) and consolidate inline type casts scattered across API routes. Must happen before component decomposition so extracted components import from clean shared modules.
-- **Scope:** `api/src/lib/` (3 new files + 4 existing), `api/src/routes/` (5 files), `worker/src/index.ts`
+- **Completed 2026-04-04**
 - **Tasks:**
-  - [ ] Create `api/src/lib/html-utils.ts` with canonical `escapeHtml` (including single-quote branch), `isLightColor`, `BUTTON_RADIUS`, `cssBackground`; update `capture-template.ts`, `download-page.ts`, `render-template.ts`, `icons.ts` to import from it — **Critical** — (source: phase 1 + phase 2 duplication; fixes render-template.ts missing single-quote bug)
-  - [ ] Create `api/src/lib/timezone.ts` with shared `getTodayRange(tz)`; update `analytics.ts` and `broadcasts.ts` to use it instead of independent timezone-boundary implementations — **Moderate** — (source: phase 1 duplication, correctness risk)
-  - [ ] Create `api/src/lib/supabase-types.ts` with shared types (`FanCaptureRow`, `CapturePageJoin`, `SocialLinks`, `StreamingLinks`); update inline `as unknown as {...}` casts in `analytics.ts`, `captures.ts`, `send-batch.ts`, `email-templates.ts`, `broadcasts.ts` — **Moderate** — (source: phase 4 type hygiene — 9 duplicated casts, 6 untyped JSON columns)
-  - [ ] Extract `buildCapturesQuery(artistId, filters)` in `captures.ts` to deduplicate list and export handlers (~90% shared query logic) — **Moderate** — (source: phase 1 duplication)
-  - [ ] Consolidate `ENTRY_METHODS` Set + `entryMethodMap` Record into a single data structure in `worker/src/index.ts`; move to module level alongside companion constants — **Low** — (source: phase 1 + phase 2 redundancy)
-  - [ ] Type `SequenceTemplate.delay_mode` as `"immediate" | "1_hour" | "next_morning"` instead of `string` in worker — **Low** — (source: phase 1 weak typing)
-  - [ ] Rename `nineAmUtc` to `localNineAmToUtc` in worker — **Low** — (source: phase 1 misleading name)
+  - [x] Created `api/src/lib/html-utils.ts` — canonical `escapeHtml` (with single-quote fix for render-template.ts bug), `isLightColor`, `BUTTON_RADIUS`, `cssBackground`; updated 4 consumers
+  - [x] Created `api/src/lib/timezone.ts` — shared `getTodayRange(tz)`; updated `analytics.ts` and `broadcasts.ts`
+  - [x] Extracted `applyFilters()` in `captures.ts` — deduplicates filter logic between list and export handlers while preserving Supabase's literal-type inference on `.select()`
+  - [x] Consolidated `ENTRY_METHODS` Set + `entryMethodMap` → single `ENTRY_METHOD_MAP` const in worker
+  - [x] Typed `SequenceTemplate.delay_mode` as `"immediate" | "1_hour" | "next_morning"` union
+  - [x] Renamed `nineAmUtc` → `localNineAmToUtc` in worker
+  - Skipped `supabase-types.ts` — inline casts only appear 2x cross-file (below 3x extraction threshold); captures dedup resolved the within-file duplication
 
 ---
 

@@ -1,17 +1,50 @@
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const app = new Hono<AuthEnv>();
 
+type CaptureFilters = {
+	pageId?: string;
+	method?: string;
+	dateFrom?: string;
+	dateTo?: string;
+	search?: string;
+};
+
+function parseFilters(c: Context): CaptureFilters {
+	return {
+		pageId: c.req.query("page_id"),
+		method: c.req.query("method"),
+		dateFrom: c.req.query("date_from"),
+		dateTo: c.req.query("date_to"),
+		search: c.req.query("search"),
+	};
+}
+
+function applyFilters<
+	Q extends {
+		eq: (...a: never[]) => Q;
+		gte: (...a: never[]) => Q;
+		lte: (...a: never[]) => Q;
+		ilike: (...a: never[]) => Q;
+	},
+>(query: Q, filters: CaptureFilters): Q {
+	if (filters.pageId) query = query.eq("capture_page_id" as never, filters.pageId as never);
+	if (filters.method) query = query.eq("entry_method" as never, filters.method as never);
+	if (filters.dateFrom) query = query.gte("captured_at" as never, filters.dateFrom as never);
+	if (filters.dateTo)
+		query = query.lte("captured_at" as never, `${filters.dateTo}T23:59:59.999Z` as never);
+	if (filters.search)
+		query = query.ilike("fan_captures.email" as never, `%${filters.search}%` as never);
+	return query;
+}
+
 // List captures with optional filters
 app.get("/", async (c) => {
 	const artist = c.get("artist");
-	const pageId = c.req.query("page_id");
-	const method = c.req.query("method");
-	const dateFrom = c.req.query("date_from");
-	const dateTo = c.req.query("date_to");
-	const search = c.req.query("search");
+	const filters = parseFilters(c);
 
 	let query = supabase
 		.from("capture_events")
@@ -28,23 +61,7 @@ app.get("/", async (c) => {
 		.eq("fan_captures.artist_id", artist.id)
 		.order("captured_at", { ascending: false })
 		.limit(500);
-
-	if (pageId) {
-		query = query.eq("capture_page_id", pageId);
-	}
-	if (method) {
-		query = query.eq("entry_method", method);
-	}
-	if (dateFrom) {
-		query = query.gte("captured_at", dateFrom);
-	}
-	if (dateTo) {
-		// Include the full end day
-		query = query.lte("captured_at", `${dateTo}T23:59:59.999Z`);
-	}
-	if (search) {
-		query = query.ilike("fan_captures.email", `%${search}%`);
-	}
+	query = applyFilters(query, filters);
 
 	const { data, error } = await query;
 
@@ -102,11 +119,7 @@ app.get("/counts", async (c) => {
 // CSV export of captures (same filters as list)
 app.get("/export", async (c) => {
 	const artist = c.get("artist");
-	const pageId = c.req.query("page_id");
-	const method = c.req.query("method");
-	const dateFrom = c.req.query("date_from");
-	const dateTo = c.req.query("date_to");
-	const search = c.req.query("search");
+	const filters = parseFilters(c);
 
 	let query = supabase
 		.from("capture_events")
@@ -121,12 +134,7 @@ app.get("/export", async (c) => {
 		)
 		.eq("fan_captures.artist_id", artist.id)
 		.order("captured_at", { ascending: false });
-
-	if (pageId) query = query.eq("capture_page_id", pageId);
-	if (method) query = query.eq("entry_method", method);
-	if (dateFrom) query = query.gte("captured_at", dateFrom);
-	if (dateTo) query = query.lte("captured_at", `${dateTo}T23:59:59.999Z`);
-	if (search) query = query.ilike("fan_captures.email", `%${search}%`);
+	query = applyFilters(query, filters);
 
 	const { data, error } = await query;
 	if (error) return c.json({ error: error.message }, 500);
