@@ -12,6 +12,7 @@ web/                      # Vite + React SPA (artist dashboard)
   public/                 # Static assets (SVG logo, PNG icons for PWA)
 api/                      # Hono API server (Node.js)
   src/routes/             # Hono route modules (capture-pages, email-templates, captures, email, etc.)
+  src/lib/                # Shared utilities (html-utils, timezone, download-page, download-token, icons, build-page, supabase)
   src/lib/email/          # EmailService abstraction, Resend provider, template renderer, suppression
   src/middleware/          # Auth middleware (Bearer token → artist context)
 worker/                   # Cloudflare Worker (serves capture pages from R2)
@@ -81,7 +82,7 @@ pnpm dev:api              # Hono API at localhost:3000 (tsx watch)
 
 # Build
 pnpm build:web            # tsc + vite build → web/dist/
-pnpm build:api            # tsc → api/dist/
+pnpm build:api            # tsc --noEmit (typecheck gate; production runs via tsx)
 
 # Worker (Cloudflare)
 pnpm dev:worker           # wrangler dev (local Worker)

@@ -1,3 +1,4 @@
+import { BUTTON_RADIUS, cssBackground, escapeHtml, isLightColor } from "./html-utils.js";
 import { renderIconItems, SOCIAL_ICONS, STREAMING_ICONS } from "./icons.js";
 
 type CapturePage = {
@@ -19,12 +20,6 @@ type CapturePage = {
 	incentive_content_type: string | null;
 };
 
-const BUTTON_RADIUS: Record<string, string> = {
-	rounded: "6px",
-	pill: "9999px",
-	sharp: "0",
-};
-
 const FONT_STACKS: Record<string, string> = {
 	modern: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif',
 	editorial: 'Georgia,"Times New Roman",Times,serif',
@@ -37,32 +32,6 @@ const TITLE_SIZES: Record<string, string> = {
 	large: "2rem",
 	xl: "2.75rem",
 };
-
-function cssBackground(style: string, accent: string, secondary: string, bg: string): string {
-	if (style === "gradient") {
-		return `linear-gradient(180deg, ${secondary}42 0%, transparent 60%), ${bg}`;
-	}
-	if (style === "glow") {
-		return `radial-gradient(ellipse at 50% 30%, ${accent}33 0%, transparent 70%), ${bg}`;
-	}
-	return bg;
-}
-
-function escapeHtml(str: string): string {
-	return str
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#39;");
-}
-
-function isLightColor(hex: string): boolean {
-	const r = Number.parseInt(hex.slice(1, 3), 16);
-	const g = Number.parseInt(hex.slice(3, 5), 16);
-	const b = Number.parseInt(hex.slice(5, 7), 16);
-	return r * 0.299 + g * 0.587 + b * 0.114 > 150;
-}
 
 function renderIconLinks(
 	streamingLinks: Record<string, string>,

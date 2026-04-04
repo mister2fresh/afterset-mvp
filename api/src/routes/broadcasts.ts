@@ -3,6 +3,7 @@ import { z } from "zod";
 import { renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.js";
 import { filterSuppressed } from "../lib/email/suppression.js";
 import { supabase } from "../lib/supabase.js";
+import { getTodayRange } from "../lib/timezone.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const app = new Hono<AuthEnv>();
@@ -340,21 +341,14 @@ async function checkDailyLimit(artistId: string): Promise<string | null> {
 		.single();
 
 	const tz = artist?.timezone ?? "America/New_York";
-	const now = new Date();
-	const formatter = new Intl.DateTimeFormat("en-CA", { timeZone: tz });
-	const todayStr = formatter.format(now);
-
-	// Start of today in artist's timezone
-	const startOfDay = new Date(`${todayStr}T00:00:00`);
-	const offset = now.getTime() - startOfDay.getTime();
-	const startUtc = new Date(now.getTime() - offset);
+	const { start } = getTodayRange(tz);
 
 	const { count } = await supabase
 		.from("broadcasts")
 		.select("id", { count: "exact", head: true })
 		.eq("artist_id", artistId)
 		.in("status", ["sending", "sent", "scheduled"])
-		.gte("updated_at", startUtc.toISOString());
+		.gte("updated_at", start);
 
 	if ((count ?? 0) >= DAILY_BROADCAST_LIMIT) {
 		return `Limit: ${DAILY_BROADCAST_LIMIT} broadcast per day`;

@@ -8,10 +8,10 @@
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api dev",
     "dev:worker": "pnpm --filter worker dev",
-    "deploy:worker": "pnpm --filter worker run publish",
+    "deploy:worker": "pnpm --filter worker deploy",
     "build:web": "pnpm --filter web build",
     "build:api": "pnpm --filter api build",
-    "test": "pnpm --filter api test",
+    "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   }

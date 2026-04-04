@@ -40,7 +40,7 @@ function getTimezoneOffsetMs(timezone: string, date: Date): number {
 	return new Date(utcStr).getTime() - new Date(tzStr).getTime();
 }
 
-function nineAmUtc(timezone: string, target: Date): string {
+function localNineAmToUtc(timezone: string, target: Date): string {
 	const dateFormatter = new Intl.DateTimeFormat("en-CA", {
 		timeZone: timezone,
 		year: "numeric",
@@ -62,18 +62,18 @@ function calculateNextMorning(timezone: string): string {
 	const localHour = Number.parseInt(formatter.format(now), 10);
 	const target = new Date(now);
 	target.setDate(target.getDate() + (localHour >= 9 ? 1 : 0));
-	return nineAmUtc(timezone, target);
+	return localNineAmToUtc(timezone, target);
 }
 
 function calculateDaysSendAt(timezone: string, days: number): string {
 	const target = new Date();
 	target.setDate(target.getDate() + days);
-	return nineAmUtc(timezone, target);
+	return localNineAmToUtc(timezone, target);
 }
 
 type SequenceTemplate = {
 	id: string;
-	delay_mode: string;
+	delay_mode: "immediate" | "1_hour" | "next_morning";
 	delay_days: number;
 	sequence_order: number;
 };
@@ -121,7 +121,7 @@ async function queueSequenceEmails(
 	});
 }
 
-const ENTRY_METHODS = new Set(["d", "q", "n", "s"]);
+const ENTRY_METHOD_MAP = { d: "direct", q: "qr", n: "nfc", s: "sms" } as const;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CORS_HEADERS = {
 	"Access-Control-Allow-Origin": "*",
@@ -202,7 +202,7 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	}
 
 	const method =
-		typeof entry_method === "string" && ENTRY_METHODS.has(entry_method) ? entry_method : "d";
+		typeof entry_method === "string" && entry_method in ENTRY_METHOD_MAP ? entry_method : "d";
 
 	// Look up capture page by slug to get artist_id and page id
 	const pageRes = await supabaseRpc(
@@ -256,14 +256,6 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	const captures = (await upsertRes.json()) as { id: string }[];
 	const fanCaptureId = captures[0].id;
 
-	// Map entry_method shortcode to enum value
-	const entryMethodMap: Record<string, string> = {
-		d: "direct",
-		q: "qr",
-		n: "nfc",
-		s: "sms",
-	};
-
 	// Insert capture event and get its ID
 	const eventRes = await supabaseRpc(env, "capture_events", {
 		method: "POST",
@@ -271,7 +263,7 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 		body: {
 			fan_capture_id: fanCaptureId,
 			capture_page_id: page.id,
-			entry_method: entryMethodMap[method],
+			entry_method: ENTRY_METHOD_MAP[method as keyof typeof ENTRY_METHOD_MAP],
 			page_title: page.title,
 		},
 	});

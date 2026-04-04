@@ -13,5 +13,4 @@ binding = "PAGES"
 bucket_name = "afterset-capture-pages"
 
 [vars]
-ENVIRONMENT = "production"
 SUPABASE_URL = "https://mnoajavdnawrmqsnbouy.supabase.co"

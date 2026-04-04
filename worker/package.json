@@ -3,7 +3,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "wrangler dev",
-		"publish": "wrangler deploy",
+		"deploy": "wrangler deploy",
 		"lint": "biome check --write .",
 		"typecheck": "tsc --noEmit"
 	},
