@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Loader2, Mail, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ export function InlineSequenceEditor({
 }) {
 	const queryClient = useQueryClient();
 	const queryKey = ["email-sequence", pageId];
+	const sectionRef = useRef<HTMLDivElement>(null);
 	const [sectionOpen, setSectionOpen] = useState(!!autoExpandFirst);
 	const [expandedOrder, setExpandedOrder] = useState<number | null>(autoExpandFirst ? 0 : null);
 	const [addingNew, setAddingNew] = useState(false);
@@ -32,6 +33,12 @@ export function InlineSequenceEditor({
 		queryKey,
 		queryFn: () => api.get<EmailTemplate[]>(`/capture-pages/${pageId}/email-sequence`),
 	});
+
+	useEffect(() => {
+		if (autoExpandFirst && sequence && sectionRef.current) {
+			sectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+		}
+	}, [autoExpandFirst, sequence]);
 
 	function invalidateAll() {
 		queryClient.invalidateQueries({ queryKey });
@@ -45,7 +52,7 @@ export function InlineSequenceEditor({
 	const activeCount = steps.filter((s) => s.is_active).length;
 
 	return (
-		<div className="space-y-3">
+		<div ref={sectionRef} className="space-y-3">
 			<button
 				type="button"
 				onClick={() => setSectionOpen(!sectionOpen)}

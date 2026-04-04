@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { EmailTemplateBadge } from "@/components/email-template-dialog";
+import { EmailTemplateBadge } from "@/components/email-template-badge";
 import { KeywordDialog } from "@/components/keyword-dialog";
 import { type CapturePage, fileTypeIcon, PageForm } from "@/components/page-form";
 import { QueryError } from "@/components/query-error";
@@ -79,6 +79,7 @@ function PagesPage() {
 	const { data: keywords } = useKeywords();
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editingPage, setEditingPage] = useState<CapturePage | null>(null);
+	const [justCreated, setJustCreated] = useState(false);
 
 	if (isLoading) {
 		return (
@@ -102,7 +103,10 @@ function PagesPage() {
 					mode="create"
 					open={createOpen}
 					onOpenChange={setCreateOpen}
-					onCreated={(p) => setEditingPage(p)}
+					onCreated={(p) => {
+						setJustCreated(true);
+						setEditingPage(p);
+					}}
 				/>
 			</div>
 
@@ -141,9 +145,13 @@ function PagesPage() {
 				<PageFormDialog
 					mode="edit"
 					page={editingPage}
+					autoExpandEmail={justCreated}
 					open={!!editingPage}
 					onOpenChange={(open) => {
-						if (!open) setEditingPage(null);
+						if (!open) {
+							setEditingPage(null);
+							setJustCreated(false);
+						}
 					}}
 				/>
 			)}
@@ -393,14 +401,14 @@ function PageCard({
 						{captureCount} {captureCount === 1 ? "capture" : "captures"}
 					</span>
 				</Link>
-				<div className="flex items-center justify-between">
+				<div className="flex flex-wrap items-center justify-between gap-y-1">
 					<div className="flex items-center gap-1.5">
 						<Badge variant={page.is_active ? "default" : "secondary"}>
 							{page.is_active ? "Active" : "Inactive"}
 						</Badge>
 						<EmailTemplateBadge pageId={page.id} onClick={onEdit} />
 					</div>
-					<div className="flex items-center gap-2">
+					<div className="flex shrink-0 items-center gap-2">
 						<div className="flex gap-0.5">
 							<div
 								className="size-3.5 rounded-full border border-border"
@@ -429,9 +437,21 @@ type PageFormDialogProps =
 			onCreated?: (page: CapturePage) => void;
 			page?: undefined;
 	  }
-	| { mode: "edit"; page: CapturePage; open: boolean; onOpenChange: (open: boolean) => void };
+	| {
+			mode: "edit";
+			page: CapturePage;
+			open: boolean;
+			onOpenChange: (open: boolean) => void;
+			autoExpandEmail?: boolean;
+	  };
 
-function PageFormDialog({ mode, page, open, onOpenChange, ...rest }: PageFormDialogProps) {
+function PageFormDialog({
+	mode,
+	page,
+	open,
+	onOpenChange,
+	...rest
+}: PageFormDialogProps & { autoExpandEmail?: boolean }) {
 	const isCreate = mode === "create";
 
 	const { data: keywords } = useKeywords();
@@ -464,6 +484,7 @@ function PageFormDialog({ mode, page, open, onOpenChange, ...rest }: PageFormDia
 				page={page}
 				currentKeyword={keyword?.keyword ?? null}
 				defaultLinks={defaultLinks}
+				autoExpandEmail={rest.autoExpandEmail}
 				onSuccess={(created) => {
 					onOpenChange(false);
 					if (mode === "create" && "onCreated" in rest && rest.onCreated) {

@@ -453,6 +453,7 @@ type PageFormProps = {
 	onSuccess: (page: CapturePage) => void;
 	onCancel?: () => void;
 	submitLabel?: string;
+	autoExpandEmail?: boolean;
 };
 
 function hasAnyLink(links: Record<string, string>): boolean {
@@ -496,6 +497,7 @@ export function PageForm({
 	onSuccess,
 	onCancel,
 	submitLabel,
+	autoExpandEmail,
 }: PageFormProps) {
 	const queryClient = useQueryClient();
 	const initialForm = page
@@ -1204,6 +1206,7 @@ export function PageForm({
 				<InlineSequenceEditor
 					pageId={page.id}
 					hasIncentive={!!(page.incentive_file_name && !fileRemoved)}
+					autoExpandFirst={autoExpandEmail}
 				/>
 			)}
 
