@@ -43,11 +43,9 @@ type SortDir = "asc" | "desc";
 export function CapturesTable({
 	rows,
 	showPageColumn = true,
-	compact = false,
 }: {
 	rows: CaptureRow[];
 	showPageColumn?: boolean;
-	compact?: boolean;
 }) {
 	const [sortKey, setSortKey] = useState<SortKey>("captured_at");
 	const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -69,10 +67,6 @@ export function CapturesTable({
 			return sortDir === "asc" ? cmp : -cmp;
 		});
 	}, [rows, sortKey, sortDir]);
-
-	if (compact) {
-		return <CompactTable rows={sorted} showPageColumn={showPageColumn} />;
-	}
 
 	return (
 		<>
@@ -200,55 +194,6 @@ function SortBar({
 	);
 }
 
-function CompactTable({ rows, showPageColumn }: { rows: CaptureRow[]; showPageColumn: boolean }) {
-	return (
-		<>
-			{/* Mobile: compact cards */}
-			<div className="space-y-2 md:hidden">
-				{rows.map((row) => (
-					<div
-						key={row.id}
-						className="flex items-center justify-between rounded-lg border border-border px-3 py-2"
-					>
-						<p className="min-w-0 truncate text-sm">{row.email}</p>
-						<span className="shrink-0 text-xs text-muted-foreground">
-							{formatDateShort(row.captured_at)}
-						</span>
-					</div>
-				))}
-			</div>
-
-			{/* Desktop: compact table */}
-			<div className="hidden md:block">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Email</TableHead>
-							{showPageColumn && <TableHead>Page</TableHead>}
-							<TableHead>Date</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{rows.map((row) => (
-							<TableRow key={row.id}>
-								<TableCell className="text-sm">{row.email}</TableCell>
-								{showPageColumn && (
-									<TableCell className="text-sm">
-										<PageLink row={row} />
-									</TableCell>
-								)}
-								<TableCell className="text-muted-foreground">
-									{formatDateShort(row.captured_at)}
-								</TableCell>
-							</TableRow>
-						))}
-					</TableBody>
-				</Table>
-			</div>
-		</>
-	);
-}
-
 function PageLink({ row, className }: { row: CaptureRow; className?: string }) {
 	if (row.page_id) {
 		return (
@@ -299,9 +244,4 @@ function formatDate(iso: string): string {
 		hour: "numeric",
 		minute: "2-digit",
 	});
-}
-
-function formatDateShort(iso: string): string {
-	const d = new Date(iso);
-	return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

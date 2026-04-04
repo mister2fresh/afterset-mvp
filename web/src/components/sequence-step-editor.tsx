@@ -23,7 +23,7 @@ export type EmailTemplate = {
 	updated_at: string;
 };
 
-export type StepForm = {
+type StepForm = {
 	subject: string;
 	body: string;
 	include_incentive_link: boolean;
@@ -40,7 +40,7 @@ const DELAY_OPTIONS = [
 	{ value: "next_morning" as const, label: "Next morning (9am)", icon: Sunrise },
 ];
 
-export const EMPTY_STEP: StepForm = {
+const EMPTY_STEP: StepForm = {
 	subject: "",
 	body: "",
 	include_incentive_link: false,
@@ -49,7 +49,7 @@ export const EMPTY_STEP: StepForm = {
 	is_active: false,
 };
 
-export function formFromTemplate(t: EmailTemplate): StepForm {
+function formFromTemplate(t: EmailTemplate): StepForm {
 	return {
 		subject: t.subject,
 		body: t.body,
@@ -72,7 +72,7 @@ export function StepDelayIcon({ step }: { step: EmailTemplate }) {
 	return <CalendarDays className="size-3" />;
 }
 
-export function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
 	return (
 		<button
 			type="button"

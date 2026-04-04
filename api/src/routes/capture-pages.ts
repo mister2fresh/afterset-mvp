@@ -203,28 +203,6 @@ app.patch("/:id", async (c) => {
 
 	const updates = { ...parsed.data };
 
-	let oldSlug: string | null = null;
-
-	if (updates.slug) {
-		const { data: existing } = await supabase
-			.from("capture_pages")
-			.select("id")
-			.eq("slug", updates.slug)
-			.neq("id", c.req.param("id"))
-			.maybeSingle();
-
-		if (existing) return c.json({ error: "Slug already taken" }, 409);
-
-		const { data: current } = await supabase
-			.from("capture_pages")
-			.select("slug")
-			.eq("id", c.req.param("id"))
-			.eq("artist_id", artist.id)
-			.single();
-
-		if (current && current.slug !== updates.slug) oldSlug = current.slug;
-	}
-
 	const { data, error } = await supabase
 		.from("capture_pages")
 		.update(updates)
@@ -237,7 +215,6 @@ app.patch("/:id", async (c) => {
 	if (!data) return c.json({ error: "Not found" }, 404);
 
 	buildPage(data.id, artist.id).catch(() => {});
-	if (oldSlug) deleteQr(oldSlug).catch(() => {});
 
 	return c.json(data);
 });

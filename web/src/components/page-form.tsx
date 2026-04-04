@@ -24,11 +24,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api, uploadToSignedUrl } from "@/lib/api";
 
-export type BackgroundStyle = "solid" | "gradient" | "glow";
-export type ButtonStyle = "rounded" | "pill" | "sharp";
-export type FontStyle = "modern" | "editorial" | "mono" | "condensed";
-export type TitleSize = "default" | "large" | "xl";
-export type LayoutStyle = "centered" | "stacked";
+type BackgroundStyle = "solid" | "gradient" | "glow";
+type ButtonStyle = "rounded" | "pill" | "sharp";
+type FontStyle = "modern" | "editorial" | "mono" | "condensed";
+type TitleSize = "default" | "large" | "xl";
+type LayoutStyle = "centered" | "stacked";
 
 export type CapturePage = {
 	id: string;
@@ -55,7 +55,7 @@ export type CapturePage = {
 	updated_at: string;
 };
 
-export type FormData = {
+type FormData = {
 	slug: string;
 	title: string;
 	value_exchange_text: string;
@@ -72,7 +72,7 @@ export type FormData = {
 	social_links: Record<string, string>;
 };
 
-export const EMPTY_FORM: FormData = {
+const EMPTY_FORM: FormData = {
 	slug: "",
 	title: "",
 	value_exchange_text: "",
@@ -89,7 +89,7 @@ export const EMPTY_FORM: FormData = {
 	social_links: {},
 };
 
-export function formFromPage(page: CapturePage): FormData {
+function formFromPage(page: CapturePage): FormData {
 	return {
 		slug: page.slug,
 		title: page.title,
@@ -121,7 +121,7 @@ type ThemePreset = {
 	bg_color: string;
 };
 
-export const THEME_PRESETS: ThemePreset[] = [
+const THEME_PRESETS: ThemePreset[] = [
 	{
 		name: "Gold",
 		accent_color: "#E8C547",
@@ -238,7 +238,7 @@ const SOCIAL_PLATFORMS = [
 	{ key: "facebook", label: "Facebook" },
 ] as const;
 
-export function formatFileSize(bytes: number): string {
+function formatFileSize(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -306,7 +306,7 @@ function previewBackground(
 	return bg;
 }
 
-export function CapturePagePreview({ form }: { form: FormData }) {
+function CapturePagePreview({ form }: { form: FormData }) {
 	const bg = previewBackground(
 		form.background_style,
 		form.accent_color,
@@ -386,7 +386,7 @@ export function CapturePagePreview({ form }: { form: FormData }) {
 	);
 }
 
-export function IncentiveFileDisplay({
+function IncentiveFileDisplay({
 	name,
 	size,
 	contentType,

@@ -1,6 +1,6 @@
 import { renderIconGrid } from "./icons.js";
 
-export type DownloadPageParams = {
+type DownloadPageParams = {
 	artistName: string;
 	fileName: string;
 	contentType: string;
