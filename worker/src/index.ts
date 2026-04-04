@@ -238,6 +238,15 @@ async function persistCapture(
 	return { fanCaptureId, captureEventId: events[0].id };
 }
 
+// Capture-to-drip flow:
+// 1. Fan submits email via capture page form → POST /api/capture
+// 2. parseSubmission() validates email + slug, lookupPage() finds the capture page
+// 3. persistCapture() upserts fan_captures (deduped per artist) and creates a capture_event
+// 4. Worker fetches all active email_templates for this page (ordered by sequence_order)
+// 5. queueSequenceEmails() inserts rows into pending_emails with calculated send_at times:
+//    - Step 0: immediate, +1h, or next-morning based on template.delay_mode
+//    - Steps 1+: artist-local 9am on day N (template.delay_days)
+// 6. pg_cron runs send-batch every minute, which claims and sends due pending_emails via Resend
 async function handleCapture(request: Request, env: Env): Promise<Response> {
 	if (request.method === "OPTIONS") {
 		return new Response(null, { status: 204, headers: CORS_HEADERS });
