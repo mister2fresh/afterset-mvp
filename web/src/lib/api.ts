@@ -65,6 +65,26 @@ export async function uploadToSignedUrl(
 	});
 }
 
+async function fetchApiText(path: string, options: RequestInit = {}): Promise<string> {
+	const token = await getAccessToken();
+
+	const res = await fetch(`/api${path}`, {
+		...options,
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${token}`,
+			...options.headers,
+		},
+	});
+
+	if (!res.ok) {
+		const body = await res.text().catch(() => "");
+		throw new Error(body || `API error ${res.status}`);
+	}
+
+	return res.text();
+}
+
 async function fetchApiBlob(path: string): Promise<Blob> {
 	const token = await getAccessToken();
 
@@ -85,5 +105,7 @@ export const api = {
 	patch: <T>(path: string, body: unknown) =>
 		fetchApi<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
 	delete: (path: string) => fetchApi<void>(path, { method: "DELETE" }),
+	postText: (path: string, body: unknown) =>
+		fetchApiText(path, { method: "POST", body: JSON.stringify(body) }),
 	getBlob: (path: string) => fetchApiBlob(path),
 };

@@ -19,7 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
+import { getAllTimezones } from "@/lib/timezones";
+import type { ArtistSettings } from "@/lib/types";
 
 export const Route = createFileRoute("/onboarding")({
 	beforeLoad: ({ context }) => {
@@ -29,29 +30,6 @@ export const Route = createFileRoute("/onboarding")({
 	},
 	component: OnboardingPage,
 });
-
-type ArtistSettings = {
-	id: string;
-	name: string;
-	email: string;
-	timezone: string;
-	onboarding_completed: boolean;
-};
-
-function getAllTimezones(): string[] {
-	try {
-		return Intl.supportedValuesOf("timeZone");
-	} catch {
-		return [
-			"America/New_York",
-			"America/Chicago",
-			"America/Denver",
-			"America/Los_Angeles",
-			"America/Anchorage",
-			"Pacific/Honolulu",
-		];
-	}
-}
 
 const STEPS = ["Profile", "First Page", "Follow-Up Email", "Ready"] as const;
 
@@ -99,6 +77,15 @@ function OnboardingPage() {
 	const [previewHtml, setPreviewHtml] = useState("");
 	const [showPreview, setShowPreview] = useState(false);
 
+	const emailForm = { subject: emailSubject, body: emailBody, delayMode, includeIncentive };
+	function handleEmailFormChange(patch: Partial<typeof emailForm>) {
+		if ("subject" in patch) setEmailSubject(patch.subject!);
+		if ("body" in patch) setEmailBody(patch.body!);
+		if ("delayMode" in patch) setDelayMode(patch.delayMode!);
+		if ("includeIncentive" in patch) setIncludeIncentive(patch.includeIncentive!);
+	}
+	const emailPreview = { html: previewHtml, show: showPreview, onShowChange: setShowPreview };
+
 	const profileMutation = useMutation({
 		mutationFn: (updates: { name: string; timezone: string }) =>
 			api.patch<ArtistSettings>("/settings", updates),
@@ -136,24 +123,12 @@ function OnboardingPage() {
 	});
 
 	const emailPreviewMutation = useMutation({
-		mutationFn: async () => {
-			const {
-				data: { session },
-			} = await supabase.auth.getSession();
-			const res = await fetch(`/api/capture-pages/${createdPage?.id}/email-sequence/0/preview`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${session?.access_token}`,
-				},
-				body: JSON.stringify({
-					subject: emailSubject,
-					body: emailBody,
-					include_incentive_link: includeIncentive,
-				}),
-			});
-			return res.text();
-		},
+		mutationFn: () =>
+			api.postText(`/capture-pages/${createdPage?.id}/email-sequence/0/preview`, {
+				subject: emailSubject,
+				body: emailBody,
+				include_incentive_link: includeIncentive,
+			}),
 		onSuccess: (html) => {
 			setPreviewHtml(html);
 			setShowPreview(true);
@@ -303,19 +278,10 @@ function OnboardingPage() {
 					{step === 2 && createdPage && (
 						<EmailStep
 							createdPage={createdPage}
-							subject={emailSubject}
-							onSubjectChange={setEmailSubject}
-							body={emailBody}
-							onBodyChange={setEmailBody}
-							delayMode={delayMode}
-							onDelayModeChange={setDelayMode}
-							includeIncentive={includeIncentive}
-							onIncludeIncentiveChange={setIncludeIncentive}
-							previewHtml={previewHtml}
-							showPreview={showPreview}
-							onShowPreviewChange={setShowPreview}
-							saveMutation={emailSaveMutation}
-							previewMutation={emailPreviewMutation}
+							emailForm={emailForm}
+							onEmailFormChange={handleEmailFormChange}
+							preview={emailPreview}
+							mutations={{ save: emailSaveMutation, preview: emailPreviewMutation }}
 							onSubmit={handleEmailSubmit}
 							onSkip={() => setStep(3)}
 						/>
@@ -370,60 +336,54 @@ function OnboardingPage() {
 	);
 }
 
+type EmailFormData = {
+	subject: string;
+	body: string;
+	delayMode: DelayMode;
+	includeIncentive: boolean;
+};
+type EmailPreview = { html: string; show: boolean; onShowChange: (v: boolean) => void };
+type EmailMutations = {
+	save: { mutate: () => void; isPending: boolean; isError: boolean; error: Error | null };
+	preview: { mutate: () => void; isPending: boolean };
+};
+
 function EmailStep({
 	createdPage,
-	subject,
-	onSubjectChange,
-	body,
-	onBodyChange,
-	delayMode,
-	onDelayModeChange,
-	includeIncentive,
-	onIncludeIncentiveChange,
-	previewHtml,
-	showPreview,
-	onShowPreviewChange,
-	saveMutation,
-	previewMutation,
+	emailForm,
+	onEmailFormChange,
+	preview,
+	mutations,
 	onSubmit,
 	onSkip,
 }: {
 	createdPage: CapturePage;
-	subject: string;
-	onSubjectChange: (v: string) => void;
-	body: string;
-	onBodyChange: (v: string) => void;
-	delayMode: DelayMode;
-	onDelayModeChange: (v: DelayMode) => void;
-	includeIncentive: boolean;
-	onIncludeIncentiveChange: (v: boolean) => void;
-	previewHtml: string;
-	showPreview: boolean;
-	onShowPreviewChange: (v: boolean) => void;
-	saveMutation: { mutate: () => void; isPending: boolean; isError: boolean; error: Error | null };
-	previewMutation: { mutate: () => void; isPending: boolean };
+	emailForm: EmailFormData;
+	onEmailFormChange: (patch: Partial<EmailFormData>) => void;
+	preview: EmailPreview;
+	mutations: EmailMutations;
 	onSubmit: (e: FormEvent) => void;
 	onSkip: () => void;
 }) {
 	const hasIncentive = !!createdPage.incentive_file_path;
-	const canSubmit = subject.trim() && body.trim();
+	const canSubmit = emailForm.subject.trim() && emailForm.body.trim();
 
-	if (showPreview) {
+	if (preview.show) {
 		return (
 			<div className="space-y-4">
 				<div className="text-center">
 					<h2 className="font-display text-xl font-bold">Preview Email</h2>
-					<p className="mt-1 text-sm text-muted-foreground">Subject: {subject}</p>
+					<p className="mt-1 text-sm text-muted-foreground">Subject: {emailForm.subject}</p>
 				</div>
 				<div className="overflow-hidden rounded-lg border border-border">
 					<iframe
 						title="Email preview"
-						srcDoc={previewHtml}
+						srcDoc={preview.html}
 						className="h-[300px] w-full bg-[#0a0e1a]"
 						sandbox=""
 					/>
 				</div>
-				<Button variant="outline" className="w-full" onClick={() => onShowPreviewChange(false)}>
+				<Button variant="outline" className="w-full" onClick={() => preview.onShowChange(false)}>
 					Back to Editor
 				</Button>
 			</div>
@@ -444,8 +404,8 @@ function EmailStep({
 				<Input
 					id="onb-email-subject"
 					placeholder='e.g. "Thanks for coming out tonight!"'
-					value={subject}
-					onChange={(e) => onSubjectChange(e.target.value)}
+					value={emailForm.subject}
+					onChange={(e) => onEmailFormChange({ subject: e.target.value })}
 					maxLength={200}
 					autoFocus
 				/>
@@ -456,13 +416,13 @@ function EmailStep({
 				<Textarea
 					id="onb-email-body"
 					placeholder="Write your message to new fans..."
-					value={body}
-					onChange={(e) => onBodyChange(e.target.value)}
+					value={emailForm.body}
+					onChange={(e) => onEmailFormChange({ body: e.target.value })}
 					maxLength={5000}
 					rows={5}
 					className="resize-y"
 				/>
-				<p className="text-xs text-muted-foreground">{body.length}/5000</p>
+				<p className="text-xs text-muted-foreground">{emailForm.body.length}/5000</p>
 			</div>
 
 			<div className="space-y-2">
@@ -470,12 +430,12 @@ function EmailStep({
 				<div className="grid grid-cols-3 gap-2">
 					{DELAY_OPTIONS.map((opt) => {
 						const Icon = opt.icon;
-						const active = delayMode === opt.value;
+						const active = emailForm.delayMode === opt.value;
 						return (
 							<button
 								key={opt.value}
 								type="button"
-								onClick={() => onDelayModeChange(opt.value)}
+								onClick={() => onEmailFormChange({ delayMode: opt.value })}
 								className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors ${active ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
 							>
 								<Icon className="size-4" />
@@ -497,12 +457,12 @@ function EmailStep({
 					<button
 						type="button"
 						role="switch"
-						aria-checked={includeIncentive}
-						onClick={() => onIncludeIncentiveChange(!includeIncentive)}
-						className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${includeIncentive ? "bg-honey-gold" : "bg-muted"}`}
+						aria-checked={emailForm.includeIncentive}
+						onClick={() => onEmailFormChange({ includeIncentive: !emailForm.includeIncentive })}
+						className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${emailForm.includeIncentive ? "bg-honey-gold" : "bg-muted"}`}
 					>
 						<span
-							className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow transition-transform ${includeIncentive ? "translate-x-5" : "translate-x-0"}`}
+							className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow transition-transform ${emailForm.includeIncentive ? "translate-x-5" : "translate-x-0"}`}
 						/>
 					</button>
 				</div>
@@ -513,10 +473,10 @@ function EmailStep({
 					type="button"
 					variant="outline"
 					size="sm"
-					disabled={!canSubmit || previewMutation.isPending}
-					onClick={() => previewMutation.mutate()}
+					disabled={!canSubmit || mutations.preview.isPending}
+					onClick={() => mutations.preview.mutate()}
 				>
-					{previewMutation.isPending ? (
+					{mutations.preview.isPending ? (
 						<Loader2 className="size-4 animate-spin" />
 					) : (
 						<Eye className="size-4" />
@@ -527,9 +487,9 @@ function EmailStep({
 				<Button
 					type="submit"
 					className="w-full sm:w-auto"
-					disabled={!canSubmit || saveMutation.isPending}
+					disabled={!canSubmit || mutations.save.isPending}
 				>
-					{saveMutation.isPending ? (
+					{mutations.save.isPending ? (
 						<Loader2 className="size-4 animate-spin" />
 					) : (
 						<Send className="size-4" />
@@ -546,8 +506,8 @@ function EmailStep({
 				Skip for now — you can set this up later from the Emails tab
 			</button>
 
-			{saveMutation.isError && (
-				<p className="text-center text-sm text-red-400">{saveMutation.error?.message}</p>
+			{mutations.save.isError && (
+				<p className="text-center text-sm text-red-400">{mutations.save.error?.message}</p>
 			)}
 		</form>
 	);

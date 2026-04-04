@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { useId } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fillLast30Days } from "@/components/daily-chart";
 
@@ -162,6 +163,7 @@ export function MiniDailyChart({
 }: {
 	daily: { date: string; count: number }[];
 }): React.ReactElement {
+	const gradientId = useId();
 	const filled = fillLast30Days(daily);
 	const data = filled.map((d) => ({
 		date: new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
@@ -172,7 +174,7 @@ export function MiniDailyChart({
 		<ResponsiveContainer width="100%" height={120}>
 			<AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
 				<defs>
-					<linearGradient id="showGradient" x1="0" y1="0" x2="0" y2="1">
+					<linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
 						<stop offset="0%" stopColor="#E8C547" stopOpacity={0.3} />
 						<stop offset="100%" stopColor="#E8C547" stopOpacity={0} />
 					</linearGradient>
@@ -198,7 +200,7 @@ export function MiniDailyChart({
 					dataKey="count"
 					stroke="#E8C547"
 					strokeWidth={2}
-					fill="url(#showGradient)"
+					fill={`url(#${gradientId})`}
 				/>
 			</AreaChart>
 		</ResponsiveContainer>

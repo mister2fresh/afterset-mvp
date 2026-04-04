@@ -63,6 +63,167 @@ function usePages() {
 	});
 }
 
+type FilterBarProps = {
+	filters: FansSearch;
+	updateFilter: (update: Partial<FansSearch>) => void;
+	clearFilters: () => void;
+	pages: CapturePage[] | undefined;
+	rows: CaptureRow[] | undefined;
+	exportCsv: () => void;
+};
+
+function FilterBar({
+	filters,
+	updateFilter,
+	clearFilters,
+	pages,
+	rows,
+	exportCsv,
+}: FilterBarProps) {
+	const hasFilters =
+		filters.page_id || filters.method || filters.date_from || filters.date_to || filters.search;
+
+	return (
+		<div className="flex flex-wrap items-end gap-3">
+			<div className="relative w-full sm:w-56">
+				<Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+				<Input
+					placeholder="Search email..."
+					className="pl-8"
+					value={filters.search ?? ""}
+					onChange={(e) => updateFilter({ search: e.target.value || undefined })}
+				/>
+			</div>
+
+			<select
+				className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+				value={filters.page_id ?? ""}
+				onChange={(e) =>
+					updateFilter({
+						page_id: e.target.value || undefined,
+						page_title: pages?.find((p) => p.id === e.target.value)?.title,
+					})
+				}
+			>
+				<option value="">All pages</option>
+				{(pages ?? []).map((p) => (
+					<option key={p.id} value={p.id}>
+						{p.title}
+					</option>
+				))}
+			</select>
+
+			<select
+				className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+				value={filters.method ?? ""}
+				onChange={(e) => updateFilter({ method: e.target.value || undefined })}
+			>
+				<option value="">All methods</option>
+				<option value="qr">QR Code</option>
+				<option value="direct">Direct Link</option>
+				<option value="sms">SMS</option>
+				<option value="nfc">NFC</option>
+			</select>
+
+			<Input
+				type="date"
+				className="h-9 w-36"
+				value={filters.date_from ?? ""}
+				onChange={(e) => updateFilter({ date_from: e.target.value || undefined })}
+				placeholder="From"
+			/>
+			<Input
+				type="date"
+				className="h-9 w-36"
+				value={filters.date_to ?? ""}
+				onChange={(e) => updateFilter({ date_to: e.target.value || undefined })}
+				placeholder="To"
+			/>
+
+			{hasFilters && (
+				<Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+					<X className="size-3.5" />
+					Clear
+				</Button>
+			)}
+
+			<div className="ml-auto">
+				<Button variant="outline" size="sm" onClick={exportCsv} disabled={!rows?.length}>
+					<Download className="size-3.5" />
+					Export CSV
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+type ActiveFilterBadgesProps = {
+	filters: FansSearch;
+	updateFilter: (update: Partial<FansSearch>) => void;
+	rows: CaptureRow[] | undefined;
+};
+
+function ActiveFilterBadges({ filters, updateFilter, rows }: ActiveFilterBadgesProps) {
+	return (
+		<div className="flex flex-wrap items-center gap-2">
+			<span className="text-xs text-muted-foreground">Filters:</span>
+			{filters.page_id && (
+				<Badge variant="secondary" className="gap-1">
+					Page: {filters.page_title ?? "..."}
+					<button
+						type="button"
+						onClick={() => updateFilter({ page_id: undefined, page_title: undefined })}
+						className="ml-0.5 rounded-full p-1 hover:bg-muted"
+					>
+						<X className="size-3.5" />
+					</button>
+				</Badge>
+			)}
+			{filters.method && (
+				<Badge variant="secondary" className="gap-1">
+					Method: {filters.method}
+					<button
+						type="button"
+						onClick={() => updateFilter({ method: undefined })}
+						className="ml-0.5 rounded-full p-1 hover:bg-muted"
+					>
+						<X className="size-3.5" />
+					</button>
+				</Badge>
+			)}
+			{filters.search && (
+				<Badge variant="secondary" className="gap-1">
+					Search: {filters.search}
+					<button
+						type="button"
+						onClick={() => updateFilter({ search: undefined })}
+						className="ml-0.5 rounded-full p-1 hover:bg-muted"
+					>
+						<X className="size-3.5" />
+					</button>
+				</Badge>
+			)}
+			{(filters.date_from || filters.date_to) && (
+				<Badge variant="secondary" className="gap-1">
+					{filters.date_from ?? "..."} — {filters.date_to ?? "..."}
+					<button
+						type="button"
+						onClick={() => updateFilter({ date_from: undefined, date_to: undefined })}
+						className="ml-0.5 rounded-full p-1 hover:bg-muted"
+					>
+						<X className="size-3.5" />
+					</button>
+				</Badge>
+			)}
+			{rows && (
+				<span className="text-xs text-muted-foreground">
+					{rows.length} result{rows.length !== 1 ? "s" : ""}
+				</span>
+			)}
+		</div>
+	);
+}
+
 function FansPage() {
 	const filters = Route.useSearch();
 	const navigate = useNavigate();
@@ -77,7 +238,6 @@ function FansPage() {
 			to: "/fans",
 			search: (prev: FansSearch) => {
 				const next = { ...prev, ...update };
-				// Remove undefined/empty values
 				for (const key of Object.keys(next) as (keyof FansSearch)[]) {
 					if (!next[key]) delete next[key];
 				}
@@ -107,144 +267,19 @@ function FansPage() {
 
 	return (
 		<div className="space-y-4">
-			{/* Filter bar */}
-			<div className="flex flex-wrap items-end gap-3">
-				{/* Email search */}
-				<div className="relative w-full sm:w-56">
-					<Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
-					<Input
-						placeholder="Search email..."
-						className="pl-8"
-						value={filters.search ?? ""}
-						onChange={(e) => updateFilter({ search: e.target.value || undefined })}
-					/>
-				</div>
+			<FilterBar
+				filters={filters}
+				updateFilter={updateFilter}
+				clearFilters={clearFilters}
+				pages={pages}
+				rows={rows}
+				exportCsv={exportCsv}
+			/>
 
-				{/* Page filter */}
-				<select
-					className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
-					value={filters.page_id ?? ""}
-					onChange={(e) =>
-						updateFilter({
-							page_id: e.target.value || undefined,
-							page_title: pages?.find((p) => p.id === e.target.value)?.title,
-						})
-					}
-				>
-					<option value="">All pages</option>
-					{(pages ?? []).map((p) => (
-						<option key={p.id} value={p.id}>
-							{p.title}
-						</option>
-					))}
-				</select>
-
-				{/* Method filter */}
-				<select
-					className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
-					value={filters.method ?? ""}
-					onChange={(e) => updateFilter({ method: e.target.value || undefined })}
-				>
-					<option value="">All methods</option>
-					<option value="qr">QR Code</option>
-					<option value="direct">Direct Link</option>
-					<option value="sms">SMS</option>
-					<option value="nfc">NFC</option>
-				</select>
-
-				{/* Date range */}
-				<Input
-					type="date"
-					className="h-9 w-36"
-					value={filters.date_from ?? ""}
-					onChange={(e) => updateFilter({ date_from: e.target.value || undefined })}
-					placeholder="From"
-				/>
-				<Input
-					type="date"
-					className="h-9 w-36"
-					value={filters.date_to ?? ""}
-					onChange={(e) => updateFilter({ date_to: e.target.value || undefined })}
-					placeholder="To"
-				/>
-
-				{/* Actions */}
-				{hasFilters && (
-					<Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
-						<X className="size-3.5" />
-						Clear
-					</Button>
-				)}
-
-				<div className="ml-auto">
-					<Button variant="outline" size="sm" onClick={exportCsv} disabled={!rows?.length}>
-						<Download className="size-3.5" />
-						Export CSV
-					</Button>
-				</div>
-			</div>
-
-			{/* Active filter badges */}
 			{hasFilters && (
-				<div className="flex flex-wrap items-center gap-2">
-					<span className="text-xs text-muted-foreground">Filters:</span>
-					{filters.page_id && (
-						<Badge variant="secondary" className="gap-1">
-							Page: {filters.page_title ?? "..."}
-							<button
-								type="button"
-								onClick={() => updateFilter({ page_id: undefined, page_title: undefined })}
-								className="ml-0.5 rounded-full p-1 hover:bg-muted"
-							>
-								<X className="size-3.5" />
-							</button>
-						</Badge>
-					)}
-					{filters.method && (
-						<Badge variant="secondary" className="gap-1">
-							Method: {filters.method}
-							<button
-								type="button"
-								onClick={() => updateFilter({ method: undefined })}
-								className="ml-0.5 rounded-full p-1 hover:bg-muted"
-							>
-								<X className="size-3.5" />
-							</button>
-						</Badge>
-					)}
-					{filters.search && (
-						<Badge variant="secondary" className="gap-1">
-							Search: {filters.search}
-							<button
-								type="button"
-								onClick={() => updateFilter({ search: undefined })}
-								className="ml-0.5 rounded-full p-1 hover:bg-muted"
-							>
-								<X className="size-3.5" />
-							</button>
-						</Badge>
-					)}
-					{(filters.date_from || filters.date_to) && (
-						<Badge variant="secondary" className="gap-1">
-							{filters.date_from ?? "..."} — {filters.date_to ?? "..."}
-							<button
-								type="button"
-								onClick={() => updateFilter({ date_from: undefined, date_to: undefined })}
-								className="ml-0.5 rounded-full p-1 hover:bg-muted"
-							>
-								<X className="size-3.5" />
-							</button>
-						</Badge>
-					)}
-					{rows && (
-						<span className="text-xs text-muted-foreground">
-							{rows.length} result{rows.length !== 1 ? "s" : ""}
-						</span>
-					)}
-				</div>
+				<ActiveFilterBadges filters={filters} updateFilter={updateFilter} rows={rows} />
 			)}
 
-			{/* Content */}
 			{isError ? (
 				<QueryError onRetry={() => refetch()} />
 			) : isLoading ? (

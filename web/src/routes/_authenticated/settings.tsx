@@ -7,43 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { getUser } from "@/lib/auth";
+import { getAllTimezones } from "@/lib/timezones";
+import type { ArtistSettings } from "@/lib/types";
 
 export const Route = createFileRoute("/_authenticated/settings")({
 	component: SettingsPage,
 });
-
-type ArtistSettings = {
-	id: string;
-	name: string;
-	email: string;
-	timezone: string;
-};
-
-const COMMON_TIMEZONES = [
-	"America/New_York",
-	"America/Chicago",
-	"America/Denver",
-	"America/Los_Angeles",
-	"America/Anchorage",
-	"Pacific/Honolulu",
-	"America/Phoenix",
-	"America/Toronto",
-	"America/Vancouver",
-	"Europe/London",
-	"Europe/Paris",
-	"Europe/Berlin",
-	"Asia/Tokyo",
-	"Asia/Shanghai",
-	"Australia/Sydney",
-];
-
-function getAllTimezones(): string[] {
-	try {
-		return Intl.supportedValuesOf("timeZone");
-	} catch {
-		return COMMON_TIMEZONES;
-	}
-}
 
 function SettingsPage() {
 	const user = getUser();

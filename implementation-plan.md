@@ -59,30 +59,28 @@ The codebase is architecturally sound — clean package separation, consistent a
 
 ---
 
-### Phase D: Frontend Type & Consistency Fixes
+### Phase D: Frontend Type & Consistency Fixes ✅
 
-- **Why fourth:** Consolidates duplicated frontend types and fixes abstraction bypasses (3 components calling raw `fetch` instead of the typed `api` helper). Independent from Phase C so could run in parallel. Must precede component decomposition since extracted components will use these shared types.
-- **Scope:** `web/src/lib/` (2 new files), `web/src/components/` (3 files), `web/src/routes/` (2 files), `web/src/hooks/` (1 file)
+- **Completed 2026-04-04**
 - **Tasks:**
-  - [ ] Replace raw `fetch()` with `api` helper in `onboarding.tsx` (emailPreviewMutation, line 138), `broadcast-compose-dialog.tsx` (handlePreview, line 249), `sequence-step-editor.tsx` (preview, line 123) — bypasses token refresh and error normalization — **Critical** — (source: phase 1 abstraction bypass)
-  - [ ] Create shared `Broadcast` type in `web/src/lib/types.ts`; update `broadcast-engagement.tsx` (5 fields), `broadcast-compose-dialog.tsx` (18 fields), `emails.tsx` (14 fields) to import it — **Moderate** — (source: phase 2 type duplication — 3 competing definitions)
-  - [ ] Extract `getAllTimezones()` to `web/src/lib/timezones.ts`; deduplicate `ArtistSettings` type to `web/src/lib/types.ts`; update `settings.tsx` and `onboarding.tsx` — **Moderate** — (source: phase 1 duplication — different fallback lists)
-  - [ ] Fix `use-mobile.ts` initial state: initialize from `window.innerWidth < MOBILE_BREAKPOINT` instead of `undefined` to prevent flash of desktop layout on mobile — **Moderate** — (source: phase 1)
-  - [ ] Fix Recharts gradient `id` collisions in `daily-chart.tsx` and `show-drill-down.tsx` — use `useId()` instead of hardcoded strings — **Low** — (source: phase 1 SVG ID collision if two charts render simultaneously)
+  - [x] Added `api.postText()` method for HTML-returning endpoints; replaced raw `fetch()` in `onboarding.tsx`, `broadcast-compose-dialog.tsx`, `sequence-step-editor.tsx` — removed 3 direct `supabase` imports
+  - [x] Created shared `Broadcast` type in `web/src/lib/types.ts`; updated `broadcast-engagement.tsx`, `broadcast-compose-dialog.tsx`, `emails.tsx`, `dashboard-all-shows.tsx` to import it
+  - [x] Extracted `getAllTimezones()` to `web/src/lib/timezones.ts` (with full 15-timezone fallback); shared `ArtistSettings` type in `web/src/lib/types.ts`; updated `settings.tsx` and `onboarding.tsx`
+  - [x] Fixed `use-mobile.ts` initial state: `useState(window.innerWidth < MOBILE_BREAKPOINT)` instead of `undefined` — eliminates flash of desktop layout on mobile
+  - [x] Fixed Recharts gradient `id` collisions in `daily-chart.tsx` and `show-drill-down.tsx` using `useId()`
 
 ---
 
-### Phase E: Component Decomposition
+### Phase E: Component Decomposition ✅
 
-- **Why fifth:** Breaks apart the 5 oversized components that concentrate most readability issues. Depends on shared utilities (C) and types (D) being available. May span 2 sessions.
-- **Scope:** `web/src/components/` (3 existing + 4-6 new files), `web/src/routes/` (3 files)
+- **Completed 2026-04-04**
 - **Tasks:**
-  - [ ] Extract from `page-form.tsx` (740 lines): `ThemeEditor` (~213 lines, 848-1061), `IncentiveUploader` (~66 lines, 1063-1129), `LinkEditor` (~70 lines, 1131-1201), `KeywordField` (~70 lines, 776-846); derive `applyPreset`/`isPresetActive` from shared `THEME_FIELDS` array to prevent drift — **Critical** — (source: phase 1 oversized)
-  - [ ] Extract `page-form.tsx` mutation logic: pull file upload and keyword save/remove out of the `useMutation` `mutationFn` (lines 595-653) into named async functions — **Moderate** — (source: phase 1)
-  - [ ] Refactor `broadcast-compose-dialog.tsx` (590 lines, 14 `useState` calls): consolidate into `useReducer` or single form-state object; the reset logic (lines 139-166) is a wall of setters that's easy to get wrong — **Critical** — (source: phase 1)
-  - [ ] Decompose `onboarding.tsx` (305 lines, 13+ state variables): extract each wizard step into its own component; reduce `EmailStep` from 16 props by grouping into objects (e.g., `emailForm: { subject, body, delayMode, includeIncentive }`) or using context — **Critical** — (source: phase 1 oversized + prop bloat)
-  - [ ] Extract from `fans.tsx` (228 lines): `FilterBar` (lines 111-185) and `ActiveFilterBadges` (lines 188-245) — **Moderate** — (source: phase 1)
-  - [ ] Extract from `pages.tsx` `PageCard` (226 lines): inline-edit block (lines 243-274) and QR/download section (lines 333-351) into sub-components — **Moderate** — (source: phase 1)
+  - [x] Extracted `ThemeEditor` (440 lines) into `web/src/components/theme-editor.tsx` — includes THEME_PRESETS, CapturePagePreview, ColorPicker, OptionRow sub-components. `applyPreset`/`isPresetActive` now derived from `THEME_FIELD_KEYS` array. `ThemeFields` type exported for composition.
+  - [x] Extracted `KeywordSection`, `IncentiveSection`, `LinkSection` as private sub-components in page-form.tsx. Extracted `uploadIncentiveFile()` and `saveKeyword()` from mutationFn. PageForm component: 740→300 lines.
+  - [x] Refactored `broadcast-compose-dialog.tsx`: consolidated 8 form useState into single `FormState` object with `set()` helper. Added `formFromBroadcast()` and `formToPayload()` pure functions. Reset logic: 14 setters → 4. Removed `fieldsRef` in favor of `formRef`.
+  - [x] Decomposed `onboarding.tsx` EmailStep: 16 props → 7 via grouped objects (`emailForm`, `preview`, `mutations`). Added `EmailFormData`, `EmailPreview`, `EmailMutations` types.
+  - [x] Extracted `FilterBar` and `ActiveFilterBadges` from `fans.tsx`. FansPage orchestrator now ~100 lines of JSX.
+  - [x] Extracted `InlineTitleEdit` and `QrSection` from PageCard in `pages.tsx`.
 
 ---
 

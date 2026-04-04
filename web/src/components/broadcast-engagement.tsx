@@ -1,17 +1,7 @@
 import { Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Broadcast } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-export type Broadcast = {
-	id: string;
-	subject: string | null;
-	status: "draft" | "scheduled" | "sending" | "sent" | "failed";
-	recipient_count: number;
-	sent_count: number;
-	opened_count: number;
-	created_at: string;
-	scheduled_at: string | null;
-};
 
 const STATUS_COLORS = {
 	sent: "bg-emerald-500/20 text-emerald-400",
