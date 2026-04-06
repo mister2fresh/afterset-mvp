@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -15,7 +16,7 @@ app.get("/", async (c) => {
 		.eq("id", artist.id)
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data);
 });
 
@@ -44,7 +45,7 @@ app.patch("/", async (c) => {
 		.select("id, name, email, timezone, onboarding_completed")
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data);
 });
 

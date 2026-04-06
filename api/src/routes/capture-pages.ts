@@ -2,6 +2,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { Hono } from "hono";
 import { z } from "zod";
 import { buildPage } from "../lib/build-page.js";
+import { internalError } from "../lib/errors.js";
 import { generateQrPng } from "../lib/generate-qr.js";
 import { R2_BUCKET, r2 } from "../lib/r2.js";
 import { supabase } from "../lib/supabase.js";
@@ -77,7 +78,7 @@ app.get("/", async (c) => {
 		.eq("artist_id", artist.id)
 		.order("created_at", { ascending: false });
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data);
 });
 
@@ -128,7 +129,7 @@ app.post("/", async (c) => {
 		.select()
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 
 	// Auto-create default follow-up email (sequence step 0) so every page has one
 	await supabase.from("email_templates").insert({
@@ -156,7 +157,7 @@ app.get("/:id", async (c) => {
 		.eq("artist_id", artist.id)
 		.maybeSingle();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	if (!data) return c.json({ error: "Not found" }, 404);
 	return c.json(data);
 });
@@ -171,7 +172,7 @@ app.get("/:id/qr.png", async (c) => {
 		.eq("artist_id", artist.id)
 		.maybeSingle();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	if (!page) return c.json({ error: "Not found" }, 404);
 
 	const key = `c/${page.slug}/qr.png`;
@@ -211,7 +212,7 @@ app.patch("/:id", async (c) => {
 		.select()
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	if (!data) return c.json({ error: "Not found" }, 404);
 
 	buildPage(data.id, artist.id).catch((e) => console.error("build failed", e));
@@ -240,7 +241,7 @@ app.delete("/:id", async (c) => {
 		.eq("id", pageId)
 		.eq("artist_id", artist.id);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 
 	// Clean up R2 page HTML and QR code
 	deleteQr(page.slug).catch(() => {});

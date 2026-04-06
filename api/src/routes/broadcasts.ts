@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.js";
 import { filterSuppressed } from "../lib/email/suppression.js";
+import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import { getTodayRange } from "../lib/timezone.js";
 import type { AuthEnv } from "../middleware/auth.js";
@@ -42,7 +43,7 @@ app.get("/", async (c) => {
 	}
 
 	const { data, error } = await query;
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data ?? []);
 });
 
@@ -59,7 +60,7 @@ app.post("/", async (c) => {
 		.select()
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data, 201);
 });
 
@@ -106,7 +107,7 @@ app.put("/:id", async (c) => {
 		.select()
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data);
 });
 
@@ -128,7 +129,7 @@ app.delete("/:id", async (c) => {
 	}
 
 	const { error } = await supabase.from("broadcasts").delete().eq("id", id);
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.body(null, 204);
 });
 
@@ -156,7 +157,7 @@ app.post("/:id/archive", async (c) => {
 		.select()
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data);
 });
 
@@ -173,7 +174,7 @@ app.post("/:id/unarchive", async (c) => {
 		.select()
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data);
 });
 
@@ -278,7 +279,7 @@ app.post("/:id/send", async (c) => {
 	}));
 
 	const { error: insertErr } = await supabase.from("pending_emails").insert(rows);
-	if (insertErr) return c.json({ error: insertErr.message }, 500);
+	if (insertErr) return internalError(c, insertErr);
 
 	const newStatus = isScheduled ? "scheduled" : "sending";
 	await supabase

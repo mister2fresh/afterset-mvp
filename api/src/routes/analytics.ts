@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import { getTodayRange } from "../lib/timezone.js";
 import type { AuthEnv } from "../middleware/auth.js";
@@ -191,7 +192,7 @@ app.get("/:id/analytics", async (c) => {
 		.eq("capture_page_id", pageId)
 		.order("captured_at", { ascending: true });
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 
 	const rows = events ?? [];
 	const total = rows.length;

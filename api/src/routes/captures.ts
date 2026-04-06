@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
+import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -65,7 +66,7 @@ app.get("/", async (c) => {
 
 	const { data, error } = await query;
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 
 	// Flatten the joined shape for the frontend
 	const rows = (data ?? []).map((row) => {
@@ -104,7 +105,7 @@ app.get("/counts", async (c) => {
 		)
 		.eq("capture_pages.artist_id", artist.id);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 
 	// Count per page
 	const counts: Record<string, number> = {};
@@ -137,7 +138,7 @@ app.get("/export", async (c) => {
 	query = applyFilters(query, filters);
 
 	const { data, error } = await query;
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 
 	const rows = data ?? [];
 	const csvLines = ["Email,Page,Method,Date"];

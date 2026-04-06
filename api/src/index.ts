@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth } from "./middleware/auth.js";
+import { rateLimit } from "./middleware/rate-limit.js";
 import analytics from "./routes/analytics.js";
 import broadcasts from "./routes/broadcasts.js";
 import build from "./routes/build.js";
@@ -54,6 +55,17 @@ app.route("/download", download);
 app.route("/api/email", email);
 app.route("/api/emails", sendBatch);
 
+// Rate limits: per-artist for auth'd routes, per-IP for public routes
+const artistLimit = rateLimit({
+	max: 120,
+	windowMs: 60_000,
+	keyFn: (c) => (c.get("artist") as { id: string })?.id ?? "anon",
+});
+const publicLimit = rateLimit({ max: 30, windowMs: 60_000 });
+
+app.use("/download/*", publicLimit);
+app.use("/api/email/*", publicLimit);
+
 // Auth: protect all authenticated API routes (public: /api/health, /api/email, /api/emails)
 for (const path of [
 	"/api/settings",
@@ -63,8 +75,8 @@ for (const path of [
 	"/api/captures",
 	"/api/device-tokens",
 ]) {
-	app.use(path, auth);
-	app.use(`${path}/*`, auth);
+	app.use(path, auth, artistLimit);
+	app.use(`${path}/*`, auth, artistLimit);
 }
 
 app.route("/api/settings", settings);

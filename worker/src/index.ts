@@ -2,6 +2,7 @@ interface Env {
 	PAGES: R2Bucket;
 	SUPABASE_URL: string;
 	SUPABASE_SERVICE_ROLE_KEY: string;
+	ALLOWED_ORIGINS?: string;
 }
 
 // Rate limiting: 5 submissions per IP per slug per 60s window
@@ -123,16 +124,23 @@ async function queueSequenceEmails(
 
 const ENTRY_METHOD_MAP = { d: "direct", q: "qr", n: "nfc", s: "sms" } as const;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const CORS_HEADERS = {
-	"Access-Control-Allow-Origin": "*",
-	"Access-Control-Allow-Methods": "POST, OPTIONS",
-	"Access-Control-Allow-Headers": "Content-Type",
-};
+function getCorsHeaders(request: Request, env: Env): Record<string, string> {
+	const origin = request.headers.get("Origin");
+	const allowed = env.ALLOWED_ORIGINS?.split(",").map((s) => s.trim()) ?? [];
+	if (origin && allowed.includes(origin)) {
+		return {
+			"Access-Control-Allow-Origin": origin,
+			"Access-Control-Allow-Methods": "POST, OPTIONS",
+			"Access-Control-Allow-Headers": "Content-Type",
+		};
+	}
+	return {};
+}
 
 function json(data: unknown, status = 200): Response {
 	return new Response(JSON.stringify(data), {
 		status,
-		headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+		headers: { "Content-Type": "application/json" },
 	});
 }
 
@@ -183,8 +191,8 @@ async function parseSubmission(request: Request): Promise<Submission | Response>
 	if (typeof email !== "string" || !EMAIL_RE.test(email)) {
 		return json({ error: "Invalid email" }, 400);
 	}
-	if (typeof slug !== "string" || slug.length === 0) {
-		return json({ error: "Missing slug" }, 400);
+	if (typeof slug !== "string" || !/^[a-z0-9][a-z0-9-]*[a-z0-9]?$/.test(slug)) {
+		return json({ error: "Invalid slug" }, 400);
 	}
 	const method =
 		typeof entry_method === "string" && entry_method in ENTRY_METHOD_MAP ? entry_method : "d";
@@ -248,22 +256,30 @@ async function persistCapture(
 //    - Steps 1+: artist-local 9am on day N (template.delay_days)
 // 6. pg_cron runs send-batch every minute, which claims and sends due pending_emails via Resend
 async function handleCapture(request: Request, env: Env): Promise<Response> {
+	const cors = getCorsHeaders(request, env);
+	const withCors = (res: Response): Response => {
+		for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
+		return res;
+	};
+
 	if (request.method === "OPTIONS") {
-		return new Response(null, { status: 204, headers: CORS_HEADERS });
+		return new Response(null, { status: 204, headers: cors });
 	}
-	if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+	if (request.method !== "POST") return withCors(json({ error: "Method not allowed" }, 405));
 
 	const submission = await parseSubmission(request);
-	if (submission instanceof Response) return submission;
+	if (submission instanceof Response) return withCors(submission);
 
 	cleanupRateLimits();
 	const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
 	if (isRateLimited(clientIp, submission.slug)) {
-		return json({ error: "Too many submissions. Please wait a minute and try again." }, 429);
+		return withCors(
+			json({ error: "Too many submissions. Please wait a minute and try again." }, 429),
+		);
 	}
 
 	const page = await lookupPage(env, submission.slug);
-	if (page instanceof Response) return page;
+	if (page instanceof Response) return withCors(page);
 
 	const [templateRes, tzRes] = await Promise.all([
 		supabaseRpc(
@@ -278,7 +294,7 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	const timezone = tzRows[0]?.timezone ?? "America/New_York";
 
 	const capture = await persistCapture(env, page, submission.email, submission.method);
-	if (capture instanceof Response) return capture;
+	if (capture instanceof Response) return withCors(capture);
 
 	await queueSequenceEmails(env, templates, {
 		fanCaptureId: capture.fanCaptureId,
@@ -288,7 +304,7 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 		timezone,
 	});
 
-	return json({ ok: true });
+	return withCors(json({ ok: true }));
 }
 
 async function servePage(request: Request, slug: string, env: Env): Promise<Response> {
