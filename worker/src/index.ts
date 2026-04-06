@@ -3,36 +3,43 @@ interface Env {
 	SUPABASE_URL: string;
 	SUPABASE_SERVICE_ROLE_KEY: string;
 	ALLOWED_ORIGINS?: string;
+	RATE_LIMITS?: KVNamespace;
 }
 
 // Rate limiting: 5 submissions per IP per slug per 60s window
 const RATE_LIMIT_MAX = 5;
-const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_WINDOW_S = 60;
+
+// In-memory fallback (used when KV namespace is not configured)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+let lastCleanup = 0;
 
-function isRateLimited(ip: string, slug: string): boolean {
-	const key = `${ip}:${slug}`;
-	const now = Date.now();
-	const entry = rateLimitMap.get(key);
-
-	if (!entry || now >= entry.resetAt) {
-		rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+async function isRateLimited(env: Env, ip: string, slug: string): Promise<boolean> {
+	if (env.RATE_LIMITS) {
+		const key = `rl:${ip}:${slug}`;
+		const current = await env.RATE_LIMITS.get(key);
+		const count = current ? parseInt(current, 10) : 0;
+		if (count >= RATE_LIMIT_MAX) return true;
+		await env.RATE_LIMITS.put(key, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_S });
 		return false;
 	}
 
+	const key = `${ip}:${slug}`;
+	const now = Date.now();
+	const windowMs = RATE_LIMIT_WINDOW_S * 1000;
+	if (now - lastCleanup >= windowMs) {
+		lastCleanup = now;
+		for (const [k, e] of rateLimitMap) {
+			if (now >= e.resetAt) rateLimitMap.delete(k);
+		}
+	}
+	const entry = rateLimitMap.get(key);
+	if (!entry || now >= entry.resetAt) {
+		rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+		return false;
+	}
 	entry.count++;
 	return entry.count > RATE_LIMIT_MAX;
-}
-
-// Periodic cleanup of expired entries (runs at most once per window)
-let lastCleanup = 0;
-function cleanupRateLimits() {
-	const now = Date.now();
-	if (now - lastCleanup < RATE_LIMIT_WINDOW_MS) return;
-	lastCleanup = now;
-	for (const [key, entry] of rateLimitMap) {
-		if (now >= entry.resetAt) rateLimitMap.delete(key);
-	}
 }
 
 function getTimezoneOffsetMs(timezone: string, date: Date): number {
@@ -123,7 +130,7 @@ async function queueSequenceEmails(
 }
 
 const ENTRY_METHOD_MAP = { d: "direct", q: "qr", n: "nfc", s: "sms" } as const;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function getCorsHeaders(request: Request, env: Env): Record<string, string> {
 	const origin = request.headers.get("Origin");
 	const allowed = env.ALLOWED_ORIGINS?.split(",").map((s) => s.trim()) ?? [];
@@ -270,9 +277,8 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	const submission = await parseSubmission(request);
 	if (submission instanceof Response) return withCors(submission);
 
-	cleanupRateLimits();
 	const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
-	if (isRateLimited(clientIp, submission.slug)) {
+	if (await isRateLimited(env, clientIp, submission.slug)) {
 		return withCors(
 			json({ error: "Too many submissions. Please wait a minute and try again." }, 429),
 		);

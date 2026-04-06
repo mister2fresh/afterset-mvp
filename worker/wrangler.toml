@@ -12,5 +12,10 @@ routes = [
 binding = "PAGES"
 bucket_name = "afterset-capture-pages"
 
+# Rate limiting KV namespace — create with: wrangler kv:namespace create RATE_LIMITS
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "PLACEHOLDER_REPLACE_WITH_KV_NAMESPACE_ID"
+
 [vars]
 SUPABASE_URL = "https://mnoajavdnawrmqsnbouy.supabase.co"
