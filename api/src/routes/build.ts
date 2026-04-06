@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { buildPage } from "../lib/build-page.js";
+import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -14,8 +15,7 @@ app.post("/:id/build", async (c) => {
 		const result = await buildPage(pageId, artist.id);
 		return c.json({ built: true, slug: result.slug, bytes: result.size });
 	} catch (err) {
-		const message = err instanceof Error ? err.message : "Build failed";
-		return c.json({ error: message }, 500);
+		return internalError(c, err);
 	}
 });
 
@@ -29,7 +29,7 @@ app.post("/rebuild-all", async (c) => {
 		.eq("artist_id", artist.id)
 		.eq("is_active", true);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	if (!pages?.length) return c.json({ built: 0 });
 
 	const results = await Promise.allSettled(pages.map((p) => buildPage(p.id, artist.id)));

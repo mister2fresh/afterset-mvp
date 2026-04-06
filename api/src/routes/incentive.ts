@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { createDownloadToken } from "../lib/download-token.js";
+import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -86,7 +87,7 @@ app.post("/:id/incentive/upload-url", async (c) => {
 
 	const { data, error } = await supabase.storage.from("incentives").createSignedUploadUrl(filePath);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 
 	// Save file metadata to capture page
 	const { error: updateError } = await supabase
@@ -99,7 +100,7 @@ app.post("/:id/incentive/upload-url", async (c) => {
 		})
 		.eq("id", pageId);
 
-	if (updateError) return c.json({ error: updateError.message }, 500);
+	if (updateError) return internalError(c, updateError);
 
 	// Auto-enable incentive link on the sole follow-up email (if exactly one exists)
 	const { data: templates } = await supabase
@@ -145,7 +146,7 @@ app.delete("/:id/incentive", async (c) => {
 		})
 		.eq("id", pageId);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.body(null, 204);
 });
 

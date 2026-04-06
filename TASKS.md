@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 6, 2026 (v70 — Security audit HIGH fixes)
+**Last updated:** April 6, 2026 (v71 — Security audit MEDIUM fixes)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
-**Sprint:** Sprint 4 in progress — all prior phases complete, security audit HIGHs fixed (CORS, CRLF injection, unsubscribe token expiry, timing-safe batch secret)
-**Next up:** Security audit MEDIUM fixes, manual QA pass, analytics layout redesign
+**Sprint:** Sprint 4 in progress — all prior phases complete, security audit HIGHs + MEDIUMs fixed
+**Next up:** Manual QA pass, analytics layout redesign
 
 ---
 
@@ -19,18 +19,23 @@
 
 ### MEDIUM — Harden before beta
 
-- [ ] **No CSP headers** — no Content-Security-Policy in `web/index.html` or deployment config
-- [ ] **Error messages leak Supabase internals** — ~15 route handlers return raw `error.message`; replace with generic messages
-- [ ] **No rate limiting on most endpoints** — missing on page builds, analytics, device-tokens, settings, QR generation
-- [ ] **Worker slug validation mismatch** — `worker/src/index.ts:186` accepts any string; page-serving route only matches `[a-z0-9-]`
-- [ ] **Storage bucket missing RLS policies** — `incentives` bucket has no storage RLS; currently safe via signed URLs but no defense-in-depth
-- [ ] **Worker CORS is wildcard** — `worker/src/index.ts:127` uses `*`; any site can submit captures
+- [x] **No CSP headers** — added CSP meta tag in `web/index.html` (April 6)
+- [x] **Error messages leak Supabase internals** — replaced all ~35 raw `error.message` returns with generic "Internal server error" via `internalError()` helper; real errors logged server-side (April 6)
+- [x] **No rate limiting on most endpoints** — added per-artist rate limit (120 req/min) on all auth'd endpoints, per-IP limit (30 req/min) on public endpoints (April 6)
+- [x] **Worker slug validation mismatch** — slug validation in `parseSubmission()` now matches page-serving regex `[a-z0-9-]` (April 6)
+- [x] **Storage bucket missing RLS policies** — added RLS policies on `storage.objects` for `incentives` bucket: artists can only access their own folder (April 6)
+- [x] **Worker CORS is wildcard** — replaced `*` with origin-validated CORS via `ALLOWED_ORIGINS` env var; no CORS headers sent for unknown origins (April 6)
 
 ### LOW — Nice to have
 
 - [ ] **Worker email regex too permissive** — allows `a@b.c`
 - [ ] **Worker rate limiting is in-memory** — lost on redeploy
 - [ ] **Verify pg_cron has real secrets** — migration has placeholder `'BATCH_SEND_SECRET'`
+
+### Deployment follow-ups (apply on next deploy)
+
+- [ ] **Set `ALLOWED_ORIGINS` on Cloudflare Worker** — comma-separated origins (e.g. `https://afterset.net`). Without this, the Worker sends no CORS headers; same-origin flow works fine, but cross-origin form submissions are blocked.
+- [ ] **Run `supabase db push`** — applies `20260406000000_incentive_storage_rls.sql` (RLS policies on incentives storage bucket). Defense-in-depth; signed URLs still work without it.
 
 ---
 

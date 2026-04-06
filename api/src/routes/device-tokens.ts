@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -27,7 +28,7 @@ app.post("/", async (c) => {
 		{ onConflict: "token" },
 	);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json({ ok: true }, 201);
 });
 
@@ -44,7 +45,7 @@ app.delete("/", async (c) => {
 		.eq("artist_id", artist.id)
 		.eq("token", parsed.data.token);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.body(null, 204);
 });
 

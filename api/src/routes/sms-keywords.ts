@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -39,7 +40,7 @@ app.get("/keywords", async (c) => {
 		.select("capture_page_id, keyword, phone_number")
 		.eq("artist_id", artist.id);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 
 	const map: Record<string, { keyword: string; phone_number: string }> = {};
 	for (const row of data ?? []) {
@@ -61,7 +62,7 @@ app.get("/:id/keyword", async (c) => {
 		.eq("artist_id", artist.id)
 		.maybeSingle();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	if (!data) return c.json({ error: "No keyword set" }, 404);
 	return c.json(data);
 });
@@ -149,7 +150,7 @@ app.put("/:id/keyword", async (c) => {
 			const suggestions = await findSuggestions(keyword, page.slug);
 			return c.json({ error: "Keyword taken", suggestions }, 409);
 		}
-		return c.json({ error: error.message }, 500);
+		return internalError(c, error);
 	}
 
 	return c.json(data);
@@ -164,7 +165,7 @@ app.delete("/:id/keyword", async (c) => {
 		.eq("capture_page_id", c.req.param("id"))
 		.eq("artist_id", artist.id);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.body(null, 204);
 });
 

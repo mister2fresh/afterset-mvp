@@ -12,9 +12,9 @@ web/                      # Vite + React SPA (artist dashboard)
   public/                 # Static assets (SVG logo, PNG icons for PWA)
 api/                      # Hono API server (Node.js)
   src/routes/             # Hono route modules (capture-pages, email-templates, captures, email, etc.)
-  src/lib/                # Shared utilities (html-utils, timezone, download-page, download-token, icons, build-page, supabase)
+  src/lib/                # Shared utilities (html-utils, timezone, download-page, download-token, icons, build-page, supabase, errors)
   src/lib/email/          # EmailService abstraction, Resend provider, template renderer, suppression
-  src/middleware/          # Auth middleware (Bearer token → artist context)
+  src/middleware/          # Auth + rate-limit middleware (Bearer token → artist context, in-memory rate limiting)
 worker/                   # Cloudflare Worker (serves capture pages from R2)
   src/index.ts            # Worker entry point
 supabase/migrations/      # SQL migrations (applied via `supabase db push`)

@@ -1,6 +1,7 @@
 import { type Context, Hono } from "hono";
 import { z } from "zod";
 import { renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.js";
+import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
@@ -35,7 +36,7 @@ app.get("/:id/email-template", async (c) => {
 		.eq("sequence_order", 0)
 		.maybeSingle();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	if (!data) return c.json(null, 200);
 	return c.json(data);
 });
@@ -76,7 +77,7 @@ app.put("/:id/email-template", async (c) => {
 		.select()
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data);
 });
 
@@ -91,7 +92,7 @@ app.delete("/:id/email-template", async (c) => {
 		.eq("capture_page_id", pageId)
 		.eq("artist_id", artist.id);
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.body(null, 204);
 });
 
@@ -140,7 +141,7 @@ app.get("/:id/email-sequence", async (c) => {
 		.eq("artist_id", artist.id)
 		.order("sequence_order", { ascending: true });
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data ?? []);
 });
 
@@ -192,7 +193,7 @@ app.put("/:id/email-sequence/:order", async (c) => {
 		.select()
 		.single();
 
-	if (error) return c.json({ error: error.message }, 500);
+	if (error) return internalError(c, error);
 	return c.json(data);
 });
 
@@ -223,7 +224,7 @@ app.delete("/:id/email-sequence/:order", async (c) => {
 		.in("status", ["pending", "sending"]);
 
 	const { error: delError } = await supabase.from("email_templates").delete().eq("id", template.id);
-	if (delError) return c.json({ error: delError.message }, 500);
+	if (delError) return internalError(c, delError);
 
 	await renumberStepsAfterDelete(pageId, artist.id, order);
 	return c.body(null, 204);
