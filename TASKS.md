@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 6, 2026 (v71 — Security audit MEDIUM fixes)
+**Last updated:** April 6, 2026 (v72 — Security audit fully complete)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
-**Sprint:** Sprint 4 in progress — all prior phases complete, security audit HIGHs + MEDIUMs fixed
-**Next up:** Manual QA pass, analytics layout redesign
+**Sprint:** Sprint 4 in progress — all prior phases complete, security audit complete (HIGH + MEDIUM + LOW all fixed)
+**Next up:** Deploy security fixes (see checklist below), manual QA pass, analytics layout redesign
 
 ---
 
@@ -26,16 +26,65 @@
 - [x] **Storage bucket missing RLS policies** — added RLS policies on `storage.objects` for `incentives` bucket: artists can only access their own folder (April 6)
 - [x] **Worker CORS is wildcard** — replaced `*` with origin-validated CORS via `ALLOWED_ORIGINS` env var; no CORS headers sent for unknown origins (April 6)
 
-### LOW — Nice to have
+### LOW — All fixed (April 6)
 
-- [ ] **Worker email regex too permissive** — allows `a@b.c`
-- [ ] **Worker rate limiting is in-memory** — lost on redeploy
-- [ ] **Verify pg_cron has real secrets** — migration has placeholder `'BATCH_SEND_SECRET'`
+- [x] **Worker email regex too permissive** — TLD now requires ≥2 chars (`[^\s@]{2,}$`) (April 6)
+- [x] **Worker rate limiting is in-memory** — KV-backed via `RATE_LIMITS` namespace; in-memory fallback when KV not bound (April 6)
+- [x] **Verify pg_cron has real secrets** — new migration `20260406100000_pg_cron_vault_secrets.sql` reads from `vault.decrypted_secrets` (April 6)
 
-### Deployment follow-ups (apply on next deploy)
+### Deployment checklist (run once, in order)
 
-- [ ] **Set `ALLOWED_ORIGINS` on Cloudflare Worker** — comma-separated origins (e.g. `https://afterset.net`). Without this, the Worker sends no CORS headers; same-origin flow works fine, but cross-origin form submissions are blocked.
-- [ ] **Run `supabase db push`** — applies `20260406000000_incentive_storage_rls.sql` (RLS policies on incentives storage bucket). Defense-in-depth; signed URLs still work without it.
+#### 1. Create Cloudflare KV namespace for rate limiting
+
+```bash
+cd worker
+npx wrangler kv:namespace create RATE_LIMITS
+```
+
+Copy the `id` from the output and replace `PLACEHOLDER_REPLACE_WITH_KV_NAMESPACE_ID` in `worker/wrangler.toml`.
+
+#### 2. Set Cloudflare Worker environment variables
+
+```bash
+npx wrangler secret put ALLOWED_ORIGINS
+# Enter: https://afterset.net,https://www.afterset.net
+```
+
+(Without this, the Worker sends no CORS headers for cross-origin requests.)
+
+#### 3. Store secrets in Supabase Vault
+
+Run in the Supabase SQL Editor (Dashboard > SQL Editor):
+
+```sql
+SELECT vault.create_secret('https://YOUR-RAILWAY-URL', 'railway_api_url');
+SELECT vault.create_secret('YOUR-BATCH-SEND-SECRET', 'batch_send_secret');
+```
+
+Replace `YOUR-RAILWAY-URL` with the Railway production URL (e.g. `https://afterset-api-production.up.railway.app`) and `YOUR-BATCH-SEND-SECRET` with the value of `BATCH_SEND_SECRET` from Railway env vars.
+
+#### 4. Apply pending Supabase migrations
+
+```bash
+supabase db push
+```
+
+This applies:
+- `20260406000000_incentive_storage_rls.sql` — RLS policies on incentives storage bucket
+- `20260406100000_pg_cron_vault_secrets.sql` — pg_cron jobs switch to Vault secrets
+
+#### 5. Deploy Cloudflare Worker
+
+```bash
+cd worker
+npx wrangler deploy
+```
+
+#### 6. Verify
+
+- [ ] Submit a test capture at `afterset.net/c/{slug}` — should succeed
+- [ ] Submit 6+ rapid captures from same IP — 6th should return 429
+- [ ] Check Supabase logs for successful `send-pending-emails` cron runs
 
 ---
 
