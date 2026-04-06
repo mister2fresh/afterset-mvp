@@ -23,7 +23,9 @@ app.use("*", logger());
 app.use(
 	"/api/*",
 	cors({
-		origin: ["http://localhost:5173"],
+		origin: process.env.CORS_ORIGINS
+			? process.env.CORS_ORIGINS.split(",").map((o) => o.trim())
+			: ["http://localhost:5173"],
 		credentials: true,
 	}),
 );

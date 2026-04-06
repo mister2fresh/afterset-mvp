@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { Hono } from "hono";
 import { z } from "zod";
 import { createDownloadToken } from "../lib/download-token.js";
@@ -337,7 +338,12 @@ app.post("/send-batch", async (c) => {
 	const start = performance.now();
 	const secret = c.req.header("X-Batch-Secret");
 	const expected = process.env.BATCH_SEND_SECRET;
-	if (!expected || secret !== expected) {
+	if (!expected || !secret) {
+		return c.json({ error: "Unauthorized" }, 401);
+	}
+	const secretBuf = Buffer.from(secret);
+	const expectedBuf = Buffer.from(expected);
+	if (secretBuf.length !== expectedBuf.length || !timingSafeEqual(secretBuf, expectedBuf)) {
 		return c.json({ error: "Unauthorized" }, 401);
 	}
 
