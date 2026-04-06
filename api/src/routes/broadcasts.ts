@@ -12,7 +12,11 @@ const MAX_RECIPIENTS = 5000;
 const DAILY_BROADCAST_LIMIT = 1;
 
 const broadcastSchema = z.object({
-	subject: z.string().max(200).optional(),
+	subject: z
+		.string()
+		.max(200)
+		.regex(/^[^\r\n]*$/, "Must not contain newlines")
+		.optional(),
 	body: z.string().max(5000).optional(),
 	reply_to: z.string().email().nullable().optional(),
 	scheduled_at: z.string().datetime().nullable().optional(),

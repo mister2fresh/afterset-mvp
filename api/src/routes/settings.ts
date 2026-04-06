@@ -20,7 +20,12 @@ app.get("/", async (c) => {
 });
 
 const updateSchema = z.object({
-	name: z.string().min(1).max(100).optional(),
+	name: z
+		.string()
+		.min(1)
+		.max(100)
+		.regex(/^[^\r\n]*$/, "Must not contain newlines")
+		.optional(),
 	timezone: z.string().min(1).max(50).optional(),
 	onboarding_completed: z.boolean().optional(),
 });

@@ -7,7 +7,11 @@ import type { AuthEnv } from "../middleware/auth.js";
 const app = new Hono<AuthEnv>();
 
 const upsertSchema = z.object({
-	subject: z.string().min(1).max(200),
+	subject: z
+		.string()
+		.min(1)
+		.max(200)
+		.regex(/^[^\r\n]*$/, "Must not contain newlines"),
 	body: z.string().min(1).max(5000),
 	include_incentive_link: z.boolean().optional(),
 	delay_mode: z.enum(["immediate", "1_hour", "next_morning"]).optional(),

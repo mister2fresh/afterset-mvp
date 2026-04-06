@@ -1,10 +1,36 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 4, 2026 (v69 — Phase G complete: README, inline documentation, CLAUDE.md updates)
+**Last updated:** April 6, 2026 (v70 — Security audit HIGH fixes)
 **Current phase:** Sprint 4 — Mobile-First + PWA + Native
-**Sprint:** Sprint 4 in progress — Phase 1 (Mobile UX) complete, Phase 2 (PWA) complete, Phase 3 (Capacitor) code complete, QA checklist complete, Help tab shipped, analytics bug fixes shipped, analytics renames shipped, per-show drill-down shipped, Railway API deployed, pg_cron email jobs wired to production, email race condition + incentive bug fixed, per-event email dedup shipped, branded download page shipped, branded email theming shipped, email open tracking working, email page title subtitle + unsubscribe link shipped, auto-create default email on page creation shipped, confirmation dialogs on all delete actions shipped, Tonight/All Shows tabbed dashboard shipped (all 3 sessions complete), dashboard default tab switched to All Shows, emails_sent per-show attribution bug fixed, email sequence editor moved inline into page form, social/streaming icons added to all emails + download page, Emails tab refactored to broadcasts-only, email social/streaming icons fixed (SVG → text links for email client compatibility), Phase A dead code cleanup complete (14/14), unused deps removed, page creation auto-scrolls to email editor, Phase B config/build fixes complete, Phase C shared utility extraction complete, Phase D+E shared types + component decomposition complete, Phase F API function extraction complete
-**Next up:** Manual QA pass, analytics layout redesign
+**Sprint:** Sprint 4 in progress — all prior phases complete, security audit HIGHs fixed (CORS, CRLF injection, unsubscribe token expiry, timing-safe batch secret)
+**Next up:** Security audit MEDIUM fixes, manual QA pass, analytics layout redesign
+
+---
+
+## Security Hardening (Audit: April 4, 2026)
+
+### HIGH — Fix before production
+
+- [x] **CORS hardcoded to localhost** — reads `CORS_ORIGINS` env var, falls back to localhost (April 6)
+- [x] **Email header injection via CRLF** — `.regex(/^[^\r\n]*$/)` on subject/name in 3 schemas (April 6)
+- [x] **Unsubscribe token has no expiration** — 1-year expiry check added (April 6)
+- [x] **Batch send secret not timing-safe** — `timingSafeEqual` from `node:crypto` (April 6)
+
+### MEDIUM — Harden before beta
+
+- [ ] **No CSP headers** — no Content-Security-Policy in `web/index.html` or deployment config
+- [ ] **Error messages leak Supabase internals** — ~15 route handlers return raw `error.message`; replace with generic messages
+- [ ] **No rate limiting on most endpoints** — missing on page builds, analytics, device-tokens, settings, QR generation
+- [ ] **Worker slug validation mismatch** — `worker/src/index.ts:186` accepts any string; page-serving route only matches `[a-z0-9-]`
+- [ ] **Storage bucket missing RLS policies** — `incentives` bucket has no storage RLS; currently safe via signed URLs but no defense-in-depth
+- [ ] **Worker CORS is wildcard** — `worker/src/index.ts:127` uses `*`; any site can submit captures
+
+### LOW — Nice to have
+
+- [ ] **Worker email regex too permissive** — allows `a@b.c`
+- [ ] **Worker rate limiting is in-memory** — lost on redeploy
+- [ ] **Verify pg_cron has real secrets** — migration has placeholder `'BATCH_SEND_SECRET'`
 
 ---
 

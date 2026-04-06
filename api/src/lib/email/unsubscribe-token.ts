@@ -18,6 +18,8 @@ export function createUnsubscribeToken(email: string, artistId: string): string 
 	return `${encoded}.${sign(encoded)}`;
 }
 
+const TOKEN_MAX_AGE_SECONDS = 365 * 24 * 60 * 60; // 1 year
+
 export function verifyUnsubscribeToken(token: string): { email: string; artistId: string } | null {
 	const dot = token.indexOf(".");
 	if (dot === -1) return null;
@@ -33,5 +35,9 @@ export function verifyUnsubscribeToken(token: string): { email: string; artistId
 	}
 
 	const parsed = JSON.parse(Buffer.from(encoded, "base64url").toString()) as TokenPayload;
+
+	const now = Math.floor(Date.now() / 1000);
+	if (!parsed.t || now - parsed.t > TOKEN_MAX_AGE_SECONDS) return null;
+
 	return { email: parsed.e, artistId: parsed.a };
 }
