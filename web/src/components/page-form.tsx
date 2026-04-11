@@ -357,7 +357,13 @@ function KeywordSection({
 	);
 }
 
-function NfcSection({ slug }: { slug: string }): React.ReactElement {
+function NfcSection({
+	slug,
+	highlight,
+}: {
+	slug: string;
+	highlight?: boolean;
+}): React.ReactElement {
 	const [copied, setCopied] = useState(false);
 	const nfcUrl = `https://afterset.net/c/${slug}?v=n`;
 
@@ -365,6 +371,37 @@ function NfcSection({ slug }: { slug: string }): React.ReactElement {
 		await navigator.clipboard.writeText(nfcUrl);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
+	}
+
+	if (highlight) {
+		return (
+			<div className="space-y-2 rounded-lg border border-[#E8C547]/30 bg-[#E8C547]/5 p-4">
+				<p className="flex items-center gap-1.5 text-sm font-medium text-[#E8C547]">
+					<Smartphone className="size-4" />
+					Your NFC tag URL is ready
+				</p>
+				<p className="text-xs text-muted-foreground">
+					Program an NFC sticker with this URL — fans tap their phone to open your capture page.
+				</p>
+				<div className="flex items-center gap-2">
+					<code className="flex-1 truncate rounded-md border border-[#E8C547]/20 bg-muted/30 px-3 py-2 font-mono text-xs">
+						{nfcUrl}
+					</code>
+					<Button
+						type="button"
+						variant="outline"
+						size="icon"
+						className="shrink-0"
+						onClick={copyUrl}
+					>
+						{copied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
+					</Button>
+				</div>
+				<p className="text-xs text-muted-foreground/70">
+					Use any NFC writer app (NFC Tools, Shortcuts) to write this URL to an NTAG213 sticker.
+				</p>
+			</div>
+		);
 	}
 
 	return (
@@ -624,6 +661,7 @@ export function PageForm({
 	const [streamingOpen, setStreamingOpen] = useState(hasAnyLink(initialForm.streaming_links));
 	const [socialOpen, setSocialOpen] = useState(hasAnyLink(initialForm.social_links));
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const nfcEmailRef = useRef<HTMLDivElement>(null);
 
 	// Slug availability (create mode only)
 	const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
@@ -652,6 +690,10 @@ export function PageForm({
 			setSlugChecking(false);
 		};
 	}, [form.slug, mode]);
+
+	const scrollToNfcEmail = useCallback(() => {
+		nfcEmailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+	}, []);
 
 	const [keyword, setKeyword] = useState(currentKeyword ?? "");
 	const hasExistingFile = mode === "edit" && page?.incentive_file_name && !fileRemoved;
@@ -826,7 +868,7 @@ export function PageForm({
 				currentKeyword={currentKeyword}
 			/>
 
-			{!isCreate && page?.slug && <NfcSection slug={page.slug} />}
+			{!isCreate && page?.slug && !autoExpandEmail && <NfcSection slug={page.slug} />}
 
 			<ThemeEditor form={form} onChange={(updates) => setForm((f) => ({ ...f, ...updates }))} />
 
@@ -870,12 +912,25 @@ export function PageForm({
 				onLinkChange={(key, value) => setLink("social_links", key, value)}
 			/>
 
-			{!isCreate && page?.id && (
-				<InlineSequenceEditor
-					pageId={page.id}
-					hasIncentive={!!(page.incentive_file_name && !fileRemoved)}
-					autoExpandFirst={autoExpandEmail}
-				/>
+			{!isCreate && page?.id && autoExpandEmail && page.slug ? (
+				<div ref={nfcEmailRef} className="space-y-6">
+					<NfcSection slug={page.slug} highlight />
+					<InlineSequenceEditor
+						pageId={page.id}
+						hasIncentive={!!(page.incentive_file_name && !fileRemoved)}
+						autoExpandFirst
+						autoScrollDisabled
+						onReady={scrollToNfcEmail}
+					/>
+				</div>
+			) : (
+				!isCreate &&
+				page?.id && (
+					<InlineSequenceEditor
+						pageId={page.id}
+						hasIncentive={!!(page.incentive_file_name && !fileRemoved)}
+					/>
+				)
 			)}
 
 			<div className="flex gap-2">
