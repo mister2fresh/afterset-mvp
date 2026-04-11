@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Loader2, Mail, Plus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type Ref, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,13 @@ import {
 	MAX_STEPS,
 	SequenceStepEditor,
 	StepDelayIcon,
+	type StepEditorHandle,
 	stepDelayLabel,
 } from "./sequence-step-editor";
+
+export type SequenceEditorHandle = {
+	saveIfDirty: () => void;
+};
 
 export function InlineSequenceEditor({
 	pageId,
@@ -19,16 +24,27 @@ export function InlineSequenceEditor({
 	autoExpandFirst,
 	autoScrollDisabled,
 	onReady,
+	ref,
 }: {
 	pageId: string;
 	hasIncentive: boolean;
 	autoExpandFirst?: boolean;
 	autoScrollDisabled?: boolean;
 	onReady?: () => void;
+	ref?: Ref<SequenceEditorHandle>;
 }) {
 	const queryClient = useQueryClient();
 	const queryKey = ["email-sequence", pageId];
 	const sectionRef = useRef<HTMLDivElement>(null);
+	const expandedStepRef = useRef<StepEditorHandle>(null);
+	const newStepRef = useRef<StepEditorHandle>(null);
+	useImperativeHandle(ref, () => ({
+		saveIfDirty() {
+			expandedStepRef.current?.saveIfDirty();
+			newStepRef.current?.saveIfDirty();
+		},
+	}));
+
 	const [sectionOpen, setSectionOpen] = useState(!!autoExpandFirst);
 	const [expandedOrder, setExpandedOrder] = useState<number | null>(autoExpandFirst ? 0 : null);
 	const [addingNew, setAddingNew] = useState(false);
@@ -62,7 +78,10 @@ export function InlineSequenceEditor({
 		<div ref={sectionRef} className="space-y-3">
 			<button
 				type="button"
-				onClick={() => setSectionOpen(!sectionOpen)}
+				onClick={() => {
+					if (sectionOpen) expandedStepRef.current?.saveIfDirty();
+					setSectionOpen(!sectionOpen);
+				}}
 				className="flex w-full items-center justify-between"
 			>
 				<Label className="pointer-events-none flex items-center gap-2">
@@ -96,7 +115,10 @@ export function InlineSequenceEditor({
 								<div key={step.id} className="rounded-lg border border-border">
 									<button
 										type="button"
-										onClick={() => setExpandedOrder(isExpanded ? null : step.sequence_order)}
+										onClick={() => {
+											expandedStepRef.current?.saveIfDirty();
+											setExpandedOrder(isExpanded ? null : step.sequence_order);
+										}}
 										className="flex w-full items-center gap-3 p-3 text-left"
 									>
 										<div
@@ -128,14 +150,12 @@ export function InlineSequenceEditor({
 									{isExpanded && (
 										<div className="border-t border-border p-3">
 											<SequenceStepEditor
+												ref={expandedStepRef}
 												pageId={pageId}
 												order={step.sequence_order}
 												existing={step}
 												hasIncentive={hasIncentive}
-												onSaved={() => {
-													invalidateAll();
-													setExpandedOrder(null);
-												}}
+												onSaved={invalidateAll}
 												onDeleted={() => {
 													invalidateAll();
 													setExpandedOrder(null);
@@ -154,6 +174,7 @@ export function InlineSequenceEditor({
 								{nextOrder > 0 && " (follow-up)"}
 							</p>
 							<SequenceStepEditor
+								ref={newStepRef}
 								pageId={pageId}
 								order={nextOrder}
 								existing={undefined}
@@ -173,6 +194,7 @@ export function InlineSequenceEditor({
 							size="sm"
 							className="w-full border-dashed"
 							onClick={() => {
+								expandedStepRef.current?.saveIfDirty();
 								setExpandedOrder(null);
 								setAddingNew(true);
 							}}

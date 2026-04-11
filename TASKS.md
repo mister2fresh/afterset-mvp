@@ -1,7 +1,7 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 11, 2026 (v76 — NFC setup dialog + lint fixes)
+**Last updated:** April 11, 2026 (v77 — Fix email editor save + unified save UX)
 **Current phase:** Sprint 5 — Pricing Tier Enforcement
 **Sprint:** Sprint 4 complete (mobile-first + PWA + security audit + production deployment). Sprint 5 planned — tier gates for Solo/Tour/Superstar.
 **Next up:** Sprint 5 Phase 1 (foundation: migration, tier config, auth middleware). See also: manual QA pass, analytics layout redesign.

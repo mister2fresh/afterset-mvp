@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { CalendarDays, Clock, Eye, Loader2, Send, Sunrise, Trash2, Zap } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { CalendarDays, Clock, Eye, Loader2, Plus, Sunrise, Trash2, Zap } from "lucide-react";
+import { type Ref, useImperativeHandle, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,10 @@ type StepForm = {
 	delay_mode: "immediate" | "1_hour" | "next_morning";
 	delay_days: number;
 	is_active: boolean;
+};
+
+export type StepEditorHandle = {
+	saveIfDirty: () => void;
 };
 
 export const MAX_STEPS = 5;
@@ -87,6 +91,18 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
 	);
 }
 
+function formIsDirty(form: StepForm, existing: EmailTemplate | undefined): boolean {
+	if (!existing) return form.subject.trim() !== "" || form.body.trim() !== "";
+	return (
+		form.subject !== existing.subject ||
+		form.body !== existing.body ||
+		form.include_incentive_link !== existing.include_incentive_link ||
+		form.delay_mode !== existing.delay_mode ||
+		form.delay_days !== existing.delay_days ||
+		form.is_active !== existing.is_active
+	);
+}
+
 // Step 0 (the welcome email) uses `delay_mode` to control send timing relative to
 // capture: immediate, 1 hour later, or next morning at 9am artist-local-time.
 // Steps 1+ ignore delay_mode and instead use `delay_days` — sent at 9am on day N.
@@ -99,6 +115,7 @@ export function SequenceStepEditor({
 	hasIncentive,
 	onSaved,
 	onDeleted,
+	ref,
 }: {
 	pageId: string;
 	order: number;
@@ -106,8 +123,13 @@ export function SequenceStepEditor({
 	hasIncentive: boolean;
 	onSaved: () => void;
 	onDeleted: () => void;
+	ref?: Ref<StepEditorHandle>;
 }) {
 	const [form, setForm] = useState<StepForm>(existing ? formFromTemplate(existing) : EMPTY_STEP);
+	const formRef = useRef(form);
+	formRef.current = form;
+	const existingRef = useRef(existing);
+	existingRef.current = existing;
 	const [previewHtml, setPreviewHtml] = useState("");
 	const [showPreview, setShowPreview] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -123,6 +145,15 @@ export function SequenceStepEditor({
 		onSuccess: onDeleted,
 	});
 
+	useImperativeHandle(ref, () => ({
+		saveIfDirty() {
+			const f = formRef.current;
+			if (!f.subject.trim() || !f.body.trim()) return;
+			if (!formIsDirty(f, existingRef.current)) return;
+			saveMutation.mutate(f);
+		},
+	}));
+
 	const previewMutation = useMutation({
 		mutationFn: () =>
 			api.postText(`/capture-pages/${pageId}/email-sequence/${order}/preview`, {
@@ -136,8 +167,8 @@ export function SequenceStepEditor({
 		},
 	});
 
-	function handleSubmit(e: FormEvent) {
-		e.preventDefault();
+	function handleSave() {
+		if (!form.subject.trim() || !form.body.trim()) return;
 		saveMutation.mutate(form);
 	}
 
@@ -161,7 +192,7 @@ export function SequenceStepEditor({
 	}
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-4">
+		<div className="space-y-4">
 			<div className="flex items-center justify-between">
 				<Label>Active</Label>
 				<ToggleSwitch
@@ -288,19 +319,22 @@ export function SequenceStepEditor({
 					{previewMutation.isPending ? <Loader2 className="animate-spin" /> : <Eye />}
 					Preview
 				</Button>
-				<Button
-					type="submit"
-					size="sm"
-					disabled={!form.subject.trim() || !form.body.trim() || saveMutation.isPending}
-				>
-					{saveMutation.isPending ? <Loader2 className="animate-spin" /> : <Send />}
-					Save
-				</Button>
+				{!existing && (
+					<Button
+						type="button"
+						size="sm"
+						disabled={!form.subject.trim() || !form.body.trim() || saveMutation.isPending}
+						onClick={handleSave}
+					>
+						{saveMutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
+						Add
+					</Button>
+				)}
 			</div>
 
 			{saveMutation.isError && (
 				<p className="text-sm text-destructive">{saveMutation.error.message}</p>
 			)}
-		</form>
+		</div>
 	);
 }

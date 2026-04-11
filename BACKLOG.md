@@ -16,6 +16,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **"Follow All" button on capture page** — single CTA that opens all streaming/social profiles, reducing friction vs tapping each icon individually
 - [x] **Show social/streaming icons on all fan communications** — shipped March 31, 2026. Icons added to follow-up emails, broadcast emails, and download page via shared `api/src/lib/icons.ts` module.
 - [ ] **Move social/streaming text links to email footer** — currently positioned directly under the CTA button, looks tacky. Move to bottom of email with more spacing/separation from body content.
+- [ ] **Link click tracking** — redirect endpoint (`GET /l/:token`) that logs clicks and 302s to the real URL. HMAC token encodes platform, source (capture page / download page / email), page ID, and optional fan ID. New `link_clicks` table: `artist_id`, `fan_id`, `platform` (spotify/instagram/tiktok/etc.), `source` (capture_page/download_page/email), `source_id`, `clicked_at`. Covers all three surfaces: SVG icon links on capture pages (via Worker), SVG icon links on download pages (via API), and text links in follow-up/broadcast emails. Gives artists insight into which platforms their fans actually engage with.
 
 ## Integrations
 

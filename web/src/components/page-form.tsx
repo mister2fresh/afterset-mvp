@@ -22,7 +22,10 @@ import {
 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { InlineSequenceEditor } from "@/components/inline-sequence-editor";
+import {
+	InlineSequenceEditor,
+	type SequenceEditorHandle,
+} from "@/components/inline-sequence-editor";
 import { ThemeEditor, type ThemeFields } from "@/components/theme-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -647,6 +650,7 @@ export function PageForm({
 	const [isDragging, setIsDragging] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const nfcEmailRef = useRef<HTMLDivElement>(null);
+	const sequenceRef = useRef<SequenceEditorHandle>(null);
 
 	// Slug availability (create mode only)
 	const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
@@ -746,6 +750,7 @@ export function PageForm({
 
 	function handleSubmit(e: FormEvent) {
 		e.preventDefault();
+		sequenceRef.current?.saveIfDirty();
 		mutation.mutate(form);
 	}
 
@@ -953,6 +958,7 @@ export function PageForm({
 				<div ref={nfcEmailRef} className="space-y-6">
 					<NfcSection slug={page.slug} highlight />
 					<InlineSequenceEditor
+						ref={sequenceRef}
 						pageId={page.id}
 						hasIncentive={!!(page.incentive_file_name && !fileRemoved)}
 						autoExpandFirst
@@ -964,6 +970,7 @@ export function PageForm({
 				!isCreate &&
 				page?.id && (
 					<InlineSequenceEditor
+						ref={sequenceRef}
 						pageId={page.id}
 						hasIncentive={!!(page.incentive_file_name && !fileRemoved)}
 					/>
