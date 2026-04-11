@@ -119,6 +119,8 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Mobile native app consideration**
 - [ ] **MCP task server** — build when file-based tracking outgrows itself
 - [ ] **Feature branch workflow for /ship** — update ship skill to create feature branch + PR by default instead of pushing directly to main; prevents parallel Claude Code sessions from conflicting on staging area
+- [ ] **Stripe integration** — subscription billing for Solo/Tour/Superstar tiers; webhook handler to update `artists.tier` on payment events; Superstar email overage via metered billing
+- [ ] **Grandfathering / founding member pricing** — lock early adopters into discounted rate when pricing changes; needs `founding_member` flag or price_id tracking in Stripe
 
 ## Research
 
