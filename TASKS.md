@@ -405,7 +405,7 @@ All five deep research ADRs are complete and accepted. Minor decisions (auth, re
 - [x] **Authentication** — Supabase Auth: magic links + Google OAuth for artists. No fan-side auth. (ADR-001, ADR-004)
 - [x] **Real-time vs. Eventually Consistent** — Optimistic confirmation on capture (localStorage-first, "You're in!" immediately). Dashboard uses Supabase Realtime Broadcast for live fan counts. (ADR-001, ADR-003)
 - [x] **QR Code generation** — Server-side, cached per page. Downloadable as high-res PNG (300+ DPI). (ADR-003)
-- [x] **NFC** — Deferred to v2. "Coming Soon" badge. (ADR-005)
+- [x] **NFC** — NFC URL shown in page editor with copy button; help topic added
 - [x] **AI Processing** — Server-side API route on Hono, rate limited by tier. Minimal in v1 ("suggest email copy" button at most). (Handoff §6.4)
 - [x] **Monitoring** — Sentry (free) on both SPA and API. Railway Log Explorer. Supabase `cron.job_run_details`. Free uptime monitor on health endpoint. (ADR-004)
 
@@ -941,7 +941,7 @@ Depends on Phases 1 + 2. Estimated: 1 hour.
 | # | Decision | Resolution | Status |
 |---|---|---|---|
 | 1 | Text-to-Join in v1 or v1.5? | **v1 (Sprint 3)** — Telnyx toll-free, keyword routing | Resolved |
-| 2 | NFC in v1? | **Deferred to v2** — "Coming Soon" badge | Resolved |
+| 2 | NFC in v1? | **Shipped** — NFC URL in page editor + help docs | Resolved |
 | 3 | Built-in email vs. integration layer? | **Built-in (Resend)** with `EmailService` abstraction. Kit/Mailchimp CSV export in v1.1. | Resolved |
 | 4 | Custom domains for capture pages | **`afterset.net/c/[slug]` for v1.** Custom domains (CF4SaaS) at 200+ artists. | Resolved |
 | 5 | Email sending domain | **`send.afterset.net`** (corrected from ADR-002's `.com` reference — we only own `.net`) | Resolved |
@@ -972,7 +972,7 @@ Documented during the ADR critical review. These are not blockers — they have 
 These are not scheduled. Pull from here once Sprints 1–3 ship.
 
 - [ ] Kit / Mailchimp CSV export + direct integration (v1.1)
-- [ ] NFC tap-to-capture (v1.2)
+- [x] NFC tap-to-capture — shipped
 - [ ] Gig calendar with auto-generated capture pages (Layer 2)
 - [ ] Financial tracking alongside fan data (Layer 3)
 - [ ] AI-powered "suggest email copy" button (Hono API route, rate limited by tier)

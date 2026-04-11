@@ -38,10 +38,37 @@ Your page gets a permanent URL like **afterset.net/your-slug**. You can share th
 
 - **Direct link** — Share your afterset.net/your-slug URL on social media, in your bio, or on merch.
 - **QR code** — Print the QR code from your page card. Fans scan it with their phone camera and land directly on your page.
-- **NFC chip** — Program an NFC sticker or card with your page URL. Fans tap their phone to open it.
+- **NFC sticker/card** — Program an NFC tag with your NFC URL (found in the page editor). Fans tap their phone to open your page — no app needed.
 - **SMS keyword** — Set up a text-to-join keyword so fans can text a word to your number and get auto-subscribed.
 
-All of these point to the same page, so you only need to set things up once.`,
+All of these point to the same page, so you only need to set things up once. Each method is tracked separately in your analytics so you can see what's working best.`,
+			},
+			{
+				id: "nfc-setup",
+				title: "Setting up NFC tap-to-capture",
+				body: `NFC (Near Field Communication) lets fans tap their phone on a sticker or card to open your capture page — no camera or typing needed.
+
+**What you need:**
+- NTAG213 stickers or cards (~$0.30 each, available on Amazon in bulk)
+- A free NFC writer app: **NFC Tools** (Android/iOS) or Apple **Shortcuts** (iOS)
+
+**How to set it up:**
+1. Open your capture page in edit mode — find the **NFC Tag URL** section.
+2. Copy the URL (it looks like afterset.net/c/your-slug?v=n).
+3. Open your NFC writer app, choose "Write" → "URL/URI", and paste the URL.
+4. Hold an NTAG213 sticker to the back of your phone and tap "Write".
+
+**Where to put them:**
+- On your merch table or tip jar
+- On the back of your phone (show fans at the stage)
+- On guitar/case stickers, setlists, or table tents
+- Embedded in a business card or laminated card
+
+**Tips:**
+- NTAG213 tags hold up to ~130 characters — your Afterset URL fits easily.
+- NFC works through thin materials (stickers on cases, cards in sleeves).
+- Most phones made after 2018 support NFC — both iPhone and Android.
+- NFC taps show up as "NFC Tap" in your analytics, separate from QR and direct visits.`,
 			},
 			{
 				id: "first-fans",

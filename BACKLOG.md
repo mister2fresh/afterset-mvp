@@ -26,7 +26,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 
 ## Capture Methods
 
-- [ ] **NFC tap-to-capture** (v1.2)
+- [x] **NFC tap-to-capture** — NFC URL in page editor + help topic
 
 ## Onboarding
 
