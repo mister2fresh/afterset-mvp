@@ -4,6 +4,7 @@ import {
 	Check,
 	ChevronDown,
 	ChevronUp,
+	Copy,
 	FileAudio,
 	FileImage,
 	FileText,
@@ -11,6 +12,7 @@ import {
 	Loader2,
 	MessageSquare,
 	Package,
+	Smartphone,
 	Trash2,
 	Upload,
 	X,
@@ -351,6 +353,42 @@ function KeywordSection({
 					Keyword will be removed on save.
 				</p>
 			)}
+		</div>
+	);
+}
+
+function NfcSection({ slug }: { slug: string }): React.ReactElement {
+	const [copied, setCopied] = useState(false);
+	const nfcUrl = `https://afterset.net/c/${slug}?v=n`;
+
+	async function copyUrl(): Promise<void> {
+		await navigator.clipboard.writeText(nfcUrl);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	}
+
+	return (
+		<div className="space-y-2">
+			<Label>
+				<span className="flex items-center gap-1.5">
+					<Smartphone className="size-3.5" />
+					NFC Tag URL
+				</span>
+			</Label>
+			<p className="text-xs text-muted-foreground">
+				Program an NFC sticker or card with this URL. Fans tap their phone to open your page.
+			</p>
+			<div className="flex items-center gap-2">
+				<code className="flex-1 truncate rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs">
+					{nfcUrl}
+				</code>
+				<Button type="button" variant="outline" size="icon" className="shrink-0" onClick={copyUrl}>
+					{copied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
+				</Button>
+			</div>
+			<p className="text-xs text-muted-foreground/70">
+				Use any NFC writer app (NFC Tools, Shortcuts) to write this URL to an NTAG213 sticker.
+			</p>
 		</div>
 	);
 }
@@ -787,6 +825,8 @@ export function PageForm({
 				pageId={page?.id}
 				currentKeyword={currentKeyword}
 			/>
+
+			{!isCreate && page?.slug && <NfcSection slug={page.slug} />}
 
 			<ThemeEditor form={form} onChange={(updates) => setForm((f) => ({ ...f, ...updates }))} />
 
