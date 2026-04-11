@@ -21,6 +21,7 @@ supabase/migrations/      # SQL migrations (applied via `supabase db push`)
 afterset/docs/adr/        # Architecture Decision Records (001–006)
 afterset/docs/research/   # Research that informed ADRs
 TASKS.md                  # Sprint tracker and task breakdown
+PRICING.md                # Tier structure, cost analysis, enforcement checklist
 BACKLOG.md                # Future feature requests and ideas
 CRASHCOURSE.md            # Quick-start crash course for new developers
 QA-CHECKLIST.md           # Manual QA checklist for page + email flow
@@ -55,6 +56,10 @@ pnpm-workspace.yaml       # pnpm workspace definition
 - **Dialogs are full-screen on mobile:** Base `DialogContent` fills viewport on `<640px`, centered with max-height on `sm:` and up. Individual dialogs set `sm:max-w-*` for desktop sizing only.
 - **PWA installable:** `vite-plugin-pwa` with `generateSW` strategy. Manifest at `/manifest.webmanifest`, service worker precaches app shell + static assets, runtime caching for `/api/` (stale-while-revalidate, 5min). Apple PWA meta tags in `index.html`. Custom install prompt (`pwa-install-prompt.tsx`) uses `beforeinstallprompt` event, dismissible with localStorage persistence. SW update toast via Sonner (`pwa-reload-prompt.tsx`). App icons: SVG "A" lettermark + PNGs (32/180/192/512px) in `web/public/`.
 - **Capacitor native wrapper:** `capacitor.config.ts` in `web/`, app ID `net.afterset.app`. Splash screen (midnight bg, 2s auto-hide) and push notifications configured. `usePushNotifications` hook in `_authenticated` layout registers device tokens on native platforms via `POST /api/device-tokens`. `device_tokens` table stores tokens per artist with unique constraint on token. Native projects (`ios/`, `android/`) gitignored — regenerated via `npx cap sync`.
+
+## Pricing tiers (planned — Sprint 5)
+
+Three tiers: **Solo** ($12/mo), **Tour** ($25/mo), **Superstar** ($100/mo). Free trial = 1 month at Tour level. Full cost analysis and enforcement checklist in `PRICING.md`. Implementation tasks in `TASKS.md` Sprint 5. Key gates: capture method (Solo = QR only), fan cap (500/5K/unlimited per month), email cap (1K/10K/50K hidden), sequence depth (1/3/5 steps), broadcasts (0/4mo/unlimited), CSV export (Superstar only), storage (500MB/2GB/10GB). Tier is computed at request time via `getEffectiveTier()` — no cron for trial expiry. Fan captures are never rejected even when over cap. Stripe integration is a separate workstream.
 
 ## Tech stack details
 
