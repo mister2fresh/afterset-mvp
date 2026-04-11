@@ -1,3 +1,5 @@
+import { ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -40,7 +42,7 @@ const THEME_FIELD_KEYS = [
 	"bg_color",
 ] as const satisfies readonly (keyof ThemeFields)[];
 
-const THEME_PRESETS: ThemePreset[] = [
+export const THEME_PRESETS: ThemePreset[] = [
 	{
 		name: "Gold",
 		accent_color: "#E8C547",
@@ -161,7 +163,7 @@ function applyPreset<T extends ThemeFields>(form: T, preset: ThemePreset): T {
 	return { ...form, ...updates };
 }
 
-function isPresetActive(form: ThemeFields, preset: ThemePreset): boolean {
+export function isPresetActive(form: ThemeFields, preset: ThemePreset): boolean {
 	return THEME_FIELD_KEYS.every((k) => form[k] === preset[k]);
 }
 
@@ -319,6 +321,8 @@ export function ThemeEditor({
 	form: PreviewFields;
 	onChange: (updates: Partial<ThemeFields>) => void;
 }): React.ReactElement {
+	const [detailsOpen, setDetailsOpen] = useState(false);
+
 	return (
 		<div className="space-y-4">
 			<Label>Theme</Label>
@@ -366,75 +370,88 @@ export function ThemeEditor({
 				})}
 			</div>
 
-			<div className="grid grid-cols-2 gap-4">
-				<ColorPicker
-					id="accent_color"
-					label="Accent"
-					value={form.accent_color}
-					onChange={(v) => onChange({ accent_color: v })}
-				/>
-				<ColorPicker
-					id="secondary_color"
-					label="Secondary"
-					value={form.secondary_color}
-					onChange={(v) => onChange({ secondary_color: v })}
-				/>
-			</div>
+			<button
+				type="button"
+				onClick={() => setDetailsOpen(!detailsOpen)}
+				className="flex w-full items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+			>
+				{detailsOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+				Customize colors & style
+			</button>
 
-			<div className="grid grid-cols-2 gap-4">
-				<ColorPicker
-					id="text_color"
-					label="Text"
-					value={form.text_color}
-					onChange={(v) => onChange({ text_color: v })}
-				/>
-				<ColorPicker
-					id="bg_color"
-					label="Background"
-					value={form.bg_color}
-					onChange={(v) => onChange({ bg_color: v })}
-				/>
-			</div>
+			{detailsOpen && (
+				<>
+					<div className="grid grid-cols-2 gap-4">
+						<ColorPicker
+							id="accent_color"
+							label="Accent"
+							value={form.accent_color}
+							onChange={(v) => onChange({ accent_color: v })}
+						/>
+						<ColorPicker
+							id="secondary_color"
+							label="Secondary"
+							value={form.secondary_color}
+							onChange={(v) => onChange({ secondary_color: v })}
+						/>
+					</div>
 
-			<div className="grid grid-cols-2 gap-4">
-				<OptionRow
-					label="Background Effect"
-					options={["solid", "gradient", "glow"] as const}
-					value={form.background_style}
-					onChange={(v) => onChange({ background_style: v })}
-				/>
-				<OptionRow
-					label="Buttons"
-					options={["rounded", "pill", "sharp"] as const}
-					value={form.button_style}
-					onChange={(v) => onChange({ button_style: v })}
-				/>
-			</div>
+					<div className="grid grid-cols-2 gap-4">
+						<ColorPicker
+							id="text_color"
+							label="Text"
+							value={form.text_color}
+							onChange={(v) => onChange({ text_color: v })}
+						/>
+						<ColorPicker
+							id="bg_color"
+							label="Background"
+							value={form.bg_color}
+							onChange={(v) => onChange({ bg_color: v })}
+						/>
+					</div>
 
-			<div className="grid grid-cols-2 gap-4">
-				<OptionRow
-					label="Font"
-					options={["modern", "editorial", "mono", "condensed"] as const}
-					value={form.font_style}
-					onChange={(v) => onChange({ font_style: v })}
-					displayFn={(v) => (v === "condensed" ? "bold" : v)}
-				/>
-				<OptionRow
-					label="Title Size"
-					options={["default", "large", "xl"] as const}
-					value={form.title_size}
-					onChange={(v) => onChange({ title_size: v })}
-					displayFn={(v) => (v === "default" ? "Sm" : v === "large" ? "Md" : "Lg")}
-				/>
-			</div>
+					<div className="grid grid-cols-2 gap-4">
+						<OptionRow
+							label="Background Effect"
+							options={["solid", "gradient", "glow"] as const}
+							value={form.background_style}
+							onChange={(v) => onChange({ background_style: v })}
+						/>
+						<OptionRow
+							label="Buttons"
+							options={["rounded", "pill", "sharp"] as const}
+							value={form.button_style}
+							onChange={(v) => onChange({ button_style: v })}
+						/>
+					</div>
 
-			<OptionRow
-				label="Layout"
-				options={["centered", "stacked"] as const}
-				value={form.layout_style}
-				onChange={(v) => onChange({ layout_style: v })}
-				displayFn={(v) => (v === "centered" ? "Side by side" : "Stacked")}
-			/>
+					<div className="grid grid-cols-2 gap-4">
+						<OptionRow
+							label="Font"
+							options={["modern", "editorial", "mono", "condensed"] as const}
+							value={form.font_style}
+							onChange={(v) => onChange({ font_style: v })}
+							displayFn={(v) => (v === "condensed" ? "bold" : v)}
+						/>
+						<OptionRow
+							label="Title Size"
+							options={["default", "large", "xl"] as const}
+							value={form.title_size}
+							onChange={(v) => onChange({ title_size: v })}
+							displayFn={(v) => (v === "default" ? "Sm" : v === "large" ? "Md" : "Lg")}
+						/>
+					</div>
+
+					<OptionRow
+						label="Layout"
+						options={["centered", "stacked"] as const}
+						value={form.layout_style}
+						onChange={(v) => onChange({ layout_style: v })}
+						displayFn={(v) => (v === "centered" ? "Side by side" : "Stacked")}
+					/>
+				</>
+			)}
 		</div>
 	);
 }
