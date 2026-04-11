@@ -17,10 +17,14 @@ export function InlineSequenceEditor({
 	pageId,
 	hasIncentive,
 	autoExpandFirst,
+	autoScrollDisabled,
+	onReady,
 }: {
 	pageId: string;
 	hasIncentive: boolean;
 	autoExpandFirst?: boolean;
+	autoScrollDisabled?: boolean;
+	onReady?: () => void;
 }) {
 	const queryClient = useQueryClient();
 	const queryKey = ["email-sequence", pageId];
@@ -35,10 +39,13 @@ export function InlineSequenceEditor({
 	});
 
 	useEffect(() => {
-		if (autoExpandFirst && sequence && sectionRef.current) {
-			sectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+		if (autoExpandFirst && sequence) {
+			onReady?.();
+			if (!autoScrollDisabled && sectionRef.current) {
+				sectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+			}
 		}
-	}, [autoExpandFirst, sequence]);
+	}, [autoExpandFirst, autoScrollDisabled, sequence, onReady]);
 
 	function invalidateAll() {
 		queryClient.invalidateQueries({ queryKey });
