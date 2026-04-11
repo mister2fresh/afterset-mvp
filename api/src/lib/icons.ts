@@ -105,5 +105,5 @@ export function renderTextLinkGrid(
 		...renderTextLinks(socialLinks, SOCIAL_ICONS),
 	];
 	if (!allLinks.length) return "";
-	return `<div style="text-align:center;margin-top:24px;font-size:14px;color:${accentColor};">${allLinks.join(`<span style="margin:0 6px;opacity:.4;">·</span>`)}</div>`;
+	return `<div style="text-align:center;font-size:14px;color:${accentColor};">${allLinks.join(`<span style="margin:0 6px;opacity:.4;">·</span>`)}</div>`;
 }
