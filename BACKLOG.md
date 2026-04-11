@@ -49,60 +49,66 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Cohort view** — group fans by capture date (e.g., "March 15 show"), track email engagement over time per cohort
 - [ ] **Page view tracking + capture rate** — track page loads in the Cloudflare Worker (lightweight counter or `page_views` table); enables "X% of visitors became fans" capture rate KPI on the Tonight dashboard tab
 - [ ] **Capture method effectiveness** — conversion rates per method (QR scans vs completions, SMS clicks vs completions)
-- [ ] **Geography breakdown** — approximate city from IP at Worker level; map or top-cities list
+- [ ] **Geography breakdown** — extract `cf-ipcity` header from Cloudflare Worker, store alongside captures; top-cities list + map (see `afterset/docs/research/geolocation-strategy.md`)
 - [ ] **Device breakdown** — mobile vs desktop from User-Agent; informs signage placement decisions
 - [ ] **Gig calendar with title history** — log of past show titles per page; helps artists recall when/where they played (Layer 2)
 - [ ] **Financial tracking alongside fan data** (Layer 3)
 
-## Show Location Tagging (Geo-Based)
+## Show / Venue Tagging
 
-**Goal:** Let artists tag a "show" with one tap using GPS, so all fan captures during that show are automatically grouped by venue. Zero typing required in the happy path.
+> **Decision (2026-04-11):** No fan-side geolocation. Artist tags venue at gig creation via Google Places Autocomplete. Full rationale in `afterset/docs/research/geolocation-strategy.md`.
 
-**Why:** The dashboard architecture (Tonight / All Shows) depends on show-scoped data. Without frictionless show creation, the per-show stats table, capture rate comparisons, and city leaderboards have no data to display. This is the missing input layer.
+**Goal:** Let artists associate captures with a venue so the dashboard can show per-venue and per-city analytics. The artist knows the venue — don't ask the fan.
 
-**User story:** Between soundcheck and doors, the artist taps "I'm at a show" → grants location → sees a suggested venue name → confirms with one tap → all QR captures for the rest of the night attach to that show.
+**User story:** Artist creates/updates a show → searches for venue by name (Google Places Autocomplete, no location permission needed) → confirms → all captures during that show inherit the venue.
 
-### Phase 1 — Data Model / Schema
+### Phase 1 — Data Model
 
-- [ ] Add `shows` table: `id`, `artist_id`, `venue_name`, `city`, `state`, `country`, `latitude`, `longitude`, `started_at`, `ended_at`, `is_active`, `created_at`, `updated_at`
+- [ ] Add `venues` table: `id`, `google_place_id`, `name`, `address`, `city`, `state`, `country`, `latitude`, `longitude`, `created_at`
+- [ ] Add `shows` table: `id`, `artist_id`, `venue_id` (FK), `started_at`, `ended_at`, `is_active`, `created_at`, `updated_at`
 - [ ] Add optional `show_id` FK to captures. Null = captured outside a tagged show.
 - [ ] `getActiveShow(artistId)` — returns active show or null; enforces one active show per artist
-- [ ] `getShowStats(showId)` — total captures, QR scans, page views, capture rate
 - [ ] Existing captures work with show_id = null (no breaking changes)
+- [ ] Deduplicate venues by `google_place_id` — artists playing the same venue share one record
 
-### Phase 2 — Geolocation + Venue Lookup
+### Phase 2 — Google Places Autocomplete (Artist Dashboard)
 
-- [ ] `getCurrentPosition()` — wraps browser Geolocation API, returns lat/lng or structured error (denied, unavailable, timeout)
-- [ ] `suggestVenue(lat, lng)` — calls geocoding/places API, returns 1–3 nearest venue-like results (name, address, city, state, country, distance)
-- [ ] Evaluate providers: Google Places (most accurate, costs money), Mapbox (generous free tier), OSM/Nominatim (free, weaker on venue names)
-- [ ] Cache venue lookups by rounded lat/lng (3 decimal places ≈ 110m radius)
+- [ ] Integrate Google Places Autocomplete (New) in React SPA — text search, IP-based biasing, no device permissions
+- [ ] Use Text Search Essentials (IDs Only) tier — free and unlimited
+- [ ] On venue select: store `place_id`, name, address, city, state, country, lat/lng in `venues` table
+- [ ] Cache aggressively — indie artists play the same 5–20 venues repeatedly
+- [ ] Optional "Use my location" button via Web Geolocation API for artist convenience (not required)
 
 ### Phase 3 — "I'm at a Show" UI
 
-- [ ] One-tap flow: button → geolocation → venue suggestion card → confirm
-- [ ] Venue suggestion card: venue name (large), address (small), city/state. Actions: "That's right" / "Not quite" (edit)
+- [ ] One-tap flow: button → venue search autocomplete → select → show created, Tonight tab activates
+- [ ] Recent venues list for quick re-selection (most artists rotate 5–20 venues)
 - [ ] On confirm → show record created, Tonight tab activates
-- [ ] On "Not quite" → inline edit fields pre-filled with geo results
-- [ ] Location denial fallback → manual entry with IP-based city suggestion
-- [ ] No venue found → show street address, let artist type name, pre-fill city/state
+- [ ] Manual entry fallback if venue not in Google Places
 - [ ] Dark theme: midnight bg, honey-gold confirm button
 
-### Phase 4 — Dashboard Wiring (Tonight / All Shows)
+### Phase 4 — IP-Based Fan Geography (Phase 2 of geo strategy)
 
-- [ ] Tonight tab: show header from active show, KPIs scoped to active showId, capture rate, recent fan feed, email sequence status
-- [ ] All Shows tab: aggregate KPIs, fan growth chart (captures per show), show-by-show performance table
-- [ ] Show table columns: Date, Venue, City, Fans Captured, QR Scans, Capture Rate, Avg Open Rate
+- [ ] Extract `cf-ipcity` header in Cloudflare Worker on fan capture — free, no client code
+- [ ] Store approximate city alongside capture event
+- [ ] Top-cities list / map on analytics dashboard
+- [ ] Update privacy policy to disclose IP-derived city collection
+
+### Phase 5 — Dashboard Wiring
+
+- [ ] Tonight tab: show header from active show, KPIs scoped to active showId, capture rate, recent fan feed
+- [ ] All Shows tab: aggregate KPIs, fan growth chart, show-by-show performance table
+- [ ] Show table columns: Date, Venue, City, Fans Captured, Capture Rate, Avg Open Rate
 - [ ] Row expand → email sequence performance for that show's fan cohort
 - [ ] Top cities / venues leaderboard
 
-### Phase 5 — Edge Cases, Empty States, Polish
+### Phase 6 — Edge Cases, Empty States, Polish
 
-- [ ] No GPS → manual entry with IP-based city
 - [ ] Auto-close shows after 8 hours of inactivity; notification on next app open
-- [ ] Unattached captures (showId = null) → "Untagged captures" row in All Shows table
+- [ ] Unattached captures (show_id = null) → "Untagged captures" row in All Shows table
 - [ ] Allow starting new show after ending current one (one-active constraint)
 - [ ] Venue name correction on completed shows
-- [ ] Empty states: Tonight (no active show → large "I'm at a show" button), All Shows (no shows → illustration + message), single show (hide leaderboard)
+- [ ] Empty states: Tonight (no active show → large "I'm at a show" button), All Shows (no shows → illustration + message)
 - [ ] Prompt "Were you at a show?" if captures come in without an active show
 
 ## Auth & Account Recovery
@@ -116,7 +122,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Light mode / theme toggle** — lighter palette option for the dashboard; persist preference in artist settings
 - [ ] **Custom domains for capture pages** — CF4SaaS at 200+ artists
 - [ ] **Team / band member accounts** — Band tier
-- [ ] **Mobile native app consideration**
+- [ ] **Mobile native app consideration** — Capacitor not justified for location features alone (venue search is a text problem); revisit only if push notifications, offline, or NFC scanning become requirements
 - [ ] **MCP task server** — build when file-based tracking outgrows itself
 - [ ] **Feature branch workflow for /ship** — update ship skill to create feature branch + PR by default instead of pushing directly to main; prevents parallel Claude Code sessions from conflicting on staging area
 - [ ] **Stripe integration** — subscription billing for Solo/Tour/Superstar tiers; webhook handler to update `artists.tier` on payment events; Superstar email overage via metered billing
