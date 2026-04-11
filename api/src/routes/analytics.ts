@@ -223,7 +223,7 @@ app.get("/:id/analytics", async (c) => {
 	for (const row of rows) {
 		const date = row.captured_at.slice(0, 10);
 		if (dailyCounts.has(date)) {
-			dailyCounts.set(date, dailyCounts.get(date)! + 1);
+			dailyCounts.set(date, (dailyCounts.get(date) ?? 0) + 1);
 		}
 	}
 
@@ -375,7 +375,7 @@ app.get("/", async (c) => {
 	for (const row of rows) {
 		const date = row.captured_at.slice(0, 10);
 		if (dailyCounts.has(date)) {
-			dailyCounts.set(date, dailyCounts.get(date)! + 1);
+			dailyCounts.set(date, (dailyCounts.get(date) ?? 0) + 1);
 		}
 	}
 

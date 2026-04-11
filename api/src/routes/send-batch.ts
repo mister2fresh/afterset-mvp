@@ -34,15 +34,19 @@ async function claimPendingRows(ids?: string[]): Promise<PendingRow[] | { error:
 			.eq("status", "pending")
 			.lte("send_at", new Date().toISOString())
 			.select("id, fan_capture_id, artist_id, email, retry_count, email_template_id, broadcast_id");
-		if (error) console.error(error);
-		return { error: "Internal server error" };
+		if (error) {
+			console.error(error);
+			return { error: "Internal server error" };
+		}
 		return data ?? [];
 	}
 	const { data, error } = await supabase.rpc("claim_pending_emails", {
 		batch_limit: BATCH_LIMIT,
 	});
-	if (error) console.error(error);
-	return { error: "Internal server error" };
+	if (error) {
+		console.error(error);
+		return { error: "Internal server error" };
+	}
 	return data ?? [];
 }
 

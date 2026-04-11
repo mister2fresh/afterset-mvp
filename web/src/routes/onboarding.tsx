@@ -79,10 +79,10 @@ function OnboardingPage() {
 
 	const emailForm = { subject: emailSubject, body: emailBody, delayMode, includeIncentive };
 	function handleEmailFormChange(patch: Partial<typeof emailForm>) {
-		if ("subject" in patch) setEmailSubject(patch.subject!);
-		if ("body" in patch) setEmailBody(patch.body!);
-		if ("delayMode" in patch) setDelayMode(patch.delayMode!);
-		if ("includeIncentive" in patch) setIncludeIncentive(patch.includeIncentive!);
+		if (patch.subject !== undefined) setEmailSubject(patch.subject);
+		if (patch.body !== undefined) setEmailBody(patch.body);
+		if (patch.delayMode !== undefined) setDelayMode(patch.delayMode);
+		if (patch.includeIncentive !== undefined) setIncludeIncentive(patch.includeIncentive);
 	}
 	const emailPreview = { html: previewHtml, show: showPreview, onShowChange: setShowPreview };
 

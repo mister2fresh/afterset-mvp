@@ -10,6 +10,7 @@ import {
 	Pencil,
 	Plus,
 	QrCode,
+	Smartphone,
 	Trash2,
 	Users,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmailTemplateBadge } from "@/components/email-template-badge";
 import { KeywordDialog } from "@/components/keyword-dialog";
+import { NfcSetupDialog } from "@/components/nfc-setup-dialog";
 import { type CapturePage, fileTypeIcon, PageForm } from "@/components/page-form";
 import { QueryError } from "@/components/query-error";
 import { Badge } from "@/components/ui/badge";
@@ -63,14 +65,6 @@ function useKeywords() {
 		queryKey: ["keywords"],
 		queryFn: () => api.get<Record<string, KeywordEntry>>("/capture-pages/keywords"),
 	});
-}
-
-function formatPhone(phone: string): string {
-	const digits = phone.replace(/\D/g, "");
-	if (digits.length === 11 && digits[0] === "1") {
-		return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
-	}
-	return phone;
 }
 
 function PagesPage() {
@@ -257,23 +251,60 @@ function InlineTitleEdit({
 	);
 }
 
-function QrSection({ qrUrl, pageId, slug }: { qrUrl: string; pageId: string; slug: string }) {
+function CaptureMethodButtons({
+	qrUrl,
+	pageId,
+	slug,
+	keyword,
+	onKeywordSetup,
+	onNfcSetup,
+}: {
+	qrUrl: string | null;
+	pageId: string;
+	slug: string;
+	keyword: KeywordEntry | null;
+	onKeywordSetup: () => void;
+	onNfcSetup: () => void;
+}): React.ReactElement {
 	return (
-		<div className="flex items-center gap-3">
-			<img
-				src={qrUrl}
-				alt={`QR code for ${slug}`}
-				className="size-20 rounded border border-border bg-white p-1"
-			/>
-			<Button
-				variant="outline"
-				size="sm"
-				className="gap-1.5"
-				onClick={() => downloadQr(pageId, slug)}
-			>
-				<Download className="size-3.5" />
-				Download QR
-			</Button>
+		<div className="flex items-start gap-3">
+			{qrUrl && (
+				<img
+					src={qrUrl}
+					alt={`QR code for ${slug}`}
+					className="size-20 rounded border border-border bg-white p-1"
+				/>
+			)}
+			<div className="flex flex-col gap-1.5">
+				<Button
+					variant="outline"
+					size="sm"
+					className="justify-start gap-1.5"
+					onClick={() => downloadQr(pageId, slug)}
+				>
+					<Download className="size-3.5" />
+					Download QR
+				</Button>
+				<Button
+					variant="outline"
+					size="sm"
+					className="justify-start gap-1.5"
+					onClick={onKeywordSetup}
+				>
+					<MessageSquare className="size-3.5" />
+					{keyword ? (
+						<>
+							Text <span className="font-mono font-bold">{keyword.keyword}</span>
+						</>
+					) : (
+						"Text-to-Join"
+					)}
+				</Button>
+				<Button variant="outline" size="sm" className="justify-start gap-1.5" onClick={onNfcSetup}>
+					<Smartphone className="size-3.5" />
+					NFC Tap
+				</Button>
+			</div>
 		</div>
 	);
 }
@@ -292,6 +323,7 @@ function PageCard({
 	const queryClient = useQueryClient();
 	const qrUrl = useQrPreview(page.id);
 	const [keywordOpen, setKeywordOpen] = useState(false);
+	const [nfcOpen, setNfcOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [editingTitle, setEditingTitle] = useState(false);
 	const [titleDraft, setTitleDraft] = useState(page.title);
@@ -392,30 +424,16 @@ function PageCard({
 				open={keywordOpen}
 				onOpenChange={setKeywordOpen}
 			/>
+			<NfcSetupDialog slug={page.slug} open={nfcOpen} onOpenChange={setNfcOpen} />
 			<CardContent className="space-y-3">
-				{qrUrl && <QrSection qrUrl={qrUrl} pageId={page.id} slug={page.slug} />}
-				{keyword ? (
-					<button
-						type="button"
-						onClick={() => setKeywordOpen(true)}
-						className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-left text-xs transition-colors hover:border-honey-gold/50"
-					>
-						<MessageSquare className="size-3.5 shrink-0 text-honey-gold" />
-						<span>
-							Text <span className="font-mono font-bold">{keyword.keyword}</span> to{" "}
-							{formatPhone(keyword.phone_number)}
-						</span>
-					</button>
-				) : (
-					<button
-						type="button"
-						onClick={() => setKeywordOpen(true)}
-						className="flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-honey-gold"
-					>
-						<MessageSquare className="size-3.5" />
-						Set up text-to-join
-					</button>
-				)}
+				<CaptureMethodButtons
+					qrUrl={qrUrl}
+					pageId={page.id}
+					slug={page.slug}
+					keyword={keyword}
+					onKeywordSetup={() => setKeywordOpen(true)}
+					onNfcSetup={() => setNfcOpen(true)}
+				/>
 				{page.value_exchange_text && (
 					<p className="text-sm text-muted-foreground line-clamp-2">{page.value_exchange_text}</p>
 				)}

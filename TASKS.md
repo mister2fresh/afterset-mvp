@@ -1,7 +1,7 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 11, 2026 (v75 — Security deployment complete)
+**Last updated:** April 11, 2026 (v76 — NFC setup dialog + lint fixes)
 **Current phase:** Sprint 5 — Pricing Tier Enforcement
 **Sprint:** Sprint 4 complete (mobile-first + PWA + security audit + production deployment). Sprint 5 planned — tier gates for Solo/Tour/Superstar.
 **Next up:** Sprint 5 Phase 1 (foundation: migration, tier config, auth middleware). See also: manual QA pass, analytics layout redesign.
@@ -28,6 +28,7 @@ All 13 findings (4 HIGH, 6 MEDIUM, 3 LOW) fixed and deployed to production. Depl
 - [x] **Duplicate emails on capture (9 emails sent)** — race condition in send-batch: non-atomic fetch+claim allowed overlapping pg_cron runs to double-send; also skipped emails looped back to pending forever (fixed March 26)
 - [x] **Incentive file not included in emails** — send-batch queried nonexistent `incentive_uploads` table instead of `capture_pages.incentive_file_path` (fixed March 26)
 - [x] **Social/streaming icons invisible in sent emails** — inline SVGs stripped by Gmail/Outlook/Yahoo; replaced with styled text links (e.g. "Spotify · Instagram · TikTok") using artist accent color. Download page keeps SVG icons (works in browsers). Preview iframe height bumped 300→500px (fixed April 1)
+- [ ] **Broadcast "Preview" dropdown opens edit instead of preview** — the preview option in the broadcast card's `...` dropdown menu navigates to the edit view rather than showing an email preview
 
 ---
 

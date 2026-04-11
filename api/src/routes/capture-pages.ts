@@ -180,7 +180,8 @@ app.get("/:id/qr.png", async (c) => {
 
 	try {
 		const obj = await r2.send(new GetObjectCommand({ Bucket: R2_BUCKET, Key: key }));
-		body = await obj.Body!.transformToByteArray();
+		if (!obj.Body) throw new Error("Empty R2 response");
+		body = await obj.Body.transformToByteArray();
 	} catch {
 		body = await generateQrPng(page.slug);
 		uploadQr(page.slug).catch(() => {});
