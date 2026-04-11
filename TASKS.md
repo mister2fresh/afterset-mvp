@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 11, 2026 (v73 — Pricing tier enforcement planned)
+**Last updated:** April 11, 2026 (v74 — Page editor UX cleanup)
 **Current phase:** Sprint 5 — Pricing Tier Enforcement
 **Sprint:** Sprint 4 complete (mobile-first + PWA + security audit). Sprint 5 planned — tier gates for Solo/Tour/Superstar.
-**Next up:** Sprint 5 Phase 1 (foundation: migration, tier config, auth middleware). See also: deploy security fixes checklist, manual QA pass, analytics layout redesign.
+**Next up:** Sprint 5 Phase 1 (foundation: migration, tier config, auth middleware). See also: manual QA pass, analytics layout redesign.
 
 ---
 
@@ -82,9 +82,9 @@ npx wrangler deploy
 
 #### 6. Verify
 
-- [ ] Submit a test capture at `afterset.net/c/{slug}` — should succeed
-- [ ] Submit 6+ rapid captures from same IP — 6th should return 429
-- [ ] Check Supabase logs for successful `send-pending-emails` cron runs
+- [x] Submit a test capture at `afterset.net/c/{slug}` — should succeed
+- [x] Submit 6+ rapid captures from same IP — 6th should return 429
+- [x] Check Supabase logs for successful `send-pending-emails` cron runs
 
 ---
 

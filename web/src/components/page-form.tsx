@@ -9,6 +9,8 @@ import {
 	FileImage,
 	FileText,
 	FileVideo,
+	Gift,
+	Link as LinkIcon,
 	Loader2,
 	MessageSquare,
 	Package,
@@ -16,6 +18,7 @@ import {
 	Trash2,
 	Upload,
 	X,
+	Zap,
 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -163,10 +166,6 @@ function slugify(text: string): string {
 function stripEmpty(obj: Record<string, string>): Record<string, string> | undefined {
 	const filtered = Object.fromEntries(Object.entries(obj).filter(([, v]) => v.trim() !== ""));
 	return Object.keys(filtered).length > 0 ? filtered : undefined;
-}
-
-function hasAnyLink(links: Record<string, string>): boolean {
-	return Object.values(links).some((v) => v.trim() !== "");
 }
 
 // --- Sub-components ---
@@ -529,58 +528,46 @@ function IncentiveSection({
 	);
 }
 
-function LinkSection({
-	group,
-	label,
-	platforms,
-	links,
-	open,
-	setOpen,
-	onLinkChange,
+function EditorSection({
+	icon: Icon,
+	title,
+	summary,
+	defaultOpen = false,
+	children,
 }: {
-	group: string;
-	label: string;
-	platforms: readonly { key: string; label: string }[];
-	links: Record<string, string>;
-	open: boolean;
-	setOpen: (v: boolean) => void;
-	onLinkChange: (key: string, value: string) => void;
+	icon: React.ComponentType<{ className?: string }>;
+	title: string;
+	summary?: string;
+	defaultOpen?: boolean;
+	children: React.ReactNode;
 }): React.ReactElement {
+	const [open, setOpen] = useState(defaultOpen);
+
 	return (
 		<div className="space-y-3">
 			<button
 				type="button"
 				onClick={() => setOpen(!open)}
-				className="flex w-full items-center justify-between"
+				className="flex w-full items-center gap-2"
 			>
-				<Label className="pointer-events-none">
-					{label} <span className="text-muted-foreground">(optional)</span>
-				</Label>
+				<Icon className="size-4 shrink-0 text-muted-foreground" />
+				<span className="text-sm font-medium">{title}</span>
+				{summary && (
+					<span className="ml-auto mr-2 max-w-[50%] truncate text-xs text-muted-foreground">
+						{summary}
+					</span>
+				)}
 				{open ? (
-					<ChevronUp className="size-4 text-muted-foreground" />
+					<ChevronUp
+						className={`size-4 shrink-0 text-muted-foreground ${summary ? "" : "ml-auto"}`}
+					/>
 				) : (
-					<ChevronDown className="size-4 text-muted-foreground" />
+					<ChevronDown
+						className={`size-4 shrink-0 text-muted-foreground ${summary ? "" : "ml-auto"}`}
+					/>
 				)}
 			</button>
-			{open &&
-				platforms.map((p) => (
-					<div key={p.key} className="flex items-center gap-2">
-						<Label
-							htmlFor={`${group}-${p.key}`}
-							className="w-20 shrink-0 text-xs text-muted-foreground sm:w-28"
-						>
-							{p.label}
-						</Label>
-						<Input
-							id={`${group}-${p.key}`}
-							type="url"
-							placeholder="https://..."
-							value={links[p.key] ?? ""}
-							onChange={(e) => onLinkChange(p.key, e.target.value)}
-							className="text-sm"
-						/>
-					</div>
-				))}
+			{open && <div className="space-y-4">{children}</div>}
 		</div>
 	);
 }
@@ -658,8 +645,6 @@ export function PageForm({
 	const [fileRemoved, setFileRemoved] = useState(false);
 	const [removeFileOpen, setRemoveFileOpen] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
-	const [streamingOpen, setStreamingOpen] = useState(hasAnyLink(initialForm.streaming_links));
-	const [socialOpen, setSocialOpen] = useState(hasAnyLink(initialForm.social_links));
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const nfcEmailRef = useRef<HTMLDivElement>(null);
 
@@ -860,57 +845,109 @@ export function PageForm({
 				/>
 			</div>
 
-			<KeywordSection
-				keyword={keyword}
-				setKeyword={setKeyword}
-				mode={mode}
-				pageId={page?.id}
-				currentKeyword={currentKeyword}
-			/>
-
-			{!isCreate && page?.slug && !autoExpandEmail && <NfcSection slug={page.slug} />}
-
 			<ThemeEditor form={form} onChange={(updates) => setForm((f) => ({ ...f, ...updates }))} />
 
-			<IncentiveSection
-				pendingFile={pendingFile}
-				hasExistingFile={!!hasExistingFile}
-				page={page}
-				uploadProgress={uploadProgress}
-				uploadError={uploadError}
-				fileInputRef={fileInputRef}
-				isDragging={isDragging}
-				setIsDragging={setIsDragging}
-				onFileSelect={handleFileSelect}
-				onRemovePending={() => {
-					setPendingFile(null);
-					if (fileInputRef.current) fileInputRef.current.value = "";
-				}}
-				onRemoveExisting={() => removeMutation.mutate()}
-				removeFileOpen={removeFileOpen}
-				setRemoveFileOpen={setRemoveFileOpen}
-				isRemoving={removeMutation.isPending}
-			/>
+			<EditorSection
+				icon={Zap}
+				title="Capture Methods"
+				summary={(() => {
+					const parts: string[] = [];
+					if (keyword.length >= 2) parts.push(keyword.toUpperCase());
+					if (!isCreate && page?.slug && !autoExpandEmail) parts.push("NFC");
+					return parts.length > 0 ? parts.join(" · ") : "Not set";
+				})()}
+			>
+				<KeywordSection
+					keyword={keyword}
+					setKeyword={setKeyword}
+					mode={mode}
+					pageId={page?.id}
+					currentKeyword={currentKeyword}
+				/>
+				{!isCreate && page?.slug && !autoExpandEmail && <NfcSection slug={page.slug} />}
+			</EditorSection>
 
-			<LinkSection
-				group="stream"
-				label="Streaming Links"
-				platforms={STREAMING_PLATFORMS}
-				links={form.streaming_links}
-				open={streamingOpen}
-				setOpen={setStreamingOpen}
-				onLinkChange={(key, value) => setLink("streaming_links", key, value)}
-			/>
+			<EditorSection
+				icon={Gift}
+				title="Fan Incentive"
+				summary={
+					pendingFile?.name ?? (hasExistingFile ? page?.incentive_file_name : null) ?? "No file"
+				}
+			>
+				<IncentiveSection
+					pendingFile={pendingFile}
+					hasExistingFile={!!hasExistingFile}
+					page={page}
+					uploadProgress={uploadProgress}
+					uploadError={uploadError}
+					fileInputRef={fileInputRef}
+					isDragging={isDragging}
+					setIsDragging={setIsDragging}
+					onFileSelect={handleFileSelect}
+					onRemovePending={() => {
+						setPendingFile(null);
+						if (fileInputRef.current) fileInputRef.current.value = "";
+					}}
+					onRemoveExisting={() => removeMutation.mutate()}
+					removeFileOpen={removeFileOpen}
+					setRemoveFileOpen={setRemoveFileOpen}
+					isRemoving={removeMutation.isPending}
+				/>
+			</EditorSection>
 
-			<LinkSection
-				group="social"
-				label="Social Links"
-				platforms={SOCIAL_PLATFORMS}
-				links={form.social_links}
-				open={socialOpen}
-				setOpen={setSocialOpen}
-				onLinkChange={(key, value) => setLink("social_links", key, value)}
-			/>
+			<EditorSection
+				icon={LinkIcon}
+				title="Music & Social Links"
+				summary={(() => {
+					const count =
+						Object.values(form.streaming_links).filter((v) => v.trim()).length +
+						Object.values(form.social_links).filter((v) => v.trim()).length;
+					return count > 0 ? `${count} link${count !== 1 ? "s" : ""}` : "No links";
+				})()}
+			>
+				<div className="space-y-3">
+					<Label className="text-xs font-medium text-muted-foreground">Streaming</Label>
+					{STREAMING_PLATFORMS.map((p) => (
+						<div key={p.key} className="flex items-center gap-2">
+							<Label
+								htmlFor={`stream-${p.key}`}
+								className="w-20 shrink-0 text-xs text-muted-foreground sm:w-28"
+							>
+								{p.label}
+							</Label>
+							<Input
+								id={`stream-${p.key}`}
+								type="url"
+								placeholder="https://..."
+								value={form.streaming_links[p.key] ?? ""}
+								onChange={(e) => setLink("streaming_links", p.key, e.target.value)}
+								className="text-sm"
+							/>
+						</div>
+					))}
+				</div>
+				<div className="space-y-3">
+					<Label className="text-xs font-medium text-muted-foreground">Social</Label>
+					{SOCIAL_PLATFORMS.map((p) => (
+						<div key={p.key} className="flex items-center gap-2">
+							<Label
+								htmlFor={`social-${p.key}`}
+								className="w-20 shrink-0 text-xs text-muted-foreground sm:w-28"
+							>
+								{p.label}
+							</Label>
+							<Input
+								id={`social-${p.key}`}
+								type="url"
+								placeholder="https://..."
+								value={form.social_links[p.key] ?? ""}
+								onChange={(e) => setLink("social_links", p.key, e.target.value)}
+								className="text-sm"
+							/>
+						</div>
+					))}
+				</div>
+			</EditorSection>
 
 			{!isCreate && page?.id && autoExpandEmail && page.slug ? (
 				<div ref={nfcEmailRef} className="space-y-6">
