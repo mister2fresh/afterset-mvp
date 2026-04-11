@@ -15,7 +15,7 @@ bucket_name = "afterset-capture-pages"
 # Rate limiting KV namespace — create with: wrangler kv:namespace create RATE_LIMITS
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
-id = "PLACEHOLDER_REPLACE_WITH_KV_NAMESPACE_ID"
+id = "d57c197ba4a3412da1f5e6d0601cc21c"
 
 [vars]
 SUPABASE_URL = "https://mnoajavdnawrmqsnbouy.supabase.co"
