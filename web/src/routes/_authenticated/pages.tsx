@@ -278,23 +278,19 @@ function CaptureMethodButtons({
 				<img
 					src={qrUrl}
 					alt={`QR code for ${slug}`}
-					className="size-28 self-center rounded border border-border bg-white p-1 sm:size-20 sm:self-start"
+					className="size-28 self-center rounded border border-border bg-white p-1 sm:size-24 sm:self-start"
 				/>
 			)}
 			<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 				<Button
 					variant="outline"
-					className="gap-1.5 sm:h-8 sm:justify-start sm:text-xs"
+					className="gap-1.5 sm:h-8 sm:text-xs"
 					onClick={() => downloadQr(pageId, slug)}
 				>
 					<Download className="size-4 sm:size-3.5" />
 					Download QR
 				</Button>
-				<Button
-					variant="outline"
-					className="gap-1.5 sm:h-8 sm:justify-start sm:text-xs"
-					onClick={onKeywordSetup}
-				>
+				<Button variant="outline" className="gap-1.5 sm:h-8 sm:text-xs" onClick={onKeywordSetup}>
 					<MessageSquare className="size-4 sm:size-3.5" />
 					{keyword ? (
 						<>
@@ -304,11 +300,7 @@ function CaptureMethodButtons({
 						"Text-to-Join"
 					)}
 				</Button>
-				<Button
-					variant="outline"
-					className="gap-1.5 sm:h-8 sm:justify-start sm:text-xs"
-					onClick={onNfcSetup}
-				>
+				<Button variant="outline" className="gap-1.5 sm:h-8 sm:text-xs" onClick={onNfcSetup}>
 					<Smartphone className="size-4 sm:size-3.5" />
 					NFC Tap
 				</Button>
