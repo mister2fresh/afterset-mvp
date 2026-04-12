@@ -25,7 +25,6 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { api } from "@/lib/api";
 import { clearUser, getUser, signOut } from "@/lib/auth";
@@ -36,20 +35,24 @@ export const Route = createFileRoute("/_authenticated")({
 			throw redirect({ to: "/login" });
 		}
 
-		let settings: { onboarding_completed: boolean };
+		let settings: { onboarding_completed: boolean } | null = null;
 		try {
 			settings = await context.queryClient.fetchQuery({
 				queryKey: ["settings"],
 				queryFn: () => api.get<{ onboarding_completed: boolean }>("/settings"),
 				staleTime: 1000 * 60 * 5,
 			});
-		} catch {
-			clearUser();
-			context.queryClient.removeQueries({ queryKey: ["settings"] });
-			throw redirect({ to: "/login" });
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : "";
+			if (msg.includes("Not authenticated") || msg.includes("API error 401")) {
+				clearUser();
+				context.queryClient.removeQueries({ queryKey: ["settings"] });
+				throw redirect({ to: "/login" });
+			}
+			// Non-auth error (network blip, 500, etc.) — skip onboarding check
 		}
 
-		if (!settings.onboarding_completed) {
+		if (settings && !settings.onboarding_completed) {
 			throw redirect({ to: "/onboarding" });
 		}
 	},
@@ -72,94 +75,22 @@ const sidebarItems = [
 	{ to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
-function AuthenticatedLayout() {
+function AuthenticatedLayout(): React.ReactElement {
 	const user = getUser();
 	const matchRoute = useMatchRoute();
-	const isMobile = useIsMobile();
 	const initials = user?.email?.slice(0, 2).toUpperCase() ?? "?";
 	usePushNotifications();
 
-	async function handleSignOut() {
+	async function handleSignOut(): Promise<void> {
 		await signOut();
 	}
 
 	const currentLabel =
 		sidebarItems.find((item) => matchRoute({ to: item.to }))?.label ?? "Dashboard";
 
-	if (isMobile) {
-		return (
-			<div className="fixed inset-0 flex flex-col bg-background">
-				<header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
-					<Link to="/dashboard">
-						<span className="font-display text-lg font-bold text-honey-gold">Afterset</span>
-					</Link>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<button
-								type="button"
-								className="flex size-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-							>
-								<Avatar className="size-8">
-									<AvatarFallback className="bg-honey-gold/20 text-honey-gold text-xs">
-										{initials}
-									</AvatarFallback>
-								</Avatar>
-							</button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="w-56">
-							<div className="px-2 py-1.5 text-sm text-muted-foreground truncate">
-								{user?.email}
-							</div>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem asChild>
-								<Link to="/help">
-									<HelpCircle />
-									<span>Help</span>
-								</Link>
-							</DropdownMenuItem>
-							<DropdownMenuItem asChild>
-								<Link to="/settings">
-									<Settings />
-									<span>Settings</span>
-								</Link>
-							</DropdownMenuItem>
-							<DropdownMenuItem onClick={handleSignOut}>
-								<LogOut />
-								<span>Sign out</span>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</header>
-				<main className="min-h-0 flex-1 overflow-auto p-4">
-					<Outlet />
-				</main>
-				<nav className="shrink-0 border-t bg-sidebar">
-					<div className="flex h-14 items-center justify-around">
-						{tabItems.map((item) => {
-							const active = !!matchRoute({ to: item.to });
-							return (
-								<Link
-									key={item.to}
-									to={item.to}
-									className={`flex flex-col items-center justify-center gap-0.5 px-3 py-2 text-xs transition-colors ${
-										active ? "text-honey-gold" : "text-muted-foreground"
-									}`}
-								>
-									<item.icon className="size-5" />
-									<span>{item.label}</span>
-								</Link>
-							);
-						})}
-					</div>
-					<div className="h-[env(safe-area-inset-bottom)]" />
-				</nav>
-			</div>
-		);
-	}
-
 	return (
 		<TooltipProvider>
-			<SidebarProvider>
+			<SidebarProvider className="h-svh overflow-hidden">
 				<Sidebar>
 					<SidebarHeader className="px-4 py-4">
 						<Link to="/dashboard" className="block">
@@ -220,15 +151,79 @@ function AuthenticatedLayout() {
 						</SidebarMenu>
 					</SidebarFooter>
 				</Sidebar>
-				<SidebarInset>
-					<header className="flex h-14 items-center gap-2 border-b px-4">
+				<SidebarInset className="flex flex-col">
+					{/* Mobile header */}
+					<header className="flex h-14 shrink-0 items-center justify-between border-b px-4 md:hidden">
+						<Link to="/dashboard">
+							<span className="font-display text-lg font-bold text-honey-gold">Afterset</span>
+						</Link>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<button
+									type="button"
+									className="flex size-11 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+								>
+									<Avatar className="size-8">
+										<AvatarFallback className="bg-honey-gold/20 text-honey-gold text-xs">
+											{initials}
+										</AvatarFallback>
+									</Avatar>
+								</button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end" className="w-56">
+								<div className="px-2 py-1.5 text-sm text-muted-foreground truncate">
+									{user?.email}
+								</div>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem asChild>
+									<Link to="/help">
+										<HelpCircle />
+										<span>Help</span>
+									</Link>
+								</DropdownMenuItem>
+								<DropdownMenuItem asChild>
+									<Link to="/settings">
+										<Settings />
+										<span>Settings</span>
+									</Link>
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={handleSignOut}>
+									<LogOut />
+									<span>Sign out</span>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</header>
+					{/* Desktop header */}
+					<header className="hidden h-14 items-center gap-2 border-b px-4 md:flex">
 						<SidebarTrigger />
 						<Separator orientation="vertical" className="h-5" />
 						<h1 className="font-display text-sm font-semibold">{currentLabel}</h1>
 					</header>
-					<main className="flex-1 overflow-auto p-6">
+					<div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
 						<Outlet />
-					</main>
+					</div>
+					{/* Mobile bottom nav */}
+					<nav className="shrink-0 border-t bg-sidebar md:hidden">
+						<div className="flex h-14 items-center justify-around">
+							{tabItems.map((item) => {
+								const active = !!matchRoute({ to: item.to });
+								return (
+									<Link
+										key={item.to}
+										to={item.to}
+										className={`flex flex-col items-center justify-center gap-0.5 px-3 py-2 text-xs transition-colors ${
+											active ? "text-honey-gold" : "text-muted-foreground"
+										}`}
+									>
+										<item.icon className="size-5" />
+										<span>{item.label}</span>
+									</Link>
+								);
+							})}
+						</div>
+						<div className="h-[env(safe-area-inset-bottom)]" />
+					</nav>
 				</SidebarInset>
 			</SidebarProvider>
 		</TooltipProvider>
