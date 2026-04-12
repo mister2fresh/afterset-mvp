@@ -273,31 +273,29 @@ function CaptureMethodButtons({
 	onNfcSetup: () => void;
 }): React.ReactElement {
 	return (
-		<div className="flex items-start gap-3">
+		<div className="flex flex-col gap-3 sm:flex-row sm:items-start">
 			{qrUrl && (
 				<img
 					src={qrUrl}
 					alt={`QR code for ${slug}`}
-					className="size-20 rounded border border-border bg-white p-1"
+					className="size-28 self-center rounded border border-border bg-white p-1 sm:size-20 sm:self-start"
 				/>
 			)}
-			<div className="flex flex-col gap-1.5">
+			<div className="flex min-w-0 flex-1 flex-col gap-1.5">
 				<Button
 					variant="outline"
-					size="sm"
-					className="justify-start gap-1.5"
+					className="gap-1.5 sm:h-8 sm:justify-start sm:text-xs"
 					onClick={() => downloadQr(pageId, slug)}
 				>
-					<Download className="size-3.5" />
+					<Download className="size-4 sm:size-3.5" />
 					Download QR
 				</Button>
 				<Button
 					variant="outline"
-					size="sm"
-					className="justify-start gap-1.5"
+					className="gap-1.5 sm:h-8 sm:justify-start sm:text-xs"
 					onClick={onKeywordSetup}
 				>
-					<MessageSquare className="size-3.5" />
+					<MessageSquare className="size-4 sm:size-3.5" />
 					{keyword ? (
 						<>
 							Text <span className="font-mono font-bold">{keyword.keyword}</span>
@@ -306,8 +304,12 @@ function CaptureMethodButtons({
 						"Text-to-Join"
 					)}
 				</Button>
-				<Button variant="outline" size="sm" className="justify-start gap-1.5" onClick={onNfcSetup}>
-					<Smartphone className="size-3.5" />
+				<Button
+					variant="outline"
+					className="gap-1.5 sm:h-8 sm:justify-start sm:text-xs"
+					onClick={onNfcSetup}
+				>
+					<Smartphone className="size-4 sm:size-3.5" />
 					NFC Tap
 				</Button>
 			</div>
@@ -391,14 +393,6 @@ function PageCard({
 						</Button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="end">
-						<DropdownMenuItem onClick={onEdit}>
-							<Pencil />
-							Edit
-						</DropdownMenuItem>
-						<DropdownMenuItem onClick={onEditEmail}>
-							<Mail />
-							Follow-Up Emails
-						</DropdownMenuItem>
 						<DropdownMenuItem
 							className="text-destructive"
 							disabled={deleteMutation.isPending}
@@ -410,6 +404,16 @@ function PageCard({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</CardHeader>
+			<div className="grid grid-cols-1 gap-2 px-6 pb-2 sm:grid-cols-2">
+				<Button variant="outline" className="gap-1.5 sm:h-8 sm:text-xs" onClick={onEdit}>
+					<Pencil className="size-4 sm:size-3.5" />
+					Edit Page
+				</Button>
+				<Button variant="outline" className="gap-1.5 sm:h-8 sm:text-xs" onClick={onEditEmail}>
+					<Mail className="size-4 sm:size-3.5" />
+					Emails
+				</Button>
+			</div>
 			<ConfirmDialog
 				open={deleteOpen}
 				onOpenChange={setDeleteOpen}

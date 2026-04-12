@@ -112,6 +112,11 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] Empty states: Tonight (no active show → large "I'm at a show" button), All Shows (no shows → illustration + message)
 - [ ] Prompt "Were you at a show?" if captures come in without an active show
 
+## UX Polish
+
+- [ ] **Sticky save button in page editor** — pin save button to bottom of dialog so it's always visible while scrolling the long form
+- [ ] **Progressive disclosure in page editor** — collapsible sections to reduce visual overwhelm (see memory: project_page_editor_simplify)
+
 ## Auth & Account Recovery
 
 - [ ] **Google / Apple OAuth login** — add as linked auth method via Supabase `signInWithOAuth()`; doubles as recovery path if artist loses email access and reduces magic-link friction
