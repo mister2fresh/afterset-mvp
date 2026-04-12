@@ -74,6 +74,7 @@ function PagesPage() {
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editingPage, setEditingPage] = useState<CapturePage | null>(null);
 	const [justCreated, setJustCreated] = useState(false);
+	const [autoExpandEmail, setAutoExpandEmail] = useState(false);
 
 	if (isLoading) {
 		return (
@@ -113,6 +114,10 @@ function PagesPage() {
 							captureCount={counts?.[page.id] ?? 0}
 							keyword={keywords?.[page.id] ?? null}
 							onEdit={() => setEditingPage(page)}
+							onEditEmail={() => {
+								setAutoExpandEmail(true);
+								setEditingPage(page);
+							}}
 						/>
 					))}
 				</div>
@@ -139,12 +144,13 @@ function PagesPage() {
 				<PageFormDialog
 					mode="edit"
 					page={editingPage}
-					autoExpandEmail={justCreated}
+					autoExpandEmail={justCreated || autoExpandEmail}
 					open={!!editingPage}
 					onOpenChange={(open) => {
 						if (!open) {
 							setEditingPage(null);
 							setJustCreated(false);
+							setAutoExpandEmail(false);
 						}
 					}}
 				/>
@@ -314,11 +320,13 @@ function PageCard({
 	captureCount,
 	keyword,
 	onEdit,
+	onEditEmail,
 }: {
 	page: CapturePage;
 	captureCount: number;
 	keyword: KeywordEntry | null;
 	onEdit: () => void;
+	onEditEmail: () => void;
 }) {
 	const queryClient = useQueryClient();
 	const qrUrl = useQrPreview(page.id);
@@ -387,17 +395,9 @@ function PageCard({
 							<Pencil />
 							Edit
 						</DropdownMenuItem>
-						<DropdownMenuItem onClick={onEdit}>
+						<DropdownMenuItem onClick={onEditEmail}>
 							<Mail />
 							Follow-Up Emails
-						</DropdownMenuItem>
-						<DropdownMenuItem onClick={() => setKeywordOpen(true)}>
-							<MessageSquare />
-							Text-to-Join Keyword
-						</DropdownMenuItem>
-						<DropdownMenuItem onClick={() => downloadQr(page.id, page.slug)}>
-							<Download />
-							Download QR
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							className="text-destructive"
