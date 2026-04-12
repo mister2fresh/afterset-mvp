@@ -5,7 +5,9 @@ import {
 	ChevronDown,
 	ChevronUp,
 	Copy,
+	ExternalLink,
 	FileAudio,
+	FileDown,
 	FileImage,
 	FileText,
 	FileVideo,
@@ -26,7 +28,7 @@ import {
 	InlineSequenceEditor,
 	type SequenceEditorHandle,
 } from "@/components/inline-sequence-editor";
-import { ThemeEditor, type ThemeFields } from "@/components/theme-editor";
+import { isLightColor, ThemeEditor, type ThemeFields } from "@/components/theme-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +56,8 @@ export type CapturePage = {
 	incentive_file_name: string | null;
 	incentive_file_size: number | null;
 	incentive_content_type: string | null;
+	download_heading: string | null;
+	download_description: string | null;
 	created_at: string;
 	updated_at: string;
 };
@@ -62,6 +66,8 @@ type FormData = {
 	slug: string;
 	title: string;
 	value_exchange_text: string;
+	download_heading: string;
+	download_description: string;
 	streaming_links: Record<string, string>;
 	social_links: Record<string, string>;
 } & ThemeFields;
@@ -70,6 +76,8 @@ const EMPTY_FORM: FormData = {
 	slug: "",
 	title: "",
 	value_exchange_text: "",
+	download_heading: "",
+	download_description: "",
 	accent_color: "#E8C547",
 	secondary_color: "#D4A017",
 	background_style: "solid",
@@ -88,6 +96,8 @@ function formFromPage(page: CapturePage): FormData {
 		slug: page.slug,
 		title: page.title,
 		value_exchange_text: page.value_exchange_text ?? "",
+		download_heading: page.download_heading ?? "",
+		download_description: page.download_description ?? "",
 		accent_color: page.accent_color,
 		secondary_color: page.secondary_color,
 		background_style: (page.background_style as FormData["background_style"]) ?? "solid",
@@ -531,6 +541,66 @@ function IncentiveSection({
 	);
 }
 
+function DownloadPageMiniPreview({
+	heading,
+	description,
+	fileName,
+	contentType,
+	form,
+}: {
+	heading: string;
+	description: string;
+	fileName: string;
+	contentType: string;
+	form: ThemeFields;
+}): React.ReactElement {
+	const bgLight = isLightColor(form.bg_color);
+	const mutedColor = bgLight ? "#6b7280" : "#9ca3af";
+	const btnText = isLightColor(form.accent_color) ? "#0a0e1a" : "#f9fafb";
+	const Icon = fileTypeIcon(contentType);
+	const displayHeading = heading || fileName;
+	const showFileMeta = !!heading;
+
+	return (
+		<div
+			className="overflow-hidden rounded-lg border border-border"
+			style={{ background: form.bg_color }}
+		>
+			<div className="flex flex-col items-center px-4 py-6 text-center">
+				<Icon className="mb-2 size-8" style={{ color: form.text_color }} />
+				<p className="mb-1 text-[10px] uppercase tracking-wider" style={{ color: mutedColor }}>
+					Your Name
+				</p>
+				<p className="mb-0.5 text-sm font-semibold leading-snug" style={{ color: form.text_color }}>
+					{displayHeading || "Untitled"}
+				</p>
+				{description && (
+					<p className="mb-1 text-xs leading-relaxed" style={{ color: form.text_color }}>
+						{description}
+					</p>
+				)}
+				{showFileMeta && (
+					<p className="mb-3 text-[10px]" style={{ color: mutedColor }}>
+						{fileName}
+					</p>
+				)}
+				{!showFileMeta && <div className="mb-3" />}
+				<span
+					className="inline-block rounded px-5 py-1.5 text-xs font-semibold"
+					style={{
+						background: form.accent_color,
+						color: btnText,
+						borderRadius:
+							form.button_style === "pill" ? "9999px" : form.button_style === "sharp" ? "0" : "6px",
+					}}
+				>
+					Download
+				</span>
+			</div>
+		</div>
+	);
+}
+
 function EditorSection({
 	icon: Icon,
 	title,
@@ -694,6 +764,8 @@ export function PageForm({
 				...rest,
 				...(mode === "create" && rawSlug ? { slug: rawSlug } : {}),
 				value_exchange_text: data.value_exchange_text || undefined,
+				download_heading: data.download_heading || undefined,
+				download_description: data.download_description || undefined,
 				streaming_links: stripEmpty(data.streaming_links),
 				social_links: stripEmpty(data.social_links),
 			};
@@ -900,6 +972,70 @@ export function PageForm({
 				/>
 			</EditorSection>
 
+			{(pendingFile || hasExistingFile) && (
+				<EditorSection
+					icon={FileDown}
+					title="Download Page"
+					summary={form.download_heading || "Default"}
+				>
+					<p className="text-xs text-muted-foreground">
+						Customize what fans see when they tap the download link in your follow-up email.
+					</p>
+					<DownloadPageMiniPreview
+						heading={form.download_heading}
+						description={form.download_description}
+						fileName={pendingFile?.name ?? page?.incentive_file_name ?? "file"}
+						contentType={pendingFile?.type ?? page?.incentive_content_type ?? "audio/mpeg"}
+						form={form}
+					/>
+					<div className="space-y-2">
+						<Label htmlFor="download_heading">
+							Heading <span className="text-muted-foreground">(optional)</span>
+						</Label>
+						<Input
+							id="download_heading"
+							placeholder="e.g. Thanks for coming out!"
+							value={form.download_heading}
+							onChange={(e) => setForm((f) => ({ ...f, download_heading: e.target.value }))}
+							maxLength={200}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="download_description">
+							Description <span className="text-muted-foreground">(optional)</span>
+						</Label>
+						<Textarea
+							id="download_description"
+							placeholder="e.g. Here's an exclusive unreleased track just for you"
+							value={form.download_description}
+							onChange={(e) =>
+								setForm((f) => ({
+									...f,
+									download_description: e.target.value,
+								}))
+							}
+							maxLength={500}
+							rows={2}
+						/>
+					</div>
+					{!isCreate && page?.id && hasExistingFile && (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							className="w-full"
+							onClick={async () => {
+								const blob = await api.getBlob(`/capture-pages/${page.id}/download-preview`);
+								window.open(URL.createObjectURL(blob), "_blank");
+							}}
+						>
+							<ExternalLink className="size-3.5" />
+							Open Full Preview
+						</Button>
+					)}
+				</EditorSection>
+			)}
+
 			<EditorSection
 				icon={LinkIcon}
 				title="Music & Social Links"
@@ -977,7 +1113,7 @@ export function PageForm({
 				)
 			)}
 
-			<div className="flex gap-2">
+			<div className="sticky -bottom-4 -mx-4 flex gap-2 border-t border-border bg-background px-4 py-3">
 				{onCancel && (
 					<Button type="button" variant="outline" onClick={onCancel}>
 						Cancel

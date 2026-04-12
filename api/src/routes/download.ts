@@ -22,6 +22,8 @@ type PageRow = {
 	background_style: "solid" | "gradient" | "glow";
 	streaming_links: Record<string, string>;
 	social_links: Record<string, string>;
+	download_heading: string | null;
+	download_description: string | null;
 	artists: { name: string };
 };
 
@@ -37,6 +39,8 @@ const PAGE_COLUMNS = [
 	"background_style",
 	"streaming_links",
 	"social_links",
+	"download_heading",
+	"download_description",
 	"artists(name)",
 ].join(",");
 
@@ -89,6 +93,8 @@ app.get("/:token", async (c) => {
 				fileName: page.incentive_file_name,
 				contentType: page.incentive_content_type,
 				signedUrl: signed.signedUrl,
+				heading: page.download_heading ?? undefined,
+				description: page.download_description ?? undefined,
 				streamingLinks: page.streaming_links,
 				socialLinks: page.social_links,
 			},

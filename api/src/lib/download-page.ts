@@ -6,6 +6,8 @@ type DownloadPageParams = {
 	fileName: string;
 	contentType: string;
 	signedUrl: string;
+	heading?: string;
+	description?: string;
 	streamingLinks?: Record<string, string>;
 	socialLinks?: Record<string, string>;
 };
@@ -113,12 +115,21 @@ export function renderDownloadPage(params: DownloadPageParams, style: DownloadPa
 		style.bgColor,
 	);
 
+	const headingHtml = params.heading
+		? `<p class="file">${escapeHtml(params.heading)}</p>`
+		: `<p class="file">${escapedName}</p>`;
+	const descHtml = params.description ? `<p class="msg">${escapeHtml(params.description)}</p>` : "";
+	const fileLabel = params.heading
+		? `<p class="type">${escapedName} &middot; ${escapeHtml(label)}</p>`
+		: `<p class="type">${escapeHtml(label)}</p>`;
+
 	return pageShell(
 		style,
 		`<svg class="icon" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${svg}</svg>
 <p class="artist">${escapedArtist}</p>
-<p class="file">${escapedName}</p>
-<p class="type">${escapeHtml(label)}</p>
+${headingHtml}
+${descHtml}
+${fileLabel}
 <a class="btn" href="${escapedUrl}" download="${escapedName}">Download</a>
 <p class="hint" id="ios-hint">On iPhone, tap and hold the button, then choose &ldquo;Download Linked File&rdquo;</p>
 ${iconsBlock}`,

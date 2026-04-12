@@ -43,7 +43,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [x] **Branded fan-facing theme consistency** — follow-up emails now inherit artist's capture page colors (accent, bg, text, button style); shipped March 26, 2026
 - [ ] **Broadcast email theme editor** — let artists override the inherited theme per broadcast (color pickers for accent, bg, text + button style) instead of always pulling from their latest capture page
 - [ ] **Rich text email editor** — replace plain-text body textarea with a rich text editor (bold, italic, links, lists) for broadcasts and follow-up templates; renders to inline-styled HTML for email client compatibility
-- [ ] **Fan-facing preview tab** — preview tab in page form editor showing capture page, email, and download page side by side; let artists customize download page copy (button text, heading, description)
+- [ ] **Fan-facing preview tab** — preview tab in page form editor showing capture page and email side by side
 - [ ] **Email funnel visualization** — Sent → Delivered → Opened → Clicked drop-off chart per sequence step
 - [ ] **Best time to capture heatmap** — captures by day-of-week and hour; helps artists understand when fans engage
 - [ ] **Page comparison** — select 2-3 pages side-by-side to compare theme/incentive/sequence performance
@@ -114,7 +114,6 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 
 ## UX Polish
 
-- [ ] **Sticky save button in page editor** — pin save button to bottom of dialog so it's always visible while scrolling the long form
 - [ ] **Progressive disclosure in page editor** — collapsible sections to reduce visual overwhelm (see memory: project_page_editor_simplify)
 
 ## Auth & Account Recovery

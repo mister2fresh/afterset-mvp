@@ -2,6 +2,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { Hono } from "hono";
 import { z } from "zod";
 import { buildPage } from "../lib/build-page.js";
+import { type DownloadPageStyle, renderDownloadPage } from "../lib/download-page.js";
 import { internalError } from "../lib/errors.js";
 import { generateQrPng } from "../lib/generate-qr.js";
 import { R2_BUCKET, r2 } from "../lib/r2.js";
@@ -30,6 +31,8 @@ const createSchema = z.object({
 	layout_style: z.enum(["centered", "stacked"]).optional(),
 	text_color: hexColor.optional(),
 	bg_color: hexColor.optional(),
+	download_heading: z.string().max(200).optional(),
+	download_description: z.string().max(500).optional(),
 });
 
 const updateSchema = createSchema.partial();
@@ -219,6 +222,48 @@ app.patch("/:id", async (c) => {
 	buildPage(data.id, artist.id).catch((e) => console.error("build failed", e));
 
 	return c.json(data);
+});
+
+// Download page preview
+app.get("/:id/download-preview", async (c) => {
+	const artist = c.get("artist");
+	const { data: page, error } = await supabase
+		.from("capture_pages")
+		.select("*")
+		.eq("id", c.req.param("id"))
+		.eq("artist_id", artist.id)
+		.maybeSingle();
+
+	if (error) return internalError(c, error);
+	if (!page) return c.json({ error: "Not found" }, 404);
+
+	const fileName = page.incentive_file_name ?? "example-track.mp3";
+	const contentType = page.incentive_content_type ?? "audio/mpeg";
+	const style: DownloadPageStyle = {
+		accentColor: page.accent_color,
+		secondaryColor: page.secondary_color,
+		bgColor: page.bg_color,
+		textColor: page.text_color,
+		buttonStyle: page.button_style,
+		backgroundStyle: page.background_style,
+	};
+
+	c.header("Cache-Control", "no-store");
+	return c.html(
+		renderDownloadPage(
+			{
+				artistName: artist.name,
+				fileName,
+				contentType,
+				signedUrl: "#",
+				heading: page.download_heading ?? undefined,
+				description: page.download_description ?? undefined,
+				streamingLinks: page.streaming_links,
+				socialLinks: page.social_links,
+			},
+			style,
+		),
+	);
 });
 
 // Delete

@@ -1,5 +1,15 @@
 import { useMutation } from "@tanstack/react-query";
-import { CalendarDays, Clock, Eye, Loader2, Plus, Sunrise, Trash2, Zap } from "lucide-react";
+import {
+	CalendarDays,
+	Clock,
+	ExternalLink,
+	Eye,
+	Loader2,
+	Plus,
+	Sunrise,
+	Trash2,
+	Zap,
+} from "lucide-react";
 import { type Ref, useImperativeHandle, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
@@ -184,9 +194,25 @@ export function SequenceStepEditor({
 						sandbox=""
 					/>
 				</div>
-				<Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
-					Back to Editor
-				</Button>
+				<div className="flex gap-2">
+					<Button variant="outline" size="sm" onClick={() => setShowPreview(false)}>
+						Back to Editor
+					</Button>
+					{form.include_incentive_link && hasIncentive && (
+						<Button
+							type="button"
+							variant="outline"
+							size="sm"
+							onClick={async () => {
+								const blob = await api.getBlob(`/capture-pages/${pageId}/download-preview`);
+								window.open(URL.createObjectURL(blob), "_blank");
+							}}
+						>
+							<ExternalLink className="size-3.5" />
+							Preview Download Page
+						</Button>
+					)}
+				</div>
 			</div>
 		);
 	}
