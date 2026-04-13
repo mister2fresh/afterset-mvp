@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 13, 2026 (v78 — Sprint 5 plan refined after decision walkthrough)
+**Last updated:** April 13, 2026 (v79 — Sprint 5 Phase 1 foundation shipped)
 **Current phase:** Sprint 5 — Pricing Tier Enforcement
-**Sprint:** Sprint 4 complete (mobile-first + PWA + security audit + production deployment). Sprint 5 plan finalized — tier gates for Solo/Tour/Superstar. Decisions captured in `memory/project_sprint_5_decisions.md`.
-**Next up:** Sprint 5 Phase 1 (foundation: migration w/ grandfather + skip_reason tracking, tier config, worker parity test, dev switcher, pricing.ts, use-tier hook). See also: manual QA pass, analytics layout redesign.
+**Sprint:** Sprint 5 Phase 1 (foundation) complete on `sprint-5-pricing-tiers` branch. Migration, tier config (API + Worker parity test), auth+settings tier surfacing, dev switcher, useTier hook, pricing copy all landed with typecheck/tests/lint green.
+**Next up:** Sprint 5 Phase 2 (backend gates: worker capture-method + fan cap, email cap + skip tracking, sequence depth, broadcasts, CSV export, storage, usage endpoint). Apply migration to Supabase before or during Phase 2.
 
 ---
 
@@ -821,21 +821,14 @@ Adds all gates needed to enforce the Solo / Tour / Superstar tier structure defi
 
 All other phases depend on this. Estimated: 2–3 hours.
 
-- [ ] **Migration: tier columns + tracking markers** — new `20260413000000_pricing_tiers.sql`:
-  - Create `tier_level` enum (solo/tour/superstar)
-  - Add `tier tier_level NOT NULL DEFAULT 'solo'` and `trial_ends_at timestamptz` to `artists`
-  - Add `cap_exceeded_at timestamptz` to `fan_captures` (historical marker)
-  - Add `skip_reason text` and `skip_reason_at timestamptz` to `pending_emails`
-  - Grandfather existing artists: `UPDATE artists SET tier='superstar', trial_ends_at=NULL`
-  - Update `claim_pending_emails()` function: add `AND send_at > NOW() - interval '7 days'` filter for staleness cap
-  - Files: `supabase/migrations/`
-- [ ] **Tier config module** — new `api/src/lib/tier.ts` with `TIER_LIMITS` constant (fanCap, emailCap, sequenceDepth, broadcastsPerMonth, storageMb, captureMethods, hasSegmentation, hasCsvExport per tier), `getEffectiveTier()` helper (returns `tour` if trial active + tier is solo, else paid tier), `getTierLimits()` lookup. Add `getMonthRange(tz)` to `api/src/lib/timezone.ts` (first-of-month to first-of-next-month in artist TZ, matching `getTodayRange` pattern)
-- [ ] **Worker tier slice + parity test** — new `worker/src/tier.ts` with slim copy: `getEffectiveTier()` + `WORKER_TIER_LIMITS` (only fanCap, captureMethods, sequenceDepth — subset of API's TIER_LIMITS). Add `api/tests/tier-parity.test.ts` importing both files and asserting overlapping fields match byte-for-byte. CI blocks drift
-- [ ] **Auth middleware: include tier in Artist type** — modify `api/src/middleware/auth.ts`: add `tier` and `trial_ends_at` to `Artist` type, update both `.select()` calls + auto-create insert (set `trial_ends_at` to 30 days from now for new signups, keep `tier` default of `solo`). `AuthEnv` propagates to all routes automatically
-- [ ] **Settings API: expose tier info** — modify `api/src/routes/settings.ts`: add `tier`, `trial_ends_at`, computed `effective_tier` to GET response. Tier is NOT writable via PATCH. Update `ArtistSettings` type in `web/src/lib/types.ts`
-- [ ] **Dev tier switcher endpoint** — new `api/src/routes/dev.ts` with `POST /api/dev/set-tier` accepting `{ tier, trialDays? }`. Mount in `api/src/index.ts` only when `process.env.NODE_ENV !== 'production'`. Writes to authenticated artist's row. Returns updated settings for query invalidation
-- [ ] **Frontend tier hook** — new `web/src/hooks/use-tier.ts`: reads from cached `["settings"]` query, returns `{ tier, effectiveTier, trialEndsAt, limits, isTrial }`. Avoids prop drilling, matches `useIsMobile()` pattern
-- [ ] **Pricing display config** — new `web/src/lib/pricing.ts`: `TIER_DISPLAY` with bullets/taglines/price/excluded per tier (mirrored from landing page `components/PricingCards.tsx`). `COPY` export with trial banner text, compliance footnote, upgrade contact text. Header comment documents source-of-truth convention (landing page → this file → `api/src/lib/tier.ts` for enforcement numbers)
+- [x] **Migration: tier columns + tracking markers** — `20260413000000_pricing_tiers.sql` ships `tier_level` enum, `artists.tier`+`trial_ends_at`, `fan_captures.cap_exceeded_at`, `pending_emails.skip_reason`+`skip_reason_at`, grandfathers existing artists to `superstar`, updates `claim_pending_emails()` with 7-day staleness cap. ✅ 2026-04-13
+- [x] **Tier config module** — `api/src/lib/tier.ts` (`TIER_LIMITS`, `getEffectiveTier()`, `getTierLimits()`, `isTrialActive()`), `getMonthRange(tz)` added to `api/src/lib/timezone.ts`. ✅ 2026-04-13
+- [x] **Worker tier slice + parity test** — `worker/src/tier.ts` slim copy, `api/tests/tier-parity.test.ts` asserts overlapping fields match. 3 passing tests. ✅ 2026-04-13
+- [x] **Auth middleware: include tier in Artist type** — `tier` + `trial_ends_at` on `Artist`, auto-create sets `trial_ends_at` to +30d. ✅ 2026-04-13
+- [x] **Settings API: expose tier info** — GET returns `tier`, `trial_ends_at`, `effective_tier`, `is_trial`. PATCH never accepts tier. `ArtistSettings` extended with `Tier` union. ✅ 2026-04-13
+- [x] **Dev tier switcher endpoint** — `POST /api/dev/set-tier { tier, trialDays? }`, mounted only when `NODE_ENV !== 'production'`. ✅ 2026-04-13
+- [x] **Frontend `useTier` hook** — reads cached `["settings"]` query, returns `{ tier, effectiveTier, trialEndsAt, isTrial, limits, isLoading }`. ✅ 2026-04-13
+- [x] **Pricing display config** — `web/src/lib/pricing.ts` with `TIER_DISPLAY`, `TIER_LIMITS`, `COPY` exports; header comment documents landing-page→this-file→api/tier.ts source-of-truth chain. ✅ 2026-04-13
 
 ### Phase 2 — Backend Gates
 

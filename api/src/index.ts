@@ -9,6 +9,7 @@ import broadcasts from "./routes/broadcasts.js";
 import build from "./routes/build.js";
 import capturePages from "./routes/capture-pages.js";
 import captures from "./routes/captures.js";
+import dev from "./routes/dev.js";
 import deviceTokens from "./routes/device-tokens.js";
 import download from "./routes/download.js";
 import email from "./routes/email.js";
@@ -66,20 +67,25 @@ const publicLimit = rateLimit({ max: 30, windowMs: 60_000 });
 app.use("/download/*", publicLimit);
 app.use("/api/email/*", publicLimit);
 
-// Auth: protect all authenticated API routes (public: /api/health, /api/email, /api/emails)
-for (const path of [
+const authedPaths = [
 	"/api/settings",
 	"/api/capture-pages",
 	"/api/analytics",
 	"/api/broadcasts",
 	"/api/captures",
 	"/api/device-tokens",
-]) {
+];
+const isDev = process.env.NODE_ENV !== "production";
+if (isDev) authedPaths.push("/api/dev");
+
+// Auth: protect all authenticated API routes (public: /api/health, /api/email, /api/emails)
+for (const path of authedPaths) {
 	app.use(path, auth, artistLimit);
 	app.use(`${path}/*`, auth, artistLimit);
 }
 
 app.route("/api/settings", settings);
+if (isDev) app.route("/api/dev", dev);
 
 // /api/capture-pages — 6 route modules share this base path:
 app.route("/api/capture-pages", capturePages); // CRUD + QR (capture-pages.ts)
