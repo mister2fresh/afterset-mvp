@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 11, 2026 (v77 — Fix email editor save + unified save UX)
+**Last updated:** April 13, 2026 (v78 — Sprint 5 plan refined after decision walkthrough)
 **Current phase:** Sprint 5 — Pricing Tier Enforcement
-**Sprint:** Sprint 4 complete (mobile-first + PWA + security audit + production deployment). Sprint 5 planned — tier gates for Solo/Tour/Superstar.
-**Next up:** Sprint 5 Phase 1 (foundation: migration, tier config, auth middleware). See also: manual QA pass, analytics layout redesign.
+**Sprint:** Sprint 4 complete (mobile-first + PWA + security audit + production deployment). Sprint 5 plan finalized — tier gates for Solo/Tour/Superstar. Decisions captured in `memory/project_sprint_5_decisions.md`.
+**Next up:** Sprint 5 Phase 1 (foundation: migration w/ grandfather + skip_reason tracking, tier config, worker parity test, dev switcher, pricing.ts, use-tier hook). See also: manual QA pass, analytics layout redesign.
 
 ---
 
@@ -802,61 +802,86 @@ Run ADR validation tasks before committing to the stack.
 
 ## Sprint 5 — Pricing Tier Enforcement
 
-Adds all gates needed to enforce the Solo / Tour / Superstar tier structure defined in `PRICING.md`. No Stripe integration — changing an artist's `tier` column (via Stripe webhook or DB update) automatically gates/ungates features.
+Adds all gates needed to enforce the Solo / Tour / Superstar tier structure defined in `PRICING.md`. No Stripe integration — changing an artist's `tier` column (via dev switcher, direct Supabase row edit, or eventual Stripe webhook) automatically gates/ungates features. Planning decisions captured in `memory/project_sprint_5_decisions.md`.
 
 **Design invariants:**
 - Effective tier computed at request time via `getEffectiveTier()` — no cron needed for trial expiry
-- Fan captures are never rejected — over-cap captures persist, marked with `cap_exceeded_at`
-- Email cap is a soft pause — pending_emails stay as `pending`, resume automatically on upgrade
-- Worker duplicates `getEffectiveTier()` (5 lines) since it can't import from API lib
+- Fan captures are never rejected — over-cap captures persist, marked with `cap_exceeded_at` (historical marker only, no behavioral gating)
+- Over-cap fans are informational only — visible, counted in analytics, emailed normally (subject to email cap). Decision 5A.
+- Email skips are tracked — `pending_emails.skip_reason` (`email_cap` / `tier_locked` / `stale`) surfaces why a row didn't send, shown in usage meter, banner, per-page stats
+- Pending emails use 7-day staleness cap — `claim_pending_emails()` filters `send_at > NOW() - interval '7 days'` so ancient emails don't fire on catch-up
+- Worker duplicates a ~15-line slice of tier config in `worker/src/tier.ts`; parity test blocks drift with API
 - All monthly caps use artist timezone, matching existing `getTodayRange(tz)` pattern
+- NFC captures on Solo soft-accept as `entry_method='direct'` — never reject (physical tags in the wild). Decision 2d.
+- No waitlist DB or notify-me flow — upgrade CTAs show static "Reach out to Matt" contact text until Stripe lands. Decision 4.
+- Existing artists grandfathered to `superstar` with `trial_ends_at=NULL` in the migration. Decision 1.
+- Downgrades preserve data: sequence steps locked in editor, SMS keywords kept, broadcast history kept, NFC soft-accepted. Decision 2.
 
 ### Phase 1 — Foundation
 
-All other phases depend on this. Estimated: 1–2 hours.
+All other phases depend on this. Estimated: 2–3 hours.
 
-- [ ] **Migration: add tier + trial columns** — new `20260411000000_pricing_tiers.sql`: create `tier_level` enum (solo/tour/superstar), add `tier tier_level NOT NULL DEFAULT 'solo'` and `trial_ends_at timestamptz` to artists table. New signups default to `trial_ends_at = NOW() + 30 days`. Files: `supabase/migrations/`
+- [ ] **Migration: tier columns + tracking markers** — new `20260413000000_pricing_tiers.sql`:
+  - Create `tier_level` enum (solo/tour/superstar)
+  - Add `tier tier_level NOT NULL DEFAULT 'solo'` and `trial_ends_at timestamptz` to `artists`
+  - Add `cap_exceeded_at timestamptz` to `fan_captures` (historical marker)
+  - Add `skip_reason text` and `skip_reason_at timestamptz` to `pending_emails`
+  - Grandfather existing artists: `UPDATE artists SET tier='superstar', trial_ends_at=NULL`
+  - Update `claim_pending_emails()` function: add `AND send_at > NOW() - interval '7 days'` filter for staleness cap
+  - Files: `supabase/migrations/`
 - [ ] **Tier config module** — new `api/src/lib/tier.ts` with `TIER_LIMITS` constant (fanCap, emailCap, sequenceDepth, broadcastsPerMonth, storageMb, captureMethods, hasSegmentation, hasCsvExport per tier), `getEffectiveTier()` helper (returns `tour` if trial active + tier is solo, else paid tier), `getTierLimits()` lookup. Add `getMonthRange(tz)` to `api/src/lib/timezone.ts` (first-of-month to first-of-next-month in artist TZ, matching `getTodayRange` pattern)
-- [ ] **Auth middleware: include tier in Artist type** — modify `api/src/middleware/auth.ts`: add `tier` and `trial_ends_at` to `Artist` type, update both `.select()` calls + auto-create insert (set `trial_ends_at` to 30 days from now for new signups). `AuthEnv` propagates to all routes automatically
+- [ ] **Worker tier slice + parity test** — new `worker/src/tier.ts` with slim copy: `getEffectiveTier()` + `WORKER_TIER_LIMITS` (only fanCap, captureMethods, sequenceDepth — subset of API's TIER_LIMITS). Add `api/tests/tier-parity.test.ts` importing both files and asserting overlapping fields match byte-for-byte. CI blocks drift
+- [ ] **Auth middleware: include tier in Artist type** — modify `api/src/middleware/auth.ts`: add `tier` and `trial_ends_at` to `Artist` type, update both `.select()` calls + auto-create insert (set `trial_ends_at` to 30 days from now for new signups, keep `tier` default of `solo`). `AuthEnv` propagates to all routes automatically
 - [ ] **Settings API: expose tier info** — modify `api/src/routes/settings.ts`: add `tier`, `trial_ends_at`, computed `effective_tier` to GET response. Tier is NOT writable via PATCH. Update `ArtistSettings` type in `web/src/lib/types.ts`
+- [ ] **Dev tier switcher endpoint** — new `api/src/routes/dev.ts` with `POST /api/dev/set-tier` accepting `{ tier, trialDays? }`. Mount in `api/src/index.ts` only when `process.env.NODE_ENV !== 'production'`. Writes to authenticated artist's row. Returns updated settings for query invalidation
 - [ ] **Frontend tier hook** — new `web/src/hooks/use-tier.ts`: reads from cached `["settings"]` query, returns `{ tier, effectiveTier, trialEndsAt, limits, isTrial }`. Avoids prop drilling, matches `useIsMobile()` pattern
+- [ ] **Pricing display config** — new `web/src/lib/pricing.ts`: `TIER_DISPLAY` with bullets/taglines/price/excluded per tier (mirrored from landing page `components/PricingCards.tsx`). `COPY` export with trial banner text, compliance footnote, upgrade contact text. Header comment documents source-of-truth convention (landing page → this file → `api/src/lib/tier.ts` for enforcement numbers)
 
 ### Phase 2 — Backend Gates
 
-Each task is independent. All depend on Phase 1. Estimated: 3–4 hours total.
+Each task is independent. All depend on Phase 1. Estimated: 4–5 hours total.
 
-- [ ] **Capture method gating** — modify `worker/src/index.ts`: after `lookupPage()`, fetch artist tier (add to existing artist query). If effective tier is `solo` and entry_method is `sms` or `nfc`, return 403 with `{ error, upgrade: true }`. QR/direct always pass
-- [ ] **Fan count cap** — modify `worker/src/index.ts`: query monthly new fan count (`COUNT(*) FROM fan_captures WHERE artist_id = X AND first_captured_at >= month_start`). If over cap: still persist capture, but set `cap_exceeded_at` on the fan_captures row (add column in Phase 1 migration). Solo: 500/mo, Tour: 5,000/mo, Superstar: unlimited
-- [ ] **Email volume cap** — modify `api/src/routes/send-batch.ts`: after claiming rows, group by artist_id, check monthly sent count against tier cap. Release (set back to `pending`) rows for artists at cap. Also check in `broadcasts.ts` `POST /:id/send` before inserting pending_emails — return 429 if monthly sent + recipient count would exceed cap. Solo: 1,000/mo, Tour: 10,000/mo, Superstar: 50,000/mo
-- [ ] **Sequence depth gating** — modify `api/src/routes/email-templates.ts`: in `PUT /:id/email-sequence/:order`, replace hardcoded `order > 4` with `order >= getTierLimits(effectiveTier).sequenceDepth`. Solo: order 0 only (immediate), Tour: 0–2 (3 steps), Superstar: 0–4 (5 steps)
-- [ ] **Broadcast gating** — modify `api/src/routes/broadcasts.ts`: Solo → block `POST /broadcasts` (403 + upgrade). Tour → replace `checkDailyLimit()` with `checkMonthlyLimit()` using `getMonthRange(tz)`, cap at 4/mo; strip/reject segment filters. Superstar → unlimited + full segmentation
+- [ ] **Capture method gating (Worker)** — modify `worker/src/index.ts`: after `lookupPage()` (now joining artist tier + trial_ends_at), compute effective tier. If Solo and `entry_method='sms'`: return 403 with upgrade JSON. If Solo and `entry_method='nfc'`: soft-accept, rewrite to `entry_method='direct'` and proceed (cheat code for existing NFC users). QR/direct always pass regardless of tier
+- [ ] **Fan count cap (Worker)** — modify `worker/src/index.ts`: query monthly new fan count using `getMonthRange(tz)` (`COUNT(*) FROM fan_captures WHERE artist_id = X AND first_captured_at >= month_start`). If over cap: still persist capture, set `cap_exceeded_at = NOW()` on the insert. Solo: 500/mo, Tour: 5,000/mo, Superstar: skip query (unlimited)
+- [ ] **First-crossing notification (Worker)** — in fan cap logic: on first over-cap capture of the month for an artist (query whether any current-month `fan_captures` row already has `cap_exceeded_at`), insert a one-off row via `pending_emails` to the artist's own email. Template: "You hit your fan cap for {month}" — reassures captures continue, invites upgrade. Once per month per artist
+- [ ] **Email volume cap + skip tracking** — modify `api/src/routes/send-batch.ts`: after claiming rows, group by artist_id, check monthly sent count against `getTierLimits(effectiveTier).emailCap`. For artists at cap: release rows (back to `pending`) AND set `skip_reason='email_cap'`, `skip_reason_at=NOW()`. Next batch clears `skip_reason` when artist drops below cap (new month / upgrade). Also check in `broadcasts.ts` `POST /:id/send` before inserting pending_emails — return 429 if monthly sent + recipient count would exceed cap. Solo: 1,000/mo, Tour: 10,000/mo, Superstar: 50,000/mo
+- [ ] **Sequence depth gating (API + Worker + skip tracking)** — (1) modify `api/src/routes/email-templates.ts`: in `PUT /:id/email-sequence/:order`, replace hardcoded `order > 4` with `order >= getTierLimits(effectiveTier).sequenceDepth`. Solo: order 0 only (1 step), Tour: 0–2 (3 steps), Superstar: 0–4 (5 steps). (2) modify Worker's `queueSequenceEmails()`: only queue templates within tier's sequence depth at capture time. (3) modify `send-batch.ts`: before sending, verify row's `sequence_order < getTierLimits(artist).sequenceDepth`; if over-tier, set `skip_reason='tier_locked'` and skip. Handles downgrade case where rows were queued pre-downgrade
+- [ ] **Broadcast gating** — modify `api/src/routes/broadcasts.ts`: Solo → block `POST /broadcasts` (403 + upgrade). Tour → replace `checkDailyLimit()` with `checkMonthlyLimit()` using `getMonthRange(tz)`, cap at 4/mo; strip/reject segment filters. Superstar → unlimited + full segmentation. Historical broadcasts remain visible on all tiers
 - [ ] **CSV export gating** — modify `api/src/routes/captures.ts`: in `GET /captures/export`, check effective tier. If not superstar, return 403 with `{ error, upgrade: true }`
-- [ ] **Storage cap** — modify `api/src/routes/incentive.ts`: in `POST /:id/incentive/upload-url`, query `SUM(incentive_file_size) FROM capture_pages WHERE artist_id = X`. If `current + file_size > tierLimit`, return 413 with usage info. Solo: 500MB, Tour: 2GB, Superstar: 10GB
-- [ ] **Usage tracking endpoint** — new `api/src/routes/usage.ts` mounted at `/api/usage`: `GET /usage` returns `{ fans: {used, limit}, emails: {used, limit}, broadcasts: {used, limit}, storage: {usedMb, limitMb} }` for the current month. Register in `api/src/index.ts`
+- [ ] **Storage cap** — modify `api/src/routes/incentive.ts`: in `POST /:id/incentive/upload-url`, query `SUM(incentive_file_size) FROM capture_pages WHERE artist_id = X`. If `current + file_size > tierLimit`, return 413 with usage info. Solo: 500MB, Tour: 2GB, Superstar: 10GB. Existing over-cap files remain downloadable
+- [ ] **Usage tracking endpoint** — new `api/src/routes/usage.ts` mounted at `/api/usage`: `GET /usage` returns `{ fans: {used, limit, cap_exceeded_count}, emails: {used, limit, paused_count, paused_by_reason}, broadcasts: {used, limit}, storage: {usedMb, limitMb} }` for the current month. `paused_by_reason` breaks down `pending_emails.skip_reason` counts. Register in `api/src/index.ts`
 
 ### Phase 3 — Frontend Gates
 
-Depend on Phase 1 (Task 1.5) + corresponding Phase 2 backend gates. Estimated: 3–4 hours total.
+Depend on Phase 1 + corresponding Phase 2 backend gates. Estimated: 4–5 hours total.
 
-- [ ] **Upgrade prompt component** — new `web/src/components/upgrade-prompt.tsx`: reusable card with locked feature description, required tier badge, "Upgrade" CTA (links to settings page, placeholder until Stripe). Props: `feature`, `requiredTier`, `compact?`. Used by all subsequent gating tasks
+- [ ] **Tier comparison component** — new `web/src/components/tier-comparison.tsx`: 3-column (stacks on mobile) comparing Solo/Tour/Superstar using `TIER_DISPLAY` from `pricing.ts`. Current tier highlighted with border/badge. Informational only — no CTA buttons (parent Plan card handles contact CTA)
+- [ ] **Upgrade prompt component** — new `web/src/components/upgrade-prompt.tsx`: compact card with locked feature description + required tier badge + "See plans" link that deep-links to Settings Plan section. Props: `feature`, `requiredTier`, `compact?`. No mailto, no modal — the Plan card owns the contact CTA
 - [ ] **SMS keyword gating** — modify `web/src/components/page-form.tsx`: hide SMS keyword section for Solo artists, replace with compact upgrade prompt. Uses `useTier()` hook
-- [ ] **Sequence editor locked steps** — modify `web/src/components/inline-sequence-editor.tsx`: replace `canAddStep = steps.length < MAX_STEPS` with `steps.length < limits.sequenceDepth`. Steps beyond tier limit shown read-only with lock icon. "Add Email" button shows "Upgrade to add more steps" at tier limit
+- [ ] **Sequence editor locked steps** — modify `web/src/components/inline-sequence-editor.tsx`: replace `canAddStep = steps.length < MAX_STEPS` with `steps.length < limits.sequenceDepth`. Steps beyond tier limit shown read-only with lock icon + "Upgrade to reactivate" caption. "Add Email" button shows upgrade prompt at tier limit
 - [ ] **Broadcast gating (frontend)** — modify `web/src/routes/_authenticated/emails.tsx`: Solo → replace "New Broadcast" button with upgrade prompt. Modify `web/src/components/broadcast-compose-dialog.tsx`: Tour → hide segment filter section, show "Superstar" badge. Show monthly broadcast usage near button for Tour
 - [ ] **CSV export locked button** — modify `web/src/routes/_authenticated/fans.tsx`: if not superstar, disable Export CSV button with "Superstar" badge overlay. Click shows toast with upgrade message
-- [ ] **Dashboard usage meters** — new `web/src/components/usage-meters.tsx`: progress bars for fans + emails this month. Color-coded (green/yellow/red at 75%/90%). Fetches from `GET /api/usage`. Embedded in dashboard layout
-- [ ] **Settings plan info card** — modify `web/src/routes/_authenticated/settings.tsx`: add "Plan" card above "Account" showing current tier + badge, trial countdown if applicable, usage bars (reuse usage-meters), placeholder "Upgrade" button
+- [ ] **Usage meters + paused indicators** — new `web/src/components/usage-meters.tsx`: progress bars for fans + emails this month. Color-coded (green / yellow @ 75% / red @ 100%). When `paused_count > 0`, email meter shows "X paused" sub-label with breakdown on hover/tap. Fetches from `GET /api/usage`. Embedded in dashboard layout
+- [ ] **Paused emails banner** — in dashboard, when `emails.paused_count > 0`: non-dismissible amber banner "X fan emails are paused. [View details]". Details modal breaks down by reason (`email_cap` / `tier_locked` / `stale`) with per-reason explanation + contact info
+- [ ] **Tonight tile paused indicator** — modify `web/src/components/dashboard-tonight.tsx`: extend `email_status` display to include paused count when >0 (`23 entered · 19 sent · 4 paused`). Hover/tap tooltip explains reason
+- [ ] **Per-page paused stats** — modify per-step email breakdown (in analytics rendering, show-drill-down.tsx, etc.): show `sent / opened / paused` with reason label when paused > 0
+- [ ] **Settings plan card + dev switcher** — modify `web/src/routes/_authenticated/settings.tsx`: add "Plan" card above "Account" showing current tier + badge + trial countdown if applicable, embedded `tier-comparison`, usage meters, static "Reach out to Matt to upgrade" text, compliance footnote. In dev mode only (`import.meta.env.DEV`): tier switcher dropdown calling `POST /api/dev/set-tier` and invalidating `["settings"]` query
+- [ ] **Help topic: why emails might not send** — add entry to `web/src/lib/help-topics.ts` under "Emails & Sequences": "Why might my fans not receive emails?" explaining email cap / tier-locked steps / suppression with links to relevant surfaces
 
 ### Phase 4 — Trial Flow
 
 Depends on Phases 1 + 2. Estimated: 1 hour.
 
-- [ ] **Trial banner** — new `web/src/components/trial-banner.tsx`: dismissible banner in authenticated layout when `isTrial === true`. "Your free trial ends in X days." Yellow at 7 days, red at 3 days. Rendered in `web/src/routes/_authenticated.tsx`
-- [ ] **Trial expiry handling** — `getEffectiveTier()` already handles this (returns `solo` when trial expires). Modify Worker's `queueSequenceEmails()` to only queue templates within tier's sequence depth. Existing sequence steps remain in DB but stop sending. No grace period for MVP (open question in PRICING.md)
+- [ ] **Trial banner** — new `web/src/components/trial-banner.tsx`: dismissible banner in authenticated layout when `isTrial === true`. "Your Tour-level free trial ends in X days." Yellow at 7 days, red at 3 days. Links to Settings Plan section. Rendered in `web/src/routes/_authenticated.tsx`
+- [ ] **Trial expiry handling** — `getEffectiveTier()` already handles this (returns `solo` when trial expires). Existing sequence steps, SMS keywords, broadcast history, NFC setup all preserved per Decision 2. Pending emails for now-locked sequence steps get `skip_reason='tier_locked'` at next send-batch run. NFC captures soft-accept as `direct`. No grace period for MVP
 
 ### Not in scope (separate workstreams)
 
-- Stripe integration + payment UI (upgrade buttons are placeholder CTAs)
-- Admin panel for managing tiers (use direct DB updates for now)
+- Stripe integration + payment UI (upgrade CTAs show static contact info placeholder)
+- Admin panel for managing tiers (dev switcher + direct Supabase row edits cover this pre-Stripe)
+- Upgrade requests DB table / notify-me flow (not needed until Stripe lands with paying users)
+- Layered messaging for consecutive over-cap months (communication-only, add if abuse patterns emerge)
+- Hard gate on over-cap fan re-engagement (revisit only if informational-only cap proves exploitable)
 - Analytics tier gating (revisit when analytics are more developed)
 - SMS webhook handler (prerequisite for Tour's text-to-join promise)
 - Superstar email overage billing (needs Stripe metered billing)
