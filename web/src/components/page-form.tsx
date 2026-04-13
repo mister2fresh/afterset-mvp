@@ -33,6 +33,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { UpgradePrompt } from "@/components/upgrade-prompt";
+import { useTier } from "@/hooks/use-tier";
 import { api, uploadToSignedUrl } from "@/lib/api";
 
 export type CapturePage = {
@@ -252,6 +254,7 @@ function KeywordSection({
 	pageId: string | undefined;
 	currentKeyword: string | null | undefined;
 }): React.ReactElement {
+	const { effectiveTier } = useTier();
 	const [kwCheck, setKwCheck] = useState<KeywordCheckResult | null>(null);
 	const [kwChecking, setKwChecking] = useState(false);
 	const [kwDebouncing, setKwDebouncing] = useState(false);
@@ -282,6 +285,7 @@ function KeywordSection({
 
 	useEffect(() => {
 		if (mode !== "edit") return;
+		if (effectiveTier === "solo") return;
 		const clean = keyword.replace(/[^A-Za-z0-9]/g, "");
 		if (clean.length >= 2) setKwDebouncing(true);
 		const timer = setTimeout(() => {
@@ -292,7 +296,17 @@ function KeywordSection({
 			}
 		}, 300);
 		return () => clearTimeout(timer);
-	}, [keyword, checkKeyword, mode]);
+	}, [keyword, checkKeyword, mode, effectiveTier]);
+
+	if (effectiveTier === "solo") {
+		return (
+			<UpgradePrompt
+				feature="Text-to-Join lets fans text a keyword to your number and get captured instantly — no typing or camera needed."
+				requiredTier="tour"
+				compact
+			/>
+		);
+	}
 
 	return (
 		<div className="space-y-2">
@@ -375,9 +389,12 @@ function NfcSection({
 }: {
 	slug: string;
 	highlight?: boolean;
-}): React.ReactElement {
+}): React.ReactElement | null {
+	const { effectiveTier } = useTier();
 	const [copied, setCopied] = useState(false);
 	const nfcUrl = `https://afterset.net/c/${slug}?v=n`;
+
+	if (effectiveTier === "solo") return null;
 
 	async function copyUrl(): Promise<void> {
 		await navigator.clipboard.writeText(nfcUrl);

@@ -41,6 +41,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Expanded reports** — sortable/filterable show list by capture method, timeframe, and engagement rate; exportable report views; top-level sort controls on "Captures by Show" section
 - [ ] **Date range picker + period comparison** — let artists slice analytics by week/month/custom range; compare periods ("this week vs last week")
 - [ ] **Trend deltas on stat cards** — "+23% captures this week" arrows showing direction of change
+- [ ] **Overview daily chart tooltip: show title(s) on hover** — the "All Captures (Last 30 Days)" chart currently shows only date + capture count on hover. Include the show title(s) active that day (from `capture_events.page_title` snapshot) so artists can see which gig drove a spike without switching to the per-show drill-down. Backend: extend `/api/analytics` `daily[]` rows with `titles: string[]` (or `top_titles` capped at 3 with "+N more").
 - [x] **Branded fan-facing theme consistency** — follow-up emails now inherit artist's capture page colors (accent, bg, text, button style); shipped March 26, 2026
 - [ ] **Broadcast email theme editor** — let artists override the inherited theme per broadcast (color pickers for accent, bg, text + button style) instead of always pulling from their latest capture page
 - [ ] **Rich text email editor** — replace plain-text body textarea with a rich text editor (bold, italic, links, lists) for broadcasts and follow-up templates; renders to inline-styled HTML for email client compatibility

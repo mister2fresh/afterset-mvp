@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 13, 2026 (v80 — Sprint 5 Phase 2 backend gates shipped)
+**Last updated:** April 13, 2026 (v81 — Sprint 5 Phase 3 frontend gates shipped + initial QA fixes)
 **Current phase:** Sprint 5 — Pricing Tier Enforcement
-**Sprint:** Sprint 5 Phase 2 (backend gates) complete on `sprint-5-pricing-tiers` branch. Worker enforces capture method + fan cap (soft-accept semantics preserved), send-batch partitions by tier with skip-reason tracking + 7-day stale sweep, email-templates caps sequence depth, broadcasts gate creation/send/segmentation + monthly caps, captures export is Superstar-only, incentive upload enforces storage cap, and `/api/usage` exposes month-scoped counters. Typecheck/tests/lint green.
-**Next up:** Sprint 5 Phase 3 (frontend gates: tier comparison, upgrade prompts, SMS/sequence/broadcast/CSV gating UI, usage meters, paused email banner, Settings plan card + dev switcher). First-crossing over-cap artist notification email dispatch still deferred (detection wired via `cap_exceeded_at`, delivery path TBD).
+**Sprint:** Sprint 5 Phase 3 (frontend gates) complete on `sprint-5-pricing-tiers` branch. New primitives: `UpgradePrompt`, `TierComparison`, `UsageMeters`, `PausedEmailsBanner`, `PlanCard` + `useUsage` hook. Gates: SMS keyword + NFC URL section + page-card NFC/SMS buttons hidden on Solo, sequence steps beyond tier depth render locked, broadcasts gated (Solo) + segmentation gated (non-Superstar), CSV export Superstar-only. Paused-email visibility wired across dashboard banner, Tonight tile, and per-page show drill-down (analytics.ts extended with `paused` counts). Settings Plan card + dev tier switcher mounted. Help topic added. Initial QA pass found + fixed: unlimited usage meter visual fill bug, Solo overview drill-down still expandable, Solo page card NFC/SMS leakage. Typecheck/tests/lint green.
+**Next up:** Continue Sprint 5 Phase 3 QA (un-tested: Tour flows, trial countdown, paused-email seeded data, Superstar segmentation/CSV, sequence editor downgrade lock states). Then Phase 4 (trial banner). First-crossing over-cap artist notification email dispatch still deferred (detection wired via `cap_exceeded_at`, delivery path TBD).
 
 ---
 
@@ -848,18 +848,18 @@ Each task is independent. All depend on Phase 1. Estimated: 4–5 hours total.
 
 Depend on Phase 1 + corresponding Phase 2 backend gates. Estimated: 4–5 hours total.
 
-- [ ] **Tier comparison component** — new `web/src/components/tier-comparison.tsx`: 3-column (stacks on mobile) comparing Solo/Tour/Superstar using `TIER_DISPLAY` from `pricing.ts`. Current tier highlighted with border/badge. Informational only — no CTA buttons (parent Plan card handles contact CTA)
-- [ ] **Upgrade prompt component** — new `web/src/components/upgrade-prompt.tsx`: compact card with locked feature description + required tier badge + "See plans" link that deep-links to Settings Plan section. Props: `feature`, `requiredTier`, `compact?`. No mailto, no modal — the Plan card owns the contact CTA
-- [ ] **SMS keyword gating** — modify `web/src/components/page-form.tsx`: hide SMS keyword section for Solo artists, replace with compact upgrade prompt. Uses `useTier()` hook
-- [ ] **Sequence editor locked steps** — modify `web/src/components/inline-sequence-editor.tsx`: replace `canAddStep = steps.length < MAX_STEPS` with `steps.length < limits.sequenceDepth`. Steps beyond tier limit shown read-only with lock icon + "Upgrade to reactivate" caption. "Add Email" button shows upgrade prompt at tier limit
-- [ ] **Broadcast gating (frontend)** — modify `web/src/routes/_authenticated/emails.tsx`: Solo → replace "New Broadcast" button with upgrade prompt. Modify `web/src/components/broadcast-compose-dialog.tsx`: Tour → hide segment filter section, show "Superstar" badge. Show monthly broadcast usage near button for Tour
-- [ ] **CSV export locked button** — modify `web/src/routes/_authenticated/fans.tsx`: if not superstar, disable Export CSV button with "Superstar" badge overlay. Click shows toast with upgrade message
-- [ ] **Usage meters + paused indicators** — new `web/src/components/usage-meters.tsx`: progress bars for fans + emails this month. Color-coded (green / yellow @ 75% / red @ 100%). When `paused_count > 0`, email meter shows "X paused" sub-label with breakdown on hover/tap. Fetches from `GET /api/usage`. Embedded in dashboard layout
-- [ ] **Paused emails banner** — in dashboard, when `emails.paused_count > 0`: non-dismissible amber banner "X fan emails are paused. [View details]". Details modal breaks down by reason (`email_cap` / `tier_locked` / `stale`) with per-reason explanation + contact info
-- [ ] **Tonight tile paused indicator** — modify `web/src/components/dashboard-tonight.tsx`: extend `email_status` display to include paused count when >0 (`23 entered · 19 sent · 4 paused`). Hover/tap tooltip explains reason
-- [ ] **Per-page paused stats** — modify per-step email breakdown (in analytics rendering, show-drill-down.tsx, etc.): show `sent / opened / paused` with reason label when paused > 0
-- [ ] **Settings plan card + dev switcher** — modify `web/src/routes/_authenticated/settings.tsx`: add "Plan" card above "Account" showing current tier + badge + trial countdown if applicable, embedded `tier-comparison`, usage meters, static "Reach out to Matt to upgrade" text, compliance footnote. In dev mode only (`import.meta.env.DEV`): tier switcher dropdown calling `POST /api/dev/set-tier` and invalidating `["settings"]` query
-- [ ] **Help topic: why emails might not send** — add entry to `web/src/lib/help-topics.ts` under "Emails & Sequences": "Why might my fans not receive emails?" explaining email cap / tier-locked steps / suppression with links to relevant surfaces
+- [x] **Tier comparison component** ✅ 2026-04-13 — `web/src/components/tier-comparison.tsx` shipped; current tier highlighted with honey-gold border
+- [x] **Upgrade prompt component** ✅ 2026-04-13 — `web/src/components/upgrade-prompt.tsx` shipped with `compact` + full variants, deep-links to /settings
+- [x] **SMS keyword gating** ✅ 2026-04-13 — `KeywordSection` in `page-form.tsx` returns compact UpgradePrompt for Solo. NFC URL section + page-card NFC/SMS buttons also hidden for Solo (QA fix)
+- [x] **Sequence editor locked steps** ✅ 2026-04-13 — steps beyond `limits.sequenceDepth` render with dashed border + Lock badge + disabled expand; at-limit shows UpgradePrompt for next tier
+- [x] **Broadcast gating (frontend)** ✅ 2026-04-13 — Solo hides New Broadcast button + shows full UpgradePrompt; Tour shows "X / 4 broadcasts used" counter; non-Superstar in compose dialog gets Superstar badge replacing segment filters
+- [x] **CSV export locked button** ✅ 2026-04-13 — Export button shows Lock icon + Superstar badge when not allowed; click toasts upgrade message and early-returns
+- [x] **Usage meters + paused indicators** ✅ 2026-04-13 — `web/src/components/usage-meters.tsx` + `useUsage` hook; 4 meters (fans/emails/broadcasts/storage); color-coded green→yellow @75%→red @100%; paused count + reason tooltip; QA fix: bars hidden entirely when limit is unlimited
+- [x] **Paused emails banner** ✅ 2026-04-13 — `web/src/components/paused-emails-banner.tsx` mounted on dashboard above tabs; details Dialog breaks down by reason
+- [x] **Tonight tile paused indicator** ✅ 2026-04-13 — Follow-Up Emails card on Tonight tab shows paused count with AlertTriangle when >0; backend `analytics.ts` extended to query `skip_reason`
+- [x] **Per-page paused stats** ✅ 2026-04-13 — `EmailSequenceSteps` in show drill-down shows per-step paused counts; per-page analytics endpoint returns `paused` per step
+- [x] **Settings plan card + dev switcher** ✅ 2026-04-13 — `web/src/components/plan-card.tsx` rendered above Account card; usage meters, tier comparison, upgrade copy, compliance footnote; dev-only red-bordered tier switcher posts to `/dev/set-tier`. QA fix: Solo overview drill-down content now upgrade-prompts instead of expanding ShowDrillDown; "Select a show" subtitle hidden on Solo
+- [x] **Help topic: why emails might not send** ✅ 2026-04-13 — "Why might my fans not receive emails?" added to `help-topics.ts` under Emails & Sequences
 
 ### Phase 4 — Trial Flow
 

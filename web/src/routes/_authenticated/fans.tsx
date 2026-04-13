@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Download, Loader2, QrCode, Search, Users, X } from "lucide-react";
+import { Download, Loader2, Lock, QrCode, Search, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { type CaptureRow, CapturesTable } from "@/components/captures-table";
 import { QueryError } from "@/components/query-error";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useTier } from "@/hooks/use-tier";
 import { api } from "@/lib/api";
 
 type CapturePage = {
@@ -70,6 +71,7 @@ type FilterBarProps = {
 	pages: CapturePage[] | undefined;
 	rows: CaptureRow[] | undefined;
 	exportCsv: () => void;
+	canExport: boolean;
 };
 
 function FilterBar({
@@ -79,6 +81,7 @@ function FilterBar({
 	pages,
 	rows,
 	exportCsv,
+	canExport,
 }: FilterBarProps) {
 	const hasFilters =
 		filters.page_id || filters.method || filters.date_from || filters.date_to || filters.search;
@@ -148,9 +151,20 @@ function FilterBar({
 			)}
 
 			<div className="ml-auto">
-				<Button variant="outline" size="sm" onClick={exportCsv} disabled={!rows?.length}>
-					<Download className="size-3.5" />
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={exportCsv}
+					disabled={canExport && !rows?.length}
+					className={!canExport ? "gap-1.5" : ""}
+				>
+					{canExport ? <Download className="size-3.5" /> : <Lock className="size-3.5" />}
 					Export CSV
+					{!canExport && (
+						<Badge variant="default" className="ml-1 text-[10px]">
+							Superstar
+						</Badge>
+					)}
 				</Button>
 			</div>
 		</div>
@@ -229,6 +243,8 @@ function FansPage() {
 	const navigate = useNavigate();
 	const { data: rows, isLoading, isError, refetch } = useCaptures(filters);
 	const { data: pages } = usePages();
+	const { limits } = useTier();
+	const canExport = limits.hasCsvExport;
 
 	const hasFilters =
 		filters.page_id || filters.method || filters.date_from || filters.date_to || filters.search;
@@ -251,6 +267,10 @@ function FansPage() {
 	}
 
 	async function exportCsv() {
+		if (!canExport) {
+			toast.error("CSV export is a Superstar feature. Reach out to Matt to upgrade.");
+			return;
+		}
 		try {
 			const qs = buildQueryString(filters);
 			const blob = await api.getBlob(`/captures/export${qs}`);
@@ -274,6 +294,7 @@ function FansPage() {
 				pages={pages}
 				rows={rows}
 				exportCsv={exportCsv}
+				canExport={canExport}
 			/>
 
 			{hasFilters && (

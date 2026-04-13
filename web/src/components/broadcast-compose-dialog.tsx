@@ -42,6 +42,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { UpgradePrompt } from "@/components/upgrade-prompt";
+import { useTier } from "@/hooks/use-tier";
 import { api } from "@/lib/api";
 import type { Broadcast } from "@/lib/types";
 
@@ -143,6 +145,8 @@ export function BroadcastComposeDialog({
 	onOpenChange,
 }: BroadcastComposeDialogProps) {
 	const queryClient = useQueryClient();
+	const { limits } = useTier();
+	const canSegment = limits.hasSegmentation;
 	const [form, setForm] = useState<FormState>(EMPTY_FORM);
 	const set = useCallback(
 		(updates: Partial<FormState>) => setForm((f) => ({ ...f, ...updates })),
@@ -421,23 +425,38 @@ export function BroadcastComposeDialog({
 						<div className="space-y-2">
 							<button
 								type="button"
-								className="flex items-center gap-1.5 text-sm font-medium"
-								onClick={() => setShowFilters(!showFilters)}
+								className="flex items-center gap-1.5 text-sm font-medium disabled:cursor-not-allowed"
+								onClick={() => canSegment && setShowFilters(!showFilters)}
+								disabled={!canSegment}
 							>
-								{showFilters ? (
-									<ChevronUp className="size-4" />
-								) : (
-									<ChevronDown className="size-4" />
-								)}
+								{canSegment &&
+									(showFilters ? (
+										<ChevronUp className="size-4" />
+									) : (
+										<ChevronDown className="size-4" />
+									))}
 								Filter recipients
 								{recipientCount && (
 									<Badge variant="secondary" className="ml-1">
 										{countLoading ? "..." : `${recipientCount.reachable} fans`}
 									</Badge>
 								)}
+								{!canSegment && (
+									<Badge variant="default" className="ml-1 text-[10px]">
+										Superstar
+									</Badge>
+								)}
 							</button>
 
-							{showFilters && (
+							{!canSegment && (
+								<UpgradePrompt
+									feature="Segment by capture page, signup date, or entry method to send targeted broadcasts. Superstar only."
+									requiredTier="superstar"
+									compact
+								/>
+							)}
+
+							{canSegment && showFilters && (
 								<Card>
 									<CardContent className="space-y-3 p-3">
 										{/* Page filter */}
