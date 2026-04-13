@@ -18,10 +18,16 @@ export type Broadcast = {
 	updated_at: string;
 };
 
+export type Tier = "solo" | "tour" | "superstar";
+
 export type ArtistSettings = {
 	id: string;
 	name: string;
 	email: string;
 	timezone: string;
 	onboarding_completed: boolean;
+	tier: Tier;
+	trial_ends_at: string | null;
+	effective_tier: Tier;
+	is_trial: boolean;
 };

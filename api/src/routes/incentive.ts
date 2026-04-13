@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createDownloadToken } from "../lib/download-token.js";
 import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
+import { getEffectiveTier, getTierLimits } from "../lib/tier.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const app = new Hono<AuthEnv>();
@@ -77,6 +78,27 @@ app.post("/:id/incentive/upload-url", async (c) => {
 
 	const page = await getOwnedPage(pageId, artist.id);
 	if (!page) return c.json({ error: "Not found" }, 404);
+
+	const storageLimitBytes = getTierLimits(getEffectiveTier(artist)).storageMb * 1024 * 1024;
+	const { data: sizeRows } = await supabase
+		.from("capture_pages")
+		.select("id, incentive_file_size")
+		.eq("artist_id", artist.id);
+	const currentBytes = (sizeRows ?? []).reduce(
+		(sum, row) => sum + (row.id === pageId ? 0 : (row.incentive_file_size ?? 0)),
+		0,
+	);
+	if (currentBytes + file_size > storageLimitBytes) {
+		return c.json(
+			{
+				error: "Storage limit reached for your plan.",
+				upgrade: true,
+				used_mb: Math.round(currentBytes / (1024 * 1024)),
+				limit_mb: Math.round(storageLimitBytes / (1024 * 1024)),
+			},
+			413,
+		);
+	}
 
 	// Delete existing file if replacing
 	if (page.incentive_file_path) {

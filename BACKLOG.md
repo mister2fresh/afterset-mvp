@@ -6,7 +6,9 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 
 - [x] **Broadcast campaigns** — shipped March 24, 2026. CRUD + send/schedule, segment filters, 4 preset templates, reply-to toggle, open tracking.
 - [x] **Move follow-up sequences into capture pages, keep Emails tab for broadcasts only** — shipped March 31, 2026. Inline sequence editor in PageForm (edit mode), Emails tab refactored to broadcasts-only.
+- [ ] **Inbound email forwarding on `send.afterset.net`** — Cloudflare Email Routing to forward `hello@send.afterset.net` (and catch-all) to a real mailbox. Currently if a fan ignores the Reply-To header and replies directly to the FROM address, it bounces (550). Low-risk stopgap until Resend Inbound webhook integration.
 - [ ] **AI-powered "suggest email copy" button** — Hono API route, rate limited by tier
+- [ ] **First-crossing fan-cap notification email** — detection is wired (over-cap rows marked with `cap_exceeded_at` in Worker), but artist-facing email dispatch was deferred during Sprint 5 Phase 2 because `pending_emails` currently routes by `email_template_id` / `broadcast_id`. Options: (a) add `system_subject` / `system_body` columns to `pending_emails`, or (b) build a separate system-notification channel. Once-per-month-per-artist idempotency check already specified in `TASKS.md`.
 - [ ] **Per-artist custom sending domains** — Resend Scale plan, triggers at ~200 artists
 - [ ] **SES migration** — cost optimization at 500K–1M emails/month
 - [ ] **Dedicated-number-per-artist SMS** — Telnyx, triggers at 500+ Pro artists
@@ -40,6 +42,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [ ] **Expanded reports** — sortable/filterable show list by capture method, timeframe, and engagement rate; exportable report views; top-level sort controls on "Captures by Show" section
 - [ ] **Date range picker + period comparison** — let artists slice analytics by week/month/custom range; compare periods ("this week vs last week")
 - [ ] **Trend deltas on stat cards** — "+23% captures this week" arrows showing direction of change
+- [ ] **Overview daily chart tooltip: show title(s) on hover** — the "All Captures (Last 30 Days)" chart currently shows only date + capture count on hover. Include the show title(s) active that day (from `capture_events.page_title` snapshot) so artists can see which gig drove a spike without switching to the per-show drill-down. Backend: extend `/api/analytics` `daily[]` rows with `titles: string[]` (or `top_titles` capped at 3 with "+N more").
 - [x] **Branded fan-facing theme consistency** — follow-up emails now inherit artist's capture page colors (accent, bg, text, button style); shipped March 26, 2026
 - [ ] **Broadcast email theme editor** — let artists override the inherited theme per broadcast (color pickers for accent, bg, text + button style) instead of always pulling from their latest capture page
 - [ ] **Rich text email editor** — replace plain-text body textarea with a rich text editor (bold, italic, links, lists) for broadcasts and follow-up templates; renders to inline-styled HTML for email client compatibility

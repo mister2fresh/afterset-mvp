@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Clock, Loader2, QrCode, Users } from "lucide-react";
+import { AlertTriangle, Clock, Loader2, Mail, QrCode, Users } from "lucide-react";
 import { METHOD_COLORS, METHOD_LABELS, MethodList } from "@/components/show-drill-down";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,7 @@ type TonightData = {
 		sent: number;
 		opened: number;
 		open_rate: number;
+		paused: number;
 	};
 };
 
@@ -107,6 +108,41 @@ export function DashboardTonight(): React.ReactElement {
 					</CardHeader>
 					<CardContent>
 						<MethodList methods={methodArr} total={totalMethods} />
+					</CardContent>
+				</Card>
+			)}
+
+			{data.email_status.entered > 0 && (
+				<Card>
+					<CardHeader>
+						<CardTitle className="text-sm font-medium">Follow-Up Emails</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+							<span className="flex items-center gap-1.5">
+								<Mail className="size-3.5 text-muted-foreground" />
+								<span className="tabular-nums">{data.email_status.entered}</span>
+								<span className="text-xs text-muted-foreground">entered</span>
+							</span>
+							<span className="flex items-center gap-1">
+								<span className="tabular-nums">{data.email_status.sent}</span>
+								<span className="text-xs text-muted-foreground">sent</span>
+							</span>
+							<span className="flex items-center gap-1">
+								<span className="tabular-nums">{data.email_status.opened}</span>
+								<span className="text-xs text-muted-foreground">opened</span>
+							</span>
+							{data.email_status.paused > 0 && (
+								<span
+									className="flex items-center gap-1 text-amber-400"
+									title="Paused — see banner on dashboard for details."
+								>
+									<AlertTriangle className="size-3.5" />
+									<span className="tabular-nums">{data.email_status.paused}</span>
+									<span className="text-xs">paused</span>
+								</span>
+							)}
+						</div>
 					</CardContent>
 				</Card>
 			)}

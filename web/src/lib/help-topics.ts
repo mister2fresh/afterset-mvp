@@ -173,6 +173,26 @@ To send a broadcast:
 
 Limits: 1 broadcast per day, 5,000 max recipients per send.`,
 			},
+			{
+				id: "paused-emails",
+				title: "Why might my fans not receive emails?",
+				body: `If a fan signed up but didn't get a follow-up email, the email may be **paused** instead of sent. Check the banner at the top of the Dashboard — it shows the reason for every paused email.
+
+**Common reasons emails pause:**
+
+- **Monthly email cap reached** — Each plan has a monthly send cap (Solo: 1,000, Tour: 10,000, Superstar: 50,000). Once you hit the cap, new emails queue up with a paused status. They'll resume automatically on the 1st of next month, or you can upgrade to send sooner.
+- **Sequence step locked by tier** — Your plan limits how many steps a sequence can have (Solo: 1, Tour: 3, Superstar: 5). If you downgraded, steps beyond your new limit are locked and won't send. Upgrading re-enables them.
+- **Stale queue (7+ days old)** — To prevent fans getting emails weeks after signup, rows that sit in the queue longer than 7 days are marked stale and won't send. This usually only happens after an outage or extended cap overflow.
+- **Suppressed email address** — If a fan unsubscribed, bounced, or marked an earlier email as spam, they're on the suppression list and won't receive more. This is automatic and protects your sender reputation.
+
+**Where to see this:**
+
+- **Dashboard banner** — Shows total paused count with a details dialog breaking down each reason.
+- **Tonight tab → Follow-Up Emails** — Tonight's paused count appears next to sent/opened.
+- **Show drill-down → Email Sequence** — Per-step paused counts show which steps are affected.
+
+If you're hitting the email cap regularly, that's a sign you've outgrown your plan — reach out to upgrade.`,
+			},
 		],
 	},
 	{

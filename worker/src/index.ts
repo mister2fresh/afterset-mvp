@@ -1,3 +1,5 @@
+import { type CaptureMethod, getEffectiveTier, type Tier, WORKER_TIER_LIMITS } from "./tier.js";
+
 interface Env {
 	PAGES: R2Bucket;
 	SUPABASE_URL: string;
@@ -77,6 +79,17 @@ function calculateDaysSendAt(timezone: string, days: number): string {
 	const target = new Date();
 	target.setDate(target.getDate() + days);
 	return localNineAmToUtc(timezone, target);
+}
+
+// UTC ISO start-of-month in a given timezone (mirrors api/src/lib/timezone.ts:getMonthRange).
+function getMonthStartUtc(timezone: string): string {
+	const now = new Date();
+	const ymd = now.toLocaleDateString("en-CA", { timeZone: timezone });
+	const [year, month] = ymd.split("-").map(Number);
+	const firstUtc = `${year}-${String(month).padStart(2, "0")}-01T00:00:00Z`;
+	return new Date(
+		new Date(firstUtc).getTime() + getTimezoneOffsetMs(timezone, new Date()),
+	).toISOString();
 }
 
 type SequenceTemplate = {
@@ -207,6 +220,12 @@ async function parseSubmission(request: Request): Promise<Submission | Response>
 }
 
 type PageInfo = { id: string; artist_id: string; title: string };
+type ArtistContext = {
+	timezone: string;
+	email: string;
+	tier: Tier;
+	trial_ends_at: string | null;
+};
 
 async function lookupPage(env: Env, slug: string): Promise<PageInfo | Response> {
 	const pageRes = await supabaseRpc(
@@ -221,12 +240,35 @@ async function lookupPage(env: Env, slug: string): Promise<PageInfo | Response> 
 	return pages[0];
 }
 
+async function lookupArtistContext(env: Env, artistId: string): Promise<ArtistContext> {
+	const res = await supabaseRpc(
+		env,
+		`artists?id=eq.${artistId}&select=timezone,email,tier,trial_ends_at`,
+		{},
+	);
+	const rows = res.ok ? ((await res.json()) as ArtistContext[]) : [];
+	return (
+		rows[0] ?? {
+			timezone: "America/New_York",
+			email: "",
+			tier: "superstar",
+			trial_ends_at: null,
+		}
+	);
+}
+
+type PersistResult = {
+	fanCaptureId: string;
+	captureEventId: string;
+	firstCapturedAt: string;
+};
+
 async function persistCapture(
 	env: Env,
 	page: PageInfo,
 	email: string,
 	method: string,
-): Promise<{ fanCaptureId: string; captureEventId: string } | Response> {
+): Promise<PersistResult | Response> {
 	const upsertRes = await supabaseRpc(env, "fan_captures?on_conflict=artist_id,email", {
 		method: "POST",
 		headers: { Prefer: "return=representation,resolution=merge-duplicates" },
@@ -234,8 +276,9 @@ async function persistCapture(
 	});
 	if (!upsertRes.ok) return json({ error: "Capture failed" }, 502);
 
-	const captures = (await upsertRes.json()) as { id: string }[];
+	const captures = (await upsertRes.json()) as { id: string; first_captured_at: string }[];
 	const fanCaptureId = captures[0].id;
+	const firstCapturedAt = captures[0].first_captured_at;
 
 	const eventRes = await supabaseRpc(env, "capture_events", {
 		method: "POST",
@@ -250,7 +293,39 @@ async function persistCapture(
 	if (!eventRes.ok) return json({ error: "Event creation failed" }, 502);
 
 	const events = (await eventRes.json()) as { id: string }[];
-	return { fanCaptureId, captureEventId: events[0].id };
+	return { fanCaptureId, captureEventId: events[0].id, firstCapturedAt };
+}
+
+// Count new fans this month and mark this capture's cap_exceeded_at if over the tier cap.
+// Superstar (cap=null) short-circuits. Only runs for newly-created fan_captures rows this month.
+async function maybeMarkOverCap(
+	env: Env,
+	artistId: string,
+	fanCaptureId: string,
+	firstCapturedAt: string,
+	monthStart: string,
+	fanCap: number | null,
+): Promise<void> {
+	if (fanCap === null) return;
+	if (firstCapturedAt < monthStart) return; // returning fan — doesn't count toward monthly cap
+
+	const countRes = await supabaseRpc(
+		env,
+		`fan_captures?artist_id=eq.${artistId}&first_captured_at=gte.${encodeURIComponent(monthStart)}&select=id`,
+		{ headers: { Prefer: "count=exact", Range: "0-0", "Range-Unit": "items" } },
+	);
+	const contentRange = countRes.headers.get("content-range") ?? "";
+	const total = Number.parseInt(contentRange.split("/")[1] ?? "0", 10);
+	if (total <= fanCap) return;
+
+	await supabaseRpc(env, `fan_captures?id=eq.${fanCaptureId}`, {
+		method: "PATCH",
+		body: { cap_exceeded_at: new Date().toISOString() },
+	});
+	// First-crossing artist notification is deferred — detection is available via
+	// the first fan_captures row this month with cap_exceeded_at IS NOT NULL.
+	// Implementing the email requires a schema addition (pending_emails system-kind
+	// fields) tracked as a follow-up task.
 }
 
 // Capture-to-drip flow:
@@ -287,27 +362,61 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	const page = await lookupPage(env, submission.slug);
 	if (page instanceof Response) return withCors(page);
 
-	const [templateRes, tzRes] = await Promise.all([
+	const [templateRes, artist] = await Promise.all([
 		supabaseRpc(
 			env,
 			`email_templates?capture_page_id=eq.${page.id}&is_active=eq.true&select=id,delay_mode,delay_days,sequence_order&order=sequence_order.asc`,
 			{},
 		),
-		supabaseRpc(env, `artists?id=eq.${page.artist_id}&select=timezone`, {}),
+		lookupArtistContext(env, page.artist_id),
 	]);
-	const templates = templateRes.ok ? ((await templateRes.json()) as SequenceTemplate[]) : [];
-	const tzRows = tzRes.ok ? ((await tzRes.json()) as { timezone: string }[]) : [];
-	const timezone = tzRows[0]?.timezone ?? "America/New_York";
+	const allTemplates = templateRes.ok ? ((await templateRes.json()) as SequenceTemplate[]) : [];
 
-	const capture = await persistCapture(env, page, submission.email, submission.method);
+	const effectiveTier = getEffectiveTier(artist);
+	const tierLimits = WORKER_TIER_LIMITS[effectiveTier];
+
+	// Capture method gate. Solo rejects SMS (403) and soft-accepts NFC as direct
+	// so physical tags already in the wild keep working after downgrade.
+	let method = submission.method;
+	const longMethod = ENTRY_METHOD_MAP[method as keyof typeof ENTRY_METHOD_MAP];
+	const allowed: readonly CaptureMethod[] = tierLimits.captureMethods;
+	if (!allowed.includes(longMethod)) {
+		if (longMethod === "nfc") {
+			method = "d";
+		} else {
+			return withCors(
+				json(
+					{
+						error: "Text-to-Join is not available on this plan.",
+						upgrade: true,
+						required_tier: "tour",
+					},
+					403,
+				),
+			);
+		}
+	}
+
+	const templates = allTemplates.filter((t) => t.sequence_order < tierLimits.sequenceDepth);
+
+	const capture = await persistCapture(env, page, submission.email, method);
 	if (capture instanceof Response) return withCors(capture);
+
+	await maybeMarkOverCap(
+		env,
+		page.artist_id,
+		capture.fanCaptureId,
+		capture.firstCapturedAt,
+		getMonthStartUtc(artist.timezone),
+		tierLimits.fanCap,
+	);
 
 	await queueSequenceEmails(env, templates, {
 		fanCaptureId: capture.fanCaptureId,
 		captureEventId: capture.captureEventId,
 		artistId: page.artist_id,
 		email: submission.email,
-		timezone,
+		timezone: artist.timezone,
 	});
 
 	return withCors(json({ ok: true }));

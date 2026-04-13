@@ -7,6 +7,9 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { QueryError } from "@/components/query-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { UpgradePrompt } from "@/components/upgrade-prompt";
+import { useTier } from "@/hooks/use-tier";
+import { useUsage } from "@/hooks/use-usage";
 import { api } from "@/lib/api";
 import type { Broadcast } from "@/lib/types";
 
@@ -16,6 +19,9 @@ export const Route = createFileRoute("/_authenticated/emails")({
 
 function EmailsPage() {
 	const queryClient = useQueryClient();
+	const { effectiveTier } = useTier();
+	const { data: usage } = useUsage();
+	const broadcastsAllowed = effectiveTier !== "solo";
 
 	const {
 		data: broadcasts,
@@ -97,22 +103,36 @@ function EmailsPage() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center justify-between">
+			<div className="flex items-center justify-between gap-3">
 				<div>
 					<h2 className="font-display text-lg font-semibold">Broadcasts</h2>
 					<p className="text-sm text-muted-foreground">
 						Send one-off emails to your fan list or specific segments.
 					</p>
-				</div>
-				<Button onClick={handleNewBroadcast} disabled={creating}>
-					{creating ? (
-						<Loader2 className="mr-1.5 size-4 animate-spin" />
-					) : (
-						<Plus className="mr-1.5 size-4" />
+					{broadcastsAllowed && usage?.broadcasts.limit !== null && usage?.broadcasts && (
+						<p className="mt-1 text-xs text-muted-foreground">
+							{usage.broadcasts.used} / {usage.broadcasts.limit} broadcasts used this month
+						</p>
 					)}
-					New Broadcast
-				</Button>
+				</div>
+				{broadcastsAllowed && (
+					<Button onClick={handleNewBroadcast} disabled={creating}>
+						{creating ? (
+							<Loader2 className="mr-1.5 size-4 animate-spin" />
+						) : (
+							<Plus className="mr-1.5 size-4" />
+						)}
+						New Broadcast
+					</Button>
+				)}
 			</div>
+
+			{!broadcastsAllowed && (
+				<UpgradePrompt
+					feature="Broadcasts let you email your fan list between shows — new releases, merch drops, tour dates. Tour includes 4 broadcasts/month; Superstar is unlimited."
+					requiredTier="tour"
+				/>
+			)}
 
 			{broadcasts && broadcasts.length > 0 ? (
 				<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardAllShows } from "@/components/dashboard-all-shows";
 import { DashboardTonight } from "@/components/dashboard-tonight";
+import { PausedEmailsBanner } from "@/components/paused-emails-banner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -10,6 +11,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage(): React.ReactElement {
 	return (
 		<div className="space-y-6">
+			<PausedEmailsBanner />
 			<Tabs defaultValue="all-shows">
 				<TabsList>
 					<TabsTrigger value="all-shows">All Shows</TabsTrigger>

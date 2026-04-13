@@ -13,7 +13,7 @@
 | Fan cap | 500/mo | 5,000/mo | Unlimited |
 | Follow-up emails | 1 (immediate only) | 3-step sequences | 5-step sequences |
 | Broadcasts | None | 4/mo | Unlimited |
-| Broadcast targeting | — | Send to all fans | Segmented (page/method/date filters) |
+| Broadcast targeting | — | Send to all + segment by show | + method & date filters |
 | Analytics | Tonight + All Shows | + per-show drill-down | + period trends, venue reports |
 | Data export | None | None | CSV + API |
 | Support | Community | Email | Priority |
@@ -119,8 +119,8 @@ These are the gates needed in the MVP to enforce the tier structure:
 ### Broadcast gating
 - [ ] Solo: Block broadcast creation entirely (upgrade prompt)
 - [ ] Tour: Change `DAILY_BROADCAST_LIMIT` to monthly, set to 4
-- [ ] Tour: Hide segment filters in broadcast-compose-dialog.tsx (send to all only)
-- [ ] Superstar: Unlock segmentation filters + unlimited sends
+- [ ] Tour: Page/show segmentation only; hide date + method filters in broadcast-compose-dialog.tsx
+- [ ] Superstar: Unlock advanced segmentation (date + method) + unlimited sends
 
 ### CSV export gating
 - [ ] `captures/export` route: Check tier, return 403 for Solo/Tour with upgrade message
@@ -142,7 +142,7 @@ These are the moments to show upgrade prompts in the product:
 4. **Broadcast attempt on Solo** — "Send announcements to your full fan list with Tour."
 5. **Export attempt on Solo/Tour** — "Export your fan data with Superstar."
 6. **Email cap hit** — "You've sent 10,000 emails this month. Upgrade for higher limits."
-7. **Segmentation attempt on Tour** — "Target specific fans by show, method, or date with Superstar."
+7. **Advanced segmentation attempt on Tour** — "Filter by signup date or entry method with Superstar."
 
 ---
 

@@ -10,8 +10,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { getUser, initAuth } from "./lib/auth";
 import { routeTree } from "./routeTree.gen";
 
-await initAuth(() => router.invalidate());
-
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
@@ -34,6 +32,8 @@ const router = createRouter({
 	},
 	defaultPreload: "intent",
 });
+
+await initAuth(() => router.invalidate());
 
 declare module "@tanstack/react-router" {
 	interface Register {

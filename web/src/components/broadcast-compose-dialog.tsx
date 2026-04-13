@@ -42,7 +42,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { UpgradePrompt } from "@/components/upgrade-prompt";
+import { useTier } from "@/hooks/use-tier";
 import { api } from "@/lib/api";
+import { getUser } from "@/lib/auth";
 import type { Broadcast } from "@/lib/types";
 
 type CapturePage = {
@@ -143,6 +146,10 @@ export function BroadcastComposeDialog({
 	onOpenChange,
 }: BroadcastComposeDialogProps) {
 	const queryClient = useQueryClient();
+	const { limits } = useTier();
+	const canSegmentByPage = limits.hasPageSegmentation;
+	const canSegmentAdvanced = limits.hasAdvancedSegmentation;
+	const userEmail = getUser()?.email ?? "";
 	const [form, setForm] = useState<FormState>(EMPTY_FORM);
 	const set = useCallback(
 		(updates: Partial<FormState>) => setForm((f) => ({ ...f, ...updates })),
@@ -409,35 +416,55 @@ export function BroadcastComposeDialog({
 								<Button
 									variant={form.replyTo !== null ? "default" : "outline"}
 									size="sm"
-									onClick={() => set({ replyTo: "" })}
-									disabled={!isDraft}
+									onClick={() => set({ replyTo: userEmail })}
+									disabled={!isDraft || !userEmail}
 								>
 									My email
 								</Button>
 							</div>
+							{form.replyTo !== null && (
+								<p className="text-xs text-muted-foreground">
+									Replies go to <span className="font-medium">{form.replyTo || userEmail}</span>
+								</p>
+							)}
 						</div>
 
 						{/* Filters */}
 						<div className="space-y-2">
 							<button
 								type="button"
-								className="flex items-center gap-1.5 text-sm font-medium"
-								onClick={() => setShowFilters(!showFilters)}
+								className="flex items-center gap-1.5 text-sm font-medium disabled:cursor-not-allowed"
+								onClick={() => canSegmentByPage && setShowFilters(!showFilters)}
+								disabled={!canSegmentByPage}
 							>
-								{showFilters ? (
-									<ChevronUp className="size-4" />
-								) : (
-									<ChevronDown className="size-4" />
-								)}
+								{canSegmentByPage &&
+									(showFilters ? (
+										<ChevronUp className="size-4" />
+									) : (
+										<ChevronDown className="size-4" />
+									))}
 								Filter recipients
 								{recipientCount && (
 									<Badge variant="secondary" className="ml-1">
 										{countLoading ? "..." : `${recipientCount.reachable} fans`}
 									</Badge>
 								)}
+								{!canSegmentByPage && (
+									<Badge variant="default" className="ml-1 text-[10px]">
+										Tour
+									</Badge>
+								)}
 							</button>
 
-							{showFilters && (
+							{!canSegmentByPage && (
+								<UpgradePrompt
+									feature="Segment broadcasts by show to send targeted messages — e.g. only fans from your Nashville gig."
+									requiredTier="tour"
+									compact
+								/>
+							)}
+
+							{canSegmentByPage && showFilters && (
 								<Card>
 									<CardContent className="space-y-3 p-3">
 										{/* Page filter */}
@@ -449,10 +476,7 @@ export function BroadcastComposeDialog({
 														<button
 															key={page.id}
 															type="button"
-															onClick={() => {
-																togglePageFilter(page.id);
-																// Debounced save happens on blur or explicit save
-															}}
+															onClick={() => togglePageFilter(page.id)}
 															className={`rounded-md border px-2 py-1 text-xs transition-colors ${
 																form.filterPageIds.includes(page.id)
 																	? "border-honey-gold bg-honey-gold/10 text-honey-gold"
@@ -467,44 +491,54 @@ export function BroadcastComposeDialog({
 											</div>
 										)}
 
-										{/* Date range */}
-										<div className="grid grid-cols-2 gap-2">
-											<div className="space-y-1">
-												<Label className="text-xs">Captured after</Label>
-												<Input
-													type="date"
-													value={form.filterDateFrom}
-													onChange={(e) => set({ filterDateFrom: e.target.value })}
-													disabled={!isDraft}
-												/>
-											</div>
-											<div className="space-y-1">
-												<Label className="text-xs">Captured before</Label>
-												<Input
-													type="date"
-													value={form.filterDateTo}
-													onChange={(e) => set({ filterDateTo: e.target.value })}
-													disabled={!isDraft}
-												/>
-											</div>
-										</div>
+										{canSegmentAdvanced ? (
+											<>
+												{/* Date range */}
+												<div className="grid grid-cols-2 gap-2">
+													<div className="space-y-1">
+														<Label className="text-xs">Captured after</Label>
+														<Input
+															type="date"
+															value={form.filterDateFrom}
+															onChange={(e) => set({ filterDateFrom: e.target.value })}
+															disabled={!isDraft}
+														/>
+													</div>
+													<div className="space-y-1">
+														<Label className="text-xs">Captured before</Label>
+														<Input
+															type="date"
+															value={form.filterDateTo}
+															onChange={(e) => set({ filterDateTo: e.target.value })}
+															disabled={!isDraft}
+														/>
+													</div>
+												</div>
 
-										{/* Entry method */}
-										<div className="space-y-1">
-											<Label className="text-xs">Entry method</Label>
-											<select
-												value={form.filterMethod}
-												onChange={(e) => set({ filterMethod: e.target.value })}
-												className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-												disabled={!isDraft}
-											>
-												<option value="">All methods</option>
-												<option value="qr">QR code</option>
-												<option value="sms">SMS</option>
-												<option value="direct">Direct link</option>
-												<option value="nfc">NFC</option>
-											</select>
-										</div>
+												{/* Entry method */}
+												<div className="space-y-1">
+													<Label className="text-xs">Entry method</Label>
+													<select
+														value={form.filterMethod}
+														onChange={(e) => set({ filterMethod: e.target.value })}
+														className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+														disabled={!isDraft}
+													>
+														<option value="">All methods</option>
+														<option value="qr">QR code</option>
+														<option value="sms">SMS</option>
+														<option value="direct">Direct link</option>
+														<option value="nfc">NFC</option>
+													</select>
+												</div>
+											</>
+										) : (
+											<UpgradePrompt
+												feature="Filter by signup date or entry method for advanced targeting."
+												requiredTier="superstar"
+												compact
+											/>
+										)}
 
 										{countLoading && (
 											<div className="flex items-center gap-1.5 text-xs text-muted-foreground">

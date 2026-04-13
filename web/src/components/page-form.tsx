@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useTier } from "@/hooks/use-tier";
 import { api, uploadToSignedUrl } from "@/lib/api";
 
 export type CapturePage = {
@@ -375,9 +376,12 @@ function NfcSection({
 }: {
 	slug: string;
 	highlight?: boolean;
-}): React.ReactElement {
+}): React.ReactElement | null {
+	const { effectiveTier } = useTier();
 	const [copied, setCopied] = useState(false);
 	const nfcUrl = `https://afterset.net/c/${slug}?v=n`;
+
+	if (effectiveTier === "solo") return null;
 
 	async function copyUrl(): Promise<void> {
 		await navigator.clipboard.writeText(nfcUrl);
@@ -702,6 +706,7 @@ export function PageForm({
 	autoExpandEmail,
 }: PageFormProps): React.ReactElement {
 	const queryClient = useQueryClient();
+	const { effectiveTier } = useTier();
 	const initialForm = page
 		? formFromPage(page)
 		: defaultLinks
@@ -924,25 +929,27 @@ export function PageForm({
 
 			<ThemeEditor form={form} onChange={(updates) => setForm((f) => ({ ...f, ...updates }))} />
 
-			<EditorSection
-				icon={Zap}
-				title="Capture Methods"
-				summary={(() => {
-					const parts: string[] = [];
-					if (keyword.length >= 2) parts.push(keyword.toUpperCase());
-					if (!isCreate && page?.slug && !autoExpandEmail) parts.push("NFC");
-					return parts.length > 0 ? parts.join(" · ") : "Not set";
-				})()}
-			>
-				<KeywordSection
-					keyword={keyword}
-					setKeyword={setKeyword}
-					mode={mode}
-					pageId={page?.id}
-					currentKeyword={currentKeyword}
-				/>
-				{!isCreate && page?.slug && !autoExpandEmail && <NfcSection slug={page.slug} />}
-			</EditorSection>
+			{effectiveTier !== "solo" && (
+				<EditorSection
+					icon={Zap}
+					title="Capture Methods"
+					summary={(() => {
+						const parts: string[] = [];
+						if (keyword.length >= 2) parts.push(keyword.toUpperCase());
+						if (!isCreate && page?.slug && !autoExpandEmail) parts.push("NFC");
+						return parts.length > 0 ? parts.join(" · ") : "Not set";
+					})()}
+				>
+					<KeywordSection
+						keyword={keyword}
+						setKeyword={setKeyword}
+						mode={mode}
+						pageId={page?.id}
+						currentKeyword={currentKeyword}
+					/>
+					{!isCreate && page?.slug && !autoExpandEmail && <NfcSection slug={page.slug} />}
+				</EditorSection>
+			)}
 
 			<EditorSection
 				icon={Gift}

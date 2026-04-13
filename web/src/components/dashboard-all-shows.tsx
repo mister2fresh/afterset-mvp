@@ -9,6 +9,8 @@ import { type PageAnalytics, ShowDrillDown, type ShowStats } from "@/components/
 import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UpgradePrompt } from "@/components/upgrade-prompt";
+import { useTier } from "@/hooks/use-tier";
 import { api } from "@/lib/api";
 import type { Broadcast } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -23,6 +25,8 @@ type OverviewData = {
 
 export function DashboardAllShows(): React.ReactElement {
 	const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
+	const { effectiveTier } = useTier();
+	const canDrillDown = effectiveTier !== "solo";
 
 	const {
 		data: overview,
@@ -45,7 +49,7 @@ export function DashboardAllShows(): React.ReactElement {
 	const { data: pageData, isLoading: pageLoading } = useQuery({
 		queryKey: ["page-analytics", selectedPageId],
 		queryFn: () => api.get<PageAnalytics>(`/capture-pages/${selectedPageId}/analytics`),
-		enabled: !!selectedPageId,
+		enabled: !!selectedPageId && canDrillDown,
 	});
 
 	if (isLoading) {
@@ -100,6 +104,7 @@ export function DashboardAllShows(): React.ReactElement {
 				onSelectTitle={setSelectedTitle}
 				pageData={pageData}
 				pageLoading={pageLoading}
+				canDrillDown={canDrillDown}
 			/>
 
 			<BroadcastEngagement broadcasts={broadcasts} />
@@ -114,6 +119,7 @@ function CapturesByShow({
 	onSelectTitle,
 	pageData,
 	pageLoading,
+	canDrillDown,
 }: {
 	pages: ShowStats[];
 	totalFans: number;
@@ -121,14 +127,17 @@ function CapturesByShow({
 	onSelectTitle: (title: string | null) => void;
 	pageData: PageAnalytics | undefined;
 	pageLoading: boolean;
+	canDrillDown: boolean;
 }): React.ReactElement {
 	return (
 		<Card>
 			<CardHeader>
 				<CardTitle className="text-sm font-medium">Captures by Show</CardTitle>
-				<p className="text-xs text-muted-foreground">
-					Select a show to see its capture methods, daily trend, and email stats
-				</p>
+				{canDrillDown && (
+					<p className="text-xs text-muted-foreground">
+						Select a show to see its capture methods, daily trend, and email stats
+					</p>
+				)}
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="mb-1 flex items-center px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -177,7 +186,15 @@ function CapturesByShow({
 								</button>
 								{isSelected && (
 									<div className="ml-3 border-l-2 border-honey-gold/30 py-3 pl-4">
-										<ShowDrillDown show={p} stepData={pageData} stepLoading={pageLoading} />
+										{canDrillDown ? (
+											<ShowDrillDown show={p} stepData={pageData} stepLoading={pageLoading} />
+										) : (
+											<UpgradePrompt
+												feature="Per-show drill-down shows capture methods, daily trend, and email sequence breakdown for each gig."
+												requiredTier="tour"
+												compact
+											/>
+										)}
 									</div>
 								)}
 							</div>

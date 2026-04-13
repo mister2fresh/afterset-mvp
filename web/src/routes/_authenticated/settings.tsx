@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { PlanCard } from "@/components/plan-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,8 @@ function SettingsPage() {
 
 	return (
 		<div className="max-w-2xl space-y-6">
+			<PlanCard />
+
 			<Card>
 				<CardHeader>
 					<CardTitle>Account</CardTitle>

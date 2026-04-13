@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { useId } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { fillLast30Days } from "@/components/daily-chart";
@@ -23,12 +23,14 @@ export type PageAnalytics = {
 	email: {
 		sent: number;
 		opened: number;
+		paused: number;
 		open_rate: number;
 		steps?: {
 			sequence_order: number;
 			subject: string;
 			sent: number;
 			opened: number;
+			paused: number;
 			open_rate: number;
 		}[];
 	};
@@ -121,6 +123,15 @@ function EmailSequenceSteps({
 					</span>
 					<span className="min-w-0 flex-1 truncate text-muted-foreground">{step.subject}</span>
 					<span className="shrink-0 tabular-nums">{step.sent} sent</span>
+					{step.paused > 0 && (
+						<span
+							className="flex shrink-0 items-center gap-1 tabular-nums text-amber-400"
+							title="Paused — see dashboard banner for details."
+						>
+							<AlertTriangle className="size-3" />
+							{step.paused} paused
+						</span>
+					)}
 					<span className="shrink-0 tabular-nums text-muted-foreground">
 						{step.sent > 0 ? `${Math.round(step.open_rate * 100)}%` : "—"}
 					</span>

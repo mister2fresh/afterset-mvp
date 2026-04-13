@@ -6,6 +6,8 @@ import { getEmailService } from "../lib/email/index.js";
 import { type EmailTheme, renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.js";
 import type { SendParams } from "../lib/email/types.js";
 import { supabase } from "../lib/supabase.js";
+import { getEffectiveTier, getTierLimits, type Tier } from "../lib/tier.js";
+import { getMonthRange } from "../lib/timezone.js";
 
 const app = new Hono();
 
@@ -24,6 +26,122 @@ type PendingRow = {
 	email_template_id: string | null;
 	broadcast_id: string | null;
 };
+
+// Mark pending rows older than 7 days as stale. They're not claimable (claim_pending_emails
+// filters send_at > now() - 7d) but we surface them in usage meters / paused banners.
+async function markStaleRows(): Promise<void> {
+	const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+	await supabase
+		.from("pending_emails")
+		.update({ skip_reason: "stale", skip_reason_at: new Date().toISOString() })
+		.eq("status", "pending")
+		.lt("send_at", sevenDaysAgo)
+		.is("skip_reason", null);
+}
+
+type TierArtistRow = { id: string; tier: Tier; trial_ends_at: string | null; timezone: string };
+
+type PartitionResult = {
+	sendable: PendingRow[];
+	emailCapIds: string[];
+	tierLockedIds: string[];
+};
+
+// Release skipped rows back to 'pending' with a skip_reason so the next eligible run retries.
+async function releaseSkipped(ids: string[], reason: "email_cap" | "tier_locked"): Promise<void> {
+	if (ids.length === 0) return;
+	await supabase
+		.from("pending_emails")
+		.update({
+			status: "pending",
+			skip_reason: reason,
+			skip_reason_at: new Date().toISOString(),
+		})
+		.in("id", ids);
+}
+
+async function partitionByTier(rows: PendingRow[]): Promise<PartitionResult> {
+	const artistIds = [...new Set(rows.map((r) => r.artist_id))];
+	const { data: artists } = await supabase
+		.from("artists")
+		.select("id, tier, trial_ends_at, timezone")
+		.in("id", artistIds);
+	const artistMap = new Map<string, TierArtistRow>(
+		(artists ?? []).map((a) => [a.id, a as TierArtistRow]),
+	);
+
+	const templateIds = [
+		...new Set(rows.map((r) => r.email_template_id).filter((id): id is string => id != null)),
+	];
+	const { data: templates } =
+		templateIds.length > 0
+			? await supabase.from("email_templates").select("id, sequence_order").in("id", templateIds)
+			: { data: [] };
+	const sequenceOrderMap = new Map<string, number>(
+		(templates ?? []).map((t) => [t.id, t.sequence_order]),
+	);
+
+	// Per-artist monthly sent count (only for artists with finite email cap).
+	const sentCountByArtist = new Map<string, number>();
+	await Promise.all(
+		artistIds.map(async (artistId) => {
+			const artist = artistMap.get(artistId);
+			if (!artist) return;
+			const tier = getEffectiveTier(artist);
+			const cap = getTierLimits(tier).emailCap;
+			if (!Number.isFinite(cap)) return;
+			const { start } = getMonthRange(artist.timezone ?? "America/New_York");
+			const { count } = await supabase
+				.from("pending_emails")
+				.select("id", { count: "exact", head: true })
+				.eq("artist_id", artistId)
+				.eq("status", "sent")
+				.gte("updated_at", start);
+			sentCountByArtist.set(artistId, count ?? 0);
+		}),
+	);
+
+	const sendable: PendingRow[] = [];
+	const emailCapIds: string[] = [];
+	const tierLockedIds: string[] = [];
+	const perArtistAdded = new Map<string, number>();
+
+	for (const row of rows) {
+		const artist = artistMap.get(row.artist_id);
+		if (!artist) {
+			// No artist row means the send path will fail anyway — let it fall through
+			// and be handled by the existing "no template" skip.
+			sendable.push(row);
+			continue;
+		}
+		const tier = getEffectiveTier(artist);
+		const limits = getTierLimits(tier);
+
+		// Tier-locked: sequence email whose step is beyond the tier's depth.
+		if (row.email_template_id) {
+			const seqOrder = sequenceOrderMap.get(row.email_template_id);
+			if (seqOrder !== undefined && seqOrder >= limits.sequenceDepth) {
+				tierLockedIds.push(row.id);
+				continue;
+			}
+		}
+
+		// Email cap: artist already over monthly cap, or this row would push them over.
+		if (Number.isFinite(limits.emailCap)) {
+			const alreadySent = sentCountByArtist.get(row.artist_id) ?? 0;
+			const addedThisBatch = perArtistAdded.get(row.artist_id) ?? 0;
+			if (alreadySent + addedThisBatch >= limits.emailCap) {
+				emailCapIds.push(row.id);
+				continue;
+			}
+			perArtistAdded.set(row.artist_id, addedThisBatch + 1);
+		}
+
+		sendable.push(row);
+	}
+
+	return { sendable, emailCapIds, tierLockedIds };
+}
 
 async function claimPendingRows(ids?: string[]): Promise<PendingRow[] | { error: string }> {
 	if (ids) {
@@ -357,12 +475,28 @@ app.post("/send-batch", async (c) => {
 	const parsed = requestSchema.safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
+	await markStaleRows();
+
 	const claimed = await claimPendingRows(parsed.data?.ids);
 	if ("error" in claimed) return c.json({ error: claimed.error }, 500);
 	if (claimed.length === 0) return c.json({ sent: 0, failed: 0, skipped: 0 });
 
-	const ctx = await resolveSendContext(claimed);
-	const { sendable, skippedIds } = buildSendParams(claimed, ctx);
+	// Tier-aware partition: release rows that shouldn't send this run.
+	const { sendable: eligible, emailCapIds, tierLockedIds } = await partitionByTier(claimed);
+	await Promise.all([
+		releaseSkipped(emailCapIds, "email_cap"),
+		releaseSkipped(tierLockedIds, "tier_locked"),
+	]);
+	const tierSkipCount = emailCapIds.length + tierLockedIds.length;
+
+	if (eligible.length === 0) {
+		const elapsed = Math.round(performance.now() - start);
+		console.log(`[send-batch] 0 sent, ${tierSkipCount} tier-skipped, ${elapsed}ms`);
+		return c.json({ sent: 0, failed: 0, skipped: tierSkipCount });
+	}
+
+	const ctx = await resolveSendContext(eligible);
+	const { sendable, skippedIds } = buildSendParams(eligible, ctx);
 
 	// Mark skipped emails as failed (no template / inactive — retrying won't help)
 	if (skippedIds.length > 0) {
@@ -370,9 +504,10 @@ app.post("/send-batch", async (c) => {
 	}
 
 	if (sendable.length === 0) {
+		const totalSkipped = skippedIds.length + tierSkipCount;
 		const elapsed = Math.round(performance.now() - start);
-		console.log(`[send-batch] 0 sent, ${skippedIds.length} skipped, ${elapsed}ms`);
-		return c.json({ sent: 0, failed: 0, skipped: skippedIds.length });
+		console.log(`[send-batch] 0 sent, ${totalSkipped} skipped, ${elapsed}ms`);
+		return c.json({ sent: 0, failed: 0, skipped: totalSkipped });
 	}
 
 	// Send via Resend batch API
@@ -401,12 +536,17 @@ app.post("/send-batch", async (c) => {
 			}
 		}
 
-		// Update sent emails with provider_message_id (parallel, not sequential)
+		// Update sent emails with provider_message_id + clear any prior skip_reason
 		await Promise.all(
 			providerUpdates.map((update) =>
 				supabase
 					.from("pending_emails")
-					.update({ status: "sent", provider_message_id: update.provider_message_id })
+					.update({
+						status: "sent",
+						provider_message_id: update.provider_message_id,
+						skip_reason: null,
+						skip_reason_at: null,
+					})
 					.eq("id", update.id),
 			),
 		);
@@ -429,15 +569,16 @@ app.post("/send-batch", async (c) => {
 		await updateBroadcastStats(broadcastIds);
 	}
 
+	const totalSkipped = skippedIds.length + tierSkipCount;
 	const elapsed = Math.round(performance.now() - start);
 	console.log(
-		`[send-batch] ${sentCount} sent, ${failedCount} failed, ${skippedIds.length} skipped, ${elapsed}ms`,
+		`[send-batch] ${sentCount} sent, ${failedCount} failed, ${totalSkipped} skipped, ${elapsed}ms`,
 	);
 
 	return c.json({
 		sent: sentCount,
 		failed: failedCount,
-		skipped: skippedIds.length,
+		skipped: totalSkipped,
 		latency_ms: elapsed,
 	});
 });

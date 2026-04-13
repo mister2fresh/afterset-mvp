@@ -38,6 +38,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTier } from "@/hooks/use-tier";
 import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/pages")({
@@ -272,6 +273,8 @@ function CaptureMethodButtons({
 	onKeywordSetup: () => void;
 	onNfcSetup: () => void;
 }): React.ReactElement {
+	const { effectiveTier } = useTier();
+	const isSolo = effectiveTier === "solo";
 	return (
 		<div className="flex flex-col gap-3 sm:flex-row sm:items-start">
 			{qrUrl && (
@@ -290,20 +293,28 @@ function CaptureMethodButtons({
 					<Download className="size-4 sm:size-3.5" />
 					Download QR
 				</Button>
-				<Button variant="outline" className="gap-1.5 sm:h-8 sm:text-xs" onClick={onKeywordSetup}>
-					<MessageSquare className="size-4 sm:size-3.5" />
-					{keyword ? (
-						<>
-							Text <span className="font-mono font-bold">{keyword.keyword}</span>
-						</>
-					) : (
-						"Text-to-Join"
-					)}
-				</Button>
-				<Button variant="outline" className="gap-1.5 sm:h-8 sm:text-xs" onClick={onNfcSetup}>
-					<Smartphone className="size-4 sm:size-3.5" />
-					NFC Tap
-				</Button>
+				{!isSolo && (
+					<>
+						<Button
+							variant="outline"
+							className="gap-1.5 sm:h-8 sm:text-xs"
+							onClick={onKeywordSetup}
+						>
+							<MessageSquare className="size-4 sm:size-3.5" />
+							{keyword ? (
+								<>
+									Text <span className="font-mono font-bold">{keyword.keyword}</span>
+								</>
+							) : (
+								"Text-to-Join"
+							)}
+						</Button>
+						<Button variant="outline" className="gap-1.5 sm:h-8 sm:text-xs" onClick={onNfcSetup}>
+							<Smartphone className="size-4 sm:size-3.5" />
+							NFC Tap
+						</Button>
+					</>
+				)}
 			</div>
 		</div>
 	);

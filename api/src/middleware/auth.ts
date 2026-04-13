@@ -1,5 +1,6 @@
 import { createMiddleware } from "hono/factory";
 import { supabase } from "../lib/supabase.js";
+import type { Tier } from "../lib/tier.js";
 
 type Artist = {
 	id: string;
@@ -7,9 +8,19 @@ type Artist = {
 	email: string;
 	name: string;
 	onboarding_completed: boolean;
+	tier: Tier;
+	trial_ends_at: string | null;
 };
 
 export type AuthEnv = { Variables: { artist: Artist } };
+
+const ARTIST_COLUMNS = "id, auth_id, email, name, onboarding_completed, tier, trial_ends_at";
+
+const TRIAL_DAYS = 30;
+
+function trialEnd(): string {
+	return new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
 
 export const auth = createMiddleware<AuthEnv>(async (c, next) => {
 	const header = c.req.header("Authorization");
@@ -29,7 +40,7 @@ export const auth = createMiddleware<AuthEnv>(async (c, next) => {
 
 	const { data: artist } = await supabase
 		.from("artists")
-		.select("id, auth_id, email, name, onboarding_completed")
+		.select(ARTIST_COLUMNS)
 		.eq("auth_id", user.id)
 		.single();
 
@@ -44,8 +55,9 @@ export const auth = createMiddleware<AuthEnv>(async (c, next) => {
 			auth_id: user.id,
 			email: user.email ?? "",
 			name: user.email?.split("@")[0] ?? "",
+			trial_ends_at: trialEnd(),
 		})
-		.select("id, auth_id, email, name, onboarding_completed")
+		.select(ARTIST_COLUMNS)
 		.single();
 
 	if (insertErr || !created) {

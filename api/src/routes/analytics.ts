@@ -64,26 +64,29 @@ type TonightEmailStatus = {
 	sent: number;
 	opened: number;
 	open_rate: number;
+	paused: number;
 };
 
 /** Fetch email delivery status for a set of fan capture IDs. */
 async function fetchEmailStatus(fanCaptureIds: string[]): Promise<TonightEmailStatus> {
 	if (fanCaptureIds.length === 0) {
-		return { entered: 0, sent: 0, opened: 0, open_rate: 0 };
+		return { entered: 0, sent: 0, opened: 0, open_rate: 0, paused: 0 };
 	}
 	const { data: emails } = await supabase
 		.from("pending_emails")
-		.select("status, opened_at")
+		.select("status, opened_at, skip_reason")
 		.in("fan_capture_id", fanCaptureIds);
 
 	const all = emails ?? [];
 	const sent = all.filter((e) => e.status === "sent" || e.status === "sending");
 	const opened = sent.filter((e) => e.opened_at !== null);
+	const paused = all.filter((e) => e.skip_reason !== null && e.status === "pending").length;
 	return {
 		entered: fanCaptureIds.length,
 		sent: sent.length,
 		opened: opened.length,
 		open_rate: sent.length > 0 ? opened.length / sent.length : 0,
+		paused,
 	};
 }
 
@@ -116,7 +119,7 @@ app.get("/tonight", async (c) => {
 			methods: { qr: 0, sms: 0, nfc: 0, direct: 0 } satisfies TonightMethods,
 			avg_per_show: 0,
 			recent: [],
-			email_status: { entered: 0, sent: 0, opened: 0, open_rate: 0 },
+			email_status: { entered: 0, sent: 0, opened: 0, open_rate: 0, paused: 0 },
 		});
 	}
 
@@ -243,14 +246,16 @@ app.get("/:id/analytics", async (c) => {
 		fanCaptureIds.length > 0
 			? await supabase
 					.from("pending_emails")
-					.select("opened_at, email_template_id")
-					.eq("status", "sent")
+					.select("status, opened_at, email_template_id, skip_reason")
 					.in("fan_capture_id", fanCaptureIds)
 			: { data: [] };
 
-	const sentEmails = emailData ?? [];
+	const allEmails = emailData ?? [];
+	const sentEmails = allEmails.filter((e) => e.status === "sent");
+	const pausedEmails = allEmails.filter((e) => e.skip_reason !== null && e.status === "pending");
 	const emailSent = sentEmails.length;
 	const emailOpened = sentEmails.filter((e) => e.opened_at !== null).length;
+	const emailPaused = pausedEmails.length;
 
 	// Per-step stats
 	const { data: templates } = await supabase
@@ -260,14 +265,16 @@ app.get("/:id/analytics", async (c) => {
 		.order("sequence_order", { ascending: true });
 
 	const steps = (templates ?? []).map((t) => {
-		const stepEmails = sentEmails.filter((e) => e.email_template_id === t.id);
-		const stepOpened = stepEmails.filter((e) => e.opened_at !== null).length;
+		const stepSent = sentEmails.filter((e) => e.email_template_id === t.id);
+		const stepOpened = stepSent.filter((e) => e.opened_at !== null).length;
+		const stepPaused = pausedEmails.filter((e) => e.email_template_id === t.id).length;
 		return {
 			sequence_order: t.sequence_order,
 			subject: t.subject,
-			sent: stepEmails.length,
+			sent: stepSent.length,
 			opened: stepOpened,
-			open_rate: stepEmails.length > 0 ? stepOpened / stepEmails.length : 0,
+			paused: stepPaused,
+			open_rate: stepSent.length > 0 ? stepOpened / stepSent.length : 0,
 		};
 	});
 
@@ -278,6 +285,7 @@ app.get("/:id/analytics", async (c) => {
 		email: {
 			sent: emailSent,
 			opened: emailOpened,
+			paused: emailPaused,
 			open_rate: emailSent > 0 ? emailOpened / emailSent : 0,
 			steps,
 		},
