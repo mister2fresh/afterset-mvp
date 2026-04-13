@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
+import { getEffectiveTier, getTierLimits } from "../lib/tier.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const app = new Hono<AuthEnv>();
@@ -120,6 +121,16 @@ app.get("/counts", async (c) => {
 // CSV export of captures (same filters as list)
 app.get("/export", async (c) => {
 	const artist = c.get("artist");
+	if (!getTierLimits(getEffectiveTier(artist)).hasCsvExport) {
+		return c.json(
+			{
+				error: "CSV export is a Superstar feature.",
+				upgrade: true,
+				required_tier: "superstar",
+			},
+			403,
+		);
+	}
 	const filters = parseFilters(c);
 
 	let query = supabase

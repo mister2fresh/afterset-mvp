@@ -3,6 +3,7 @@ import { z } from "zod";
 import { renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.js";
 import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
+import { getEffectiveTier, getTierLimits } from "../lib/tier.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const app = new Hono<AuthEnv>();
@@ -153,6 +154,18 @@ app.put("/:id/email-sequence/:order", async (c) => {
 
 	if (!Number.isInteger(order) || order < 0 || order > 4) {
 		return c.json({ error: "order must be 0–4" }, 400);
+	}
+
+	const limits = getTierLimits(getEffectiveTier(artist));
+	if (order >= limits.sequenceDepth) {
+		return c.json(
+			{
+				error: `Your plan allows ${limits.sequenceDepth} email step(s). Upgrade to unlock more.`,
+				upgrade: true,
+				required_tier: limits.sequenceDepth === 1 ? "tour" : "superstar",
+			},
+			403,
+		);
 	}
 
 	const body = await c.req.json();

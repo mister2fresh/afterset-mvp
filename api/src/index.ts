@@ -18,6 +18,7 @@ import incentive from "./routes/incentive.js";
 import sendBatch from "./routes/send-batch.js";
 import settings from "./routes/settings.js";
 import smsKeywords from "./routes/sms-keywords.js";
+import usage from "./routes/usage.js";
 
 const app = new Hono();
 
@@ -74,6 +75,7 @@ const authedPaths = [
 	"/api/broadcasts",
 	"/api/captures",
 	"/api/device-tokens",
+	"/api/usage",
 ];
 const isDev = process.env.NODE_ENV !== "production";
 if (isDev) authedPaths.push("/api/dev");
@@ -99,6 +101,7 @@ app.route("/api/analytics", analytics); // /tonight, / (overview)
 app.route("/api/broadcasts", broadcasts);
 app.route("/api/captures", captures);
 app.route("/api/device-tokens", deviceTokens);
+app.route("/api/usage", usage);
 
 const port = Number(process.env.PORT) || 3000;
 console.log(`API server running on port ${port}`);

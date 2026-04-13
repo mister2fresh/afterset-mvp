@@ -7,6 +7,7 @@ Future feature requests and ideas. Not scheduled — pull from here once current
 - [x] **Broadcast campaigns** — shipped March 24, 2026. CRUD + send/schedule, segment filters, 4 preset templates, reply-to toggle, open tracking.
 - [x] **Move follow-up sequences into capture pages, keep Emails tab for broadcasts only** — shipped March 31, 2026. Inline sequence editor in PageForm (edit mode), Emails tab refactored to broadcasts-only.
 - [ ] **AI-powered "suggest email copy" button** — Hono API route, rate limited by tier
+- [ ] **First-crossing fan-cap notification email** — detection is wired (over-cap rows marked with `cap_exceeded_at` in Worker), but artist-facing email dispatch was deferred during Sprint 5 Phase 2 because `pending_emails` currently routes by `email_template_id` / `broadcast_id`. Options: (a) add `system_subject` / `system_body` columns to `pending_emails`, or (b) build a separate system-notification channel. Once-per-month-per-artist idempotency check already specified in `TASKS.md`.
 - [ ] **Per-artist custom sending domains** — Resend Scale plan, triggers at ~200 artists
 - [ ] **SES migration** — cost optimization at 500K–1M emails/month
 - [ ] **Dedicated-number-per-artist SMS** — Telnyx, triggers at 500+ Pro artists

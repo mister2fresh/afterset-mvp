@@ -4,13 +4,20 @@ import { renderFollowUpHtml, toEmailTheme } from "../lib/email/render-template.j
 import { filterSuppressed } from "../lib/email/suppression.js";
 import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
-import { getTodayRange } from "../lib/timezone.js";
+import { getEffectiveTier, getTierLimits, type Tier } from "../lib/tier.js";
+import { getMonthRange } from "../lib/timezone.js";
 import type { AuthEnv } from "../middleware/auth.js";
 
 const app = new Hono<AuthEnv>();
 
 const MAX_RECIPIENTS = 5000;
-const DAILY_BROADCAST_LIMIT = 1;
+
+type TierArtist = { id: string; tier: Tier; trial_ends_at: string | null; timezone?: string };
+
+function stripSegmentFilters<T extends Record<string, unknown>>(data: T): T {
+	const { filter_page_ids, filter_date_from, filter_date_to, filter_method, ...rest } = data;
+	return rest as T;
+}
 
 const broadcastSchema = z.object({
 	subject: z
@@ -50,13 +57,28 @@ app.get("/", async (c) => {
 // POST /broadcasts — create draft
 app.post("/", async (c) => {
 	const artist = c.get("artist");
+	const effectiveTier = getEffectiveTier(artist);
+	const limits = getTierLimits(effectiveTier);
+	if (limits.broadcastsPerMonth === 0) {
+		return c.json(
+			{
+				error: "Broadcasts are available on Tour and Superstar.",
+				upgrade: true,
+				required_tier: "tour",
+			},
+			403,
+		);
+	}
+
 	const body = await c.req.json().catch(() => ({}));
 	const parsed = broadcastSchema.safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
+	const payload = limits.hasSegmentation ? parsed.data : stripSegmentFilters(parsed.data);
+
 	const { data, error } = await supabase
 		.from("broadcasts")
-		.insert({ artist_id: artist.id, ...parsed.data })
+		.insert({ artist_id: artist.id, ...payload })
 		.select()
 		.single();
 
@@ -100,9 +122,12 @@ app.put("/:id", async (c) => {
 		return c.json({ error: "Only drafts can be edited" }, 400);
 	}
 
+	const limits = getTierLimits(getEffectiveTier(artist));
+	const payload = limits.hasSegmentation ? parsed.data : stripSegmentFilters(parsed.data);
+
 	const { data, error } = await supabase
 		.from("broadcasts")
-		.update(parsed.data)
+		.update(payload)
 		.eq("id", id)
 		.select()
 		.single();
@@ -250,10 +275,20 @@ app.post("/:id/send", async (c) => {
 		return c.json({ error: "Subject and body are required" }, 400);
 	}
 
-	const limitErr = await checkDailyLimit(artist.id);
-	if (limitErr) return c.json({ error: limitErr }, 429);
+	const effectiveTier = getEffectiveTier(artist);
+	const limits = getTierLimits(effectiveTier);
+	if (limits.broadcastsPerMonth === 0) {
+		return c.json(
+			{ error: "Broadcasts require Tour or Superstar.", upgrade: true, required_tier: "tour" },
+			403,
+		);
+	}
 
-	const fans = await queryRecipients(artist.id, broadcast);
+	const monthErr = await checkMonthlyBroadcastLimit(artist, limits.broadcastsPerMonth);
+	if (monthErr) return c.json({ error: monthErr, upgrade: true }, 429);
+
+	const filters = limits.hasSegmentation ? broadcast : stripSegmentFilters(broadcast);
+	const fans = await queryRecipients(artist.id, filters);
 	const emails = fans.map((f) => f.email);
 	const suppressed =
 		emails.length > 0 ? await filterSuppressed(emails, artist.id) : new Set<string>();
@@ -264,6 +299,11 @@ app.post("/:id/send", async (c) => {
 	}
 	if (reachable.length > MAX_RECIPIENTS) {
 		return c.json({ error: `Exceeds max ${MAX_RECIPIENTS} recipients` }, 400);
+	}
+
+	const capErr = await checkMonthlyEmailCap(artist, reachable.length, limits.emailCap);
+	if (capErr) {
+		return c.json({ error: capErr, upgrade: true, required_tier: "superstar" }, 429);
 	}
 
 	const sendAt = broadcast.scheduled_at ?? new Date().toISOString();
@@ -338,25 +378,51 @@ async function queryRecipients(
 	return fans.filter((f) => matchingFanIds.has(f.id));
 }
 
-async function checkDailyLimit(artistId: string): Promise<string | null> {
-	const { data: artist } = await supabase
-		.from("artists")
-		.select("timezone")
-		.eq("id", artistId)
-		.single();
+async function getArtistTimezone(artistId: string): Promise<string> {
+	const { data } = await supabase.from("artists").select("timezone").eq("id", artistId).single();
+	return data?.timezone ?? "America/New_York";
+}
 
-	const tz = artist?.timezone ?? "America/New_York";
-	const { start } = getTodayRange(tz);
+async function checkMonthlyBroadcastLimit(
+	artist: TierArtist,
+	perMonth: number,
+): Promise<string | null> {
+	if (!Number.isFinite(perMonth)) return null;
+	const tz = artist.timezone ?? (await getArtistTimezone(artist.id));
+	const { start } = getMonthRange(tz);
 
 	const { count } = await supabase
 		.from("broadcasts")
 		.select("id", { count: "exact", head: true })
-		.eq("artist_id", artistId)
+		.eq("artist_id", artist.id)
 		.in("status", ["sending", "sent", "scheduled"])
 		.gte("updated_at", start);
 
-	if ((count ?? 0) >= DAILY_BROADCAST_LIMIT) {
-		return `Limit: ${DAILY_BROADCAST_LIMIT} broadcast per day`;
+	if ((count ?? 0) >= perMonth) {
+		return `You've used all ${perMonth} broadcasts this month.`;
+	}
+	return null;
+}
+
+async function checkMonthlyEmailCap(
+	artist: TierArtist,
+	addCount: number,
+	emailCap: number,
+): Promise<string | null> {
+	if (!Number.isFinite(emailCap)) return null;
+	const tz = artist.timezone ?? (await getArtistTimezone(artist.id));
+	const { start } = getMonthRange(tz);
+
+	const { count } = await supabase
+		.from("pending_emails")
+		.select("id", { count: "exact", head: true })
+		.eq("artist_id", artist.id)
+		.eq("status", "sent")
+		.gte("updated_at", start);
+
+	const alreadySent = count ?? 0;
+	if (alreadySent + addCount > emailCap) {
+		return `This broadcast would exceed your ${emailCap.toLocaleString()}-email monthly limit (${alreadySent} already sent).`;
 	}
 	return null;
 }
