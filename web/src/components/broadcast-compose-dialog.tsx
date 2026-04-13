@@ -45,6 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useTier } from "@/hooks/use-tier";
 import { api } from "@/lib/api";
+import { getUser } from "@/lib/auth";
 import type { Broadcast } from "@/lib/types";
 
 type CapturePage = {
@@ -148,6 +149,7 @@ export function BroadcastComposeDialog({
 	const { limits } = useTier();
 	const canSegmentByPage = limits.hasPageSegmentation;
 	const canSegmentAdvanced = limits.hasAdvancedSegmentation;
+	const userEmail = getUser()?.email ?? "";
 	const [form, setForm] = useState<FormState>(EMPTY_FORM);
 	const set = useCallback(
 		(updates: Partial<FormState>) => setForm((f) => ({ ...f, ...updates })),
@@ -414,12 +416,17 @@ export function BroadcastComposeDialog({
 								<Button
 									variant={form.replyTo !== null ? "default" : "outline"}
 									size="sm"
-									onClick={() => set({ replyTo: "" })}
-									disabled={!isDraft}
+									onClick={() => set({ replyTo: userEmail })}
+									disabled={!isDraft || !userEmail}
 								>
 									My email
 								</Button>
 							</div>
+							{form.replyTo !== null && (
+								<p className="text-xs text-muted-foreground">
+									Replies go to <span className="font-medium">{form.replyTo || userEmail}</span>
+								</p>
+							)}
 						</div>
 
 						{/* Filters */}

@@ -1,7 +1,7 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 13, 2026 (v82 — Sprint 5 Phase 3 QA cont: Solo capture-methods hidden + broadcast segmentation split Tour/Superstar)
+**Last updated:** April 13, 2026 (v83 — Broadcast reply-to bug fix: camelCase SDK param + dynamic `hello@` FROM when reply-to set)
 **Current phase:** Sprint 5 — Pricing Tier Enforcement
 **Sprint:** Sprint 5 Phase 3 (frontend gates) complete on `sprint-5-pricing-tiers` branch. New primitives: `UpgradePrompt`, `TierComparison`, `UsageMeters`, `PausedEmailsBanner`, `PlanCard` + `useUsage` hook. Gates: Capture Methods section in page-form hidden entirely on Solo (cleaner editor; QR-only is exposed via page-card "Download QR"), sequence steps beyond tier depth render locked, broadcasts gated (Solo) + page segmentation on Tour+ + advanced segmentation (date/method) Superstar-only, CSV export Superstar-only. Paused-email visibility wired across dashboard banner, Tonight tile, and per-page show drill-down. Upgrade contact copy: "Reach out to Matthew at hello@afterset.net". Typecheck/tests/lint green (55/55 passing).
 **Next up:** Continue Sprint 5 Phase 3 QA (Tour flows, trial countdown, paused-email seeded data, Superstar segmentation/CSV, sequence editor downgrade lock states). Then Phase 4 (trial banner). First-crossing over-cap artist notification email dispatch still deferred (detection wired via `cap_exceeded_at`, delivery path TBD).
@@ -29,6 +29,7 @@ All 13 findings (4 HIGH, 6 MEDIUM, 3 LOW) fixed and deployed to production. Depl
 - [x] **Incentive file not included in emails** — send-batch queried nonexistent `incentive_uploads` table instead of `capture_pages.incentive_file_path` (fixed March 26)
 - [x] **Social/streaming icons invisible in sent emails** — inline SVGs stripped by Gmail/Outlook/Yahoo; replaced with styled text links (e.g. "Spotify · Instagram · TikTok") using artist accent color. Download page keeps SVG icons (works in browsers). Preview iframe height bumped 300→500px (fixed April 1)
 - [ ] **Broadcast "Preview" dropdown opens edit instead of preview** — the preview option in the broadcast card's `...` dropdown menu navigates to the edit view rather than showing an email preview
+- [x] **Broadcast replies bouncing with 550 Mailbox does not exist** — three compounding bugs: (1) compose dialog "My email" button set `replyTo` to `""` instead of the user's actual email, autosave failed Zod silently; (2) Resend Node SDK requires camelCase `replyTo`, we were passing snake_case `reply_to` → header silently dropped on every send; (3) FROM address was hardcoded to `noreply@send.afterset.net` regardless of reply-to intent. Fixed: dialog now sets `replyTo` to `getUser()?.email` with helper text confirming the address; `buildFrom()` in `resend-service.ts` picks `hello@` vs `noreply@` based on whether replyTo is set; SDK parameter now camelCase. Follow-up: set up Cloudflare Email Routing on `send.afterset.net` (backlog) so fans who reply to the FROM address don't bounce. (fixed April 13)
 
 ---
 

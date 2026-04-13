@@ -29,6 +29,11 @@ function buildHeaders(token: string): Record<string, string> {
 	};
 }
 
+function buildFrom(artistName: string, replyTo: string | undefined): string {
+	const localPart = replyTo ? "hello" : "noreply";
+	return `${artistName} via Afterset <${localPart}@${FROM_DOMAIN}>`;
+}
+
 export class ResendEmailService implements EmailService {
 	private readonly resend: Resend;
 
@@ -48,12 +53,12 @@ export class ResendEmailService implements EmailService {
 		const token = createUnsubscribeToken(params.to, params.artistId);
 		const unsubUrl = `${getBaseUrl()}/api/email/unsubscribe?token=${token}`;
 		const { data, error } = await this.resend.emails.send({
-			from: `${params.artistName} via Afterset <noreply@${FROM_DOMAIN}>`,
+			from: buildFrom(params.artistName, params.replyTo),
 			to: [params.to],
 			subject: params.subject,
 			html: params.html + buildFooter(getAddress(), unsubUrl),
 			headers: buildHeaders(token),
-			...(params.replyTo && { reply_to: [params.replyTo] }),
+			...(params.replyTo && { replyTo: [params.replyTo] }),
 		});
 
 		if (error || !data) throw new Error(`Resend error: ${error?.message ?? "No data returned"}`);
@@ -76,12 +81,12 @@ export class ResendEmailService implements EmailService {
 			const token = createUnsubscribeToken(p.to, p.artistId);
 			const unsubUrl = `${getBaseUrl()}/api/email/unsubscribe?token=${token}`;
 			return {
-				from: `${p.artistName} via Afterset <noreply@${FROM_DOMAIN}>`,
+				from: buildFrom(p.artistName, p.replyTo),
 				to: [p.to],
 				subject: p.subject,
 				html: p.html + buildFooter(getAddress(), unsubUrl),
 				headers: buildHeaders(token),
-				...(p.replyTo && { reply_to: [p.replyTo] }),
+				...(p.replyTo && { replyTo: [p.replyTo] }),
 			};
 		});
 
