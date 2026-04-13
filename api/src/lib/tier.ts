@@ -14,7 +14,8 @@ type TierLimits = {
 	broadcastsPerMonth: number;
 	storageMb: number;
 	captureMethods: readonly CaptureMethod[];
-	hasSegmentation: boolean;
+	hasPageSegmentation: boolean;
+	hasAdvancedSegmentation: boolean;
 	hasCsvExport: boolean;
 };
 
@@ -26,7 +27,8 @@ export const TIER_LIMITS = {
 		broadcastsPerMonth: 0,
 		storageMb: 500,
 		captureMethods: ["qr", "direct"],
-		hasSegmentation: false,
+		hasPageSegmentation: false,
+		hasAdvancedSegmentation: false,
 		hasCsvExport: false,
 	},
 	tour: {
@@ -36,7 +38,8 @@ export const TIER_LIMITS = {
 		broadcastsPerMonth: 4,
 		storageMb: 2048,
 		captureMethods: ["qr", "sms", "nfc", "direct"],
-		hasSegmentation: false,
+		hasPageSegmentation: true,
+		hasAdvancedSegmentation: false,
 		hasCsvExport: false,
 	},
 	superstar: {
@@ -46,7 +49,8 @@ export const TIER_LIMITS = {
 		broadcastsPerMonth: Number.POSITIVE_INFINITY,
 		storageMb: 10_240,
 		captureMethods: ["qr", "sms", "nfc", "direct"],
-		hasSegmentation: true,
+		hasPageSegmentation: true,
+		hasAdvancedSegmentation: true,
 		hasCsvExport: true,
 	},
 } as const satisfies Record<Tier, TierLimits>;

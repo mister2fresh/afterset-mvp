@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 13, 2026 (v81 — Sprint 5 Phase 3 frontend gates shipped + initial QA fixes)
+**Last updated:** April 13, 2026 (v82 — Sprint 5 Phase 3 QA cont: Solo capture-methods hidden + broadcast segmentation split Tour/Superstar)
 **Current phase:** Sprint 5 — Pricing Tier Enforcement
-**Sprint:** Sprint 5 Phase 3 (frontend gates) complete on `sprint-5-pricing-tiers` branch. New primitives: `UpgradePrompt`, `TierComparison`, `UsageMeters`, `PausedEmailsBanner`, `PlanCard` + `useUsage` hook. Gates: SMS keyword + NFC URL section + page-card NFC/SMS buttons hidden on Solo, sequence steps beyond tier depth render locked, broadcasts gated (Solo) + segmentation gated (non-Superstar), CSV export Superstar-only. Paused-email visibility wired across dashboard banner, Tonight tile, and per-page show drill-down (analytics.ts extended with `paused` counts). Settings Plan card + dev tier switcher mounted. Help topic added. Initial QA pass found + fixed: unlimited usage meter visual fill bug, Solo overview drill-down still expandable, Solo page card NFC/SMS leakage. Typecheck/tests/lint green.
-**Next up:** Continue Sprint 5 Phase 3 QA (un-tested: Tour flows, trial countdown, paused-email seeded data, Superstar segmentation/CSV, sequence editor downgrade lock states). Then Phase 4 (trial banner). First-crossing over-cap artist notification email dispatch still deferred (detection wired via `cap_exceeded_at`, delivery path TBD).
+**Sprint:** Sprint 5 Phase 3 (frontend gates) complete on `sprint-5-pricing-tiers` branch. New primitives: `UpgradePrompt`, `TierComparison`, `UsageMeters`, `PausedEmailsBanner`, `PlanCard` + `useUsage` hook. Gates: Capture Methods section in page-form hidden entirely on Solo (cleaner editor; QR-only is exposed via page-card "Download QR"), sequence steps beyond tier depth render locked, broadcasts gated (Solo) + page segmentation on Tour+ + advanced segmentation (date/method) Superstar-only, CSV export Superstar-only. Paused-email visibility wired across dashboard banner, Tonight tile, and per-page show drill-down. Upgrade contact copy: "Reach out to Matthew at hello@afterset.net". Typecheck/tests/lint green (55/55 passing).
+**Next up:** Continue Sprint 5 Phase 3 QA (Tour flows, trial countdown, paused-email seeded data, Superstar segmentation/CSV, sequence editor downgrade lock states). Then Phase 4 (trial banner). First-crossing over-cap artist notification email dispatch still deferred (detection wired via `cap_exceeded_at`, delivery path TBD).
 
 ---
 
@@ -813,7 +813,7 @@ Adds all gates needed to enforce the Solo / Tour / Superstar tier structure defi
 - Worker duplicates a ~15-line slice of tier config in `worker/src/tier.ts`; parity test blocks drift with API
 - All monthly caps use artist timezone, matching existing `getTodayRange(tz)` pattern
 - NFC captures on Solo soft-accept as `entry_method='direct'` — never reject (physical tags in the wild). Decision 2d.
-- No waitlist DB or notify-me flow — upgrade CTAs show static "Reach out to Matt" contact text until Stripe lands. Decision 4.
+- No waitlist DB or notify-me flow — upgrade CTAs show static "Reach out to Matthew at hello@afterset.net" contact text until Stripe lands. Decision 4.
 - Existing artists grandfathered to `superstar` with `trial_ends_at=NULL` in the migration. Decision 1.
 - Downgrades preserve data: sequence steps locked in editor, SMS keywords kept, broadcast history kept, NFC soft-accepted. Decision 2.
 
@@ -839,7 +839,7 @@ Each task is independent. All depend on Phase 1. Estimated: 4–5 hours total.
 - [~] **First-crossing notification (Worker)** — detection wired (cap marker set on first over-cap row of the month). Email dispatch deferred — `pending_emails` schema currently routes via `email_template_id`/`broadcast_id`, so system-notification delivery needs a separate channel or schema addition. Tracked inline in `maybeMarkOverCap()` comment. Rolled forward as Phase 3/4 follow-up.
 - [x] **Email volume cap + skip tracking** — `send-batch.ts` now runs `markStaleRows()` (7-day send_at sweep → `skip_reason='stale'`) before claiming, then `partitionByTier()` batches artist tier fetches + template sequence_order fetches + per-artist monthly sent counts to classify claimed rows. Over-cap rows release back to `pending` with `skip_reason='email_cap'`; out-of-tier rows release with `skip_reason='tier_locked'`. Successful sends clear skip markers. `broadcasts.ts` `POST /:id/send` pre-checks via `checkMonthlyEmailCap`. ✅ 2026-04-13
 - [x] **Sequence depth gating (API + Worker + skip tracking)** — `email-templates.ts` `PUT /:id/email-sequence/:order` blocks when `order >= getTierLimits().sequenceDepth` (403 + upgrade). Worker's `queueSequenceEmails()` filters templates by tier depth at capture time. `send-batch.ts` partition logic flags over-depth rows as `tier_locked`. ✅ 2026-04-13
-- [x] **Broadcast gating** — `broadcasts.ts` POST blocks Solo (403 + upgrade). PUT strips segment filters for non-Superstar. Send path enforces `checkMonthlyBroadcastLimit()` + `checkMonthlyEmailCap()`. Historical broadcasts remain visible across tiers. ✅ 2026-04-13
+- [x] **Broadcast gating** — `broadcasts.ts` POST blocks Solo (403 + upgrade). PUT strips advanced filters (date + method) for Tour, keeps page-id filter; Superstar keeps all. Send path enforces `checkMonthlyBroadcastLimit()` + `checkMonthlyEmailCap()`. Historical broadcasts remain visible across tiers. ✅ 2026-04-13 (segmentation split refined 2026-04-13)
 - [x] **CSV export gating** — `captures.ts` `GET /export` returns 403 + upgrade payload when `hasCsvExport` is false (Solo/Tour). ✅ 2026-04-13
 - [x] **Storage cap** — `incentive.ts` `POST /:id/incentive/upload-url` sums existing `incentive_file_size` (excluding the page being replaced) and returns 413 with used/limit MB when the new upload would exceed the tier cap. ✅ 2026-04-13
 - [x] **Usage tracking endpoint** — new `api/src/routes/usage.ts` mounted at `/api/usage` returns `{ tier, effective_tier, is_trial, fans, emails, broadcasts, storage }` for the current month. `emails.paused_by_reason` breaks out `email_cap` / `tier_locked` / `stale`. Uses 8 parallel Supabase count queries. ✅ 2026-04-13
@@ -850,9 +850,9 @@ Depend on Phase 1 + corresponding Phase 2 backend gates. Estimated: 4–5 hours 
 
 - [x] **Tier comparison component** ✅ 2026-04-13 — `web/src/components/tier-comparison.tsx` shipped; current tier highlighted with honey-gold border
 - [x] **Upgrade prompt component** ✅ 2026-04-13 — `web/src/components/upgrade-prompt.tsx` shipped with `compact` + full variants, deep-links to /settings
-- [x] **SMS keyword gating** ✅ 2026-04-13 — `KeywordSection` in `page-form.tsx` returns compact UpgradePrompt for Solo. NFC URL section + page-card NFC/SMS buttons also hidden for Solo (QA fix)
+- [x] **SMS keyword gating** ✅ 2026-04-13 — `KeywordSection` is now wrapped: on Solo, the entire "Capture Methods" `EditorSection` in `page-form.tsx` is hidden (cleaner editor; QR is the only Solo capture method anyway, exposed via the page-card "Download QR" button). NFC URL section + page-card NFC/SMS buttons also hidden for Solo
 - [x] **Sequence editor locked steps** ✅ 2026-04-13 — steps beyond `limits.sequenceDepth` render with dashed border + Lock badge + disabled expand; at-limit shows UpgradePrompt for next tier
-- [x] **Broadcast gating (frontend)** ✅ 2026-04-13 — Solo hides New Broadcast button + shows full UpgradePrompt; Tour shows "X / 4 broadcasts used" counter; non-Superstar in compose dialog gets Superstar badge replacing segment filters
+- [x] **Broadcast gating (frontend)** ✅ 2026-04-13 — Solo hides New Broadcast button + shows full UpgradePrompt; Tour shows "X / 4 broadcasts used" counter. Compose dialog: Tour can expand "Filter recipients" → page picker only (date + method panel replaced inline with Superstar UpgradePrompt); Solo gets a "Tour" badge on the disabled filter button + compact upgrade pitch
 - [x] **CSV export locked button** ✅ 2026-04-13 — Export button shows Lock icon + Superstar badge when not allowed; click toasts upgrade message and early-returns
 - [x] **Usage meters + paused indicators** ✅ 2026-04-13 — `web/src/components/usage-meters.tsx` + `useUsage` hook; 4 meters (fans/emails/broadcasts/storage); color-coded green→yellow @75%→red @100%; paused count + reason tooltip; QA fix: bars hidden entirely when limit is unlimited
 - [x] **Paused emails banner** ✅ 2026-04-13 — `web/src/components/paused-emails-banner.tsx` mounted on dashboard above tabs; details Dialog breaks down by reason

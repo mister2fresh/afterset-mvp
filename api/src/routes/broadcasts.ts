@@ -14,8 +14,8 @@ const MAX_RECIPIENTS = 5000;
 
 type TierArtist = { id: string; tier: Tier; trial_ends_at: string | null; timezone?: string };
 
-function stripSegmentFilters<T extends Record<string, unknown>>(data: T): T {
-	const { filter_page_ids, filter_date_from, filter_date_to, filter_method, ...rest } = data;
+function stripAdvancedFilters<T extends Record<string, unknown>>(data: T): T {
+	const { filter_date_from, filter_date_to, filter_method, ...rest } = data;
 	return rest as T;
 }
 
@@ -74,7 +74,7 @@ app.post("/", async (c) => {
 	const parsed = broadcastSchema.safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
-	const payload = limits.hasSegmentation ? parsed.data : stripSegmentFilters(parsed.data);
+	const payload = limits.hasAdvancedSegmentation ? parsed.data : stripAdvancedFilters(parsed.data);
 
 	const { data, error } = await supabase
 		.from("broadcasts")
@@ -123,7 +123,7 @@ app.put("/:id", async (c) => {
 	}
 
 	const limits = getTierLimits(getEffectiveTier(artist));
-	const payload = limits.hasSegmentation ? parsed.data : stripSegmentFilters(parsed.data);
+	const payload = limits.hasAdvancedSegmentation ? parsed.data : stripAdvancedFilters(parsed.data);
 
 	const { data, error } = await supabase
 		.from("broadcasts")
@@ -287,7 +287,7 @@ app.post("/:id/send", async (c) => {
 	const monthErr = await checkMonthlyBroadcastLimit(artist, limits.broadcastsPerMonth);
 	if (monthErr) return c.json({ error: monthErr, upgrade: true }, 429);
 
-	const filters = limits.hasSegmentation ? broadcast : stripSegmentFilters(broadcast);
+	const filters = limits.hasAdvancedSegmentation ? broadcast : stripAdvancedFilters(broadcast);
 	const fans = await queryRecipients(artist.id, filters);
 	const emails = fans.map((f) => f.email);
 	const suppressed =

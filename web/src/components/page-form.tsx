@@ -33,7 +33,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useTier } from "@/hooks/use-tier";
 import { api, uploadToSignedUrl } from "@/lib/api";
 
@@ -254,7 +253,6 @@ function KeywordSection({
 	pageId: string | undefined;
 	currentKeyword: string | null | undefined;
 }): React.ReactElement {
-	const { effectiveTier } = useTier();
 	const [kwCheck, setKwCheck] = useState<KeywordCheckResult | null>(null);
 	const [kwChecking, setKwChecking] = useState(false);
 	const [kwDebouncing, setKwDebouncing] = useState(false);
@@ -285,7 +283,6 @@ function KeywordSection({
 
 	useEffect(() => {
 		if (mode !== "edit") return;
-		if (effectiveTier === "solo") return;
 		const clean = keyword.replace(/[^A-Za-z0-9]/g, "");
 		if (clean.length >= 2) setKwDebouncing(true);
 		const timer = setTimeout(() => {
@@ -296,17 +293,7 @@ function KeywordSection({
 			}
 		}, 300);
 		return () => clearTimeout(timer);
-	}, [keyword, checkKeyword, mode, effectiveTier]);
-
-	if (effectiveTier === "solo") {
-		return (
-			<UpgradePrompt
-				feature="Text-to-Join lets fans text a keyword to your number and get captured instantly — no typing or camera needed."
-				requiredTier="tour"
-				compact
-			/>
-		);
-	}
+	}, [keyword, checkKeyword, mode]);
 
 	return (
 		<div className="space-y-2">
@@ -719,6 +706,7 @@ export function PageForm({
 	autoExpandEmail,
 }: PageFormProps): React.ReactElement {
 	const queryClient = useQueryClient();
+	const { effectiveTier } = useTier();
 	const initialForm = page
 		? formFromPage(page)
 		: defaultLinks
@@ -941,25 +929,27 @@ export function PageForm({
 
 			<ThemeEditor form={form} onChange={(updates) => setForm((f) => ({ ...f, ...updates }))} />
 
-			<EditorSection
-				icon={Zap}
-				title="Capture Methods"
-				summary={(() => {
-					const parts: string[] = [];
-					if (keyword.length >= 2) parts.push(keyword.toUpperCase());
-					if (!isCreate && page?.slug && !autoExpandEmail) parts.push("NFC");
-					return parts.length > 0 ? parts.join(" · ") : "Not set";
-				})()}
-			>
-				<KeywordSection
-					keyword={keyword}
-					setKeyword={setKeyword}
-					mode={mode}
-					pageId={page?.id}
-					currentKeyword={currentKeyword}
-				/>
-				{!isCreate && page?.slug && !autoExpandEmail && <NfcSection slug={page.slug} />}
-			</EditorSection>
+			{effectiveTier !== "solo" && (
+				<EditorSection
+					icon={Zap}
+					title="Capture Methods"
+					summary={(() => {
+						const parts: string[] = [];
+						if (keyword.length >= 2) parts.push(keyword.toUpperCase());
+						if (!isCreate && page?.slug && !autoExpandEmail) parts.push("NFC");
+						return parts.length > 0 ? parts.join(" · ") : "Not set";
+					})()}
+				>
+					<KeywordSection
+						keyword={keyword}
+						setKeyword={setKeyword}
+						mode={mode}
+						pageId={page?.id}
+						currentKeyword={currentKeyword}
+					/>
+					{!isCreate && page?.slug && !autoExpandEmail && <NfcSection slug={page.slug} />}
+				</EditorSection>
+			)}
 
 			<EditorSection
 				icon={Gift}

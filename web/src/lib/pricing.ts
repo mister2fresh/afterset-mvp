@@ -16,7 +16,8 @@ export type TierLimits = {
 	sequenceDepth: number;
 	broadcastsPerMonth: number;
 	storageMb: number;
-	hasSegmentation: boolean;
+	hasPageSegmentation: boolean;
+	hasAdvancedSegmentation: boolean;
 	hasCsvExport: boolean;
 };
 
@@ -27,7 +28,8 @@ export const TIER_LIMITS = {
 		sequenceDepth: 1,
 		broadcastsPerMonth: 0,
 		storageMb: 500,
-		hasSegmentation: false,
+		hasPageSegmentation: false,
+		hasAdvancedSegmentation: false,
 		hasCsvExport: false,
 	},
 	tour: {
@@ -36,7 +38,8 @@ export const TIER_LIMITS = {
 		sequenceDepth: 3,
 		broadcastsPerMonth: 4,
 		storageMb: 2048,
-		hasSegmentation: false,
+		hasPageSegmentation: true,
+		hasAdvancedSegmentation: false,
 		hasCsvExport: false,
 	},
 	superstar: {
@@ -45,7 +48,8 @@ export const TIER_LIMITS = {
 		sequenceDepth: 5,
 		broadcastsPerMonth: Number.POSITIVE_INFINITY,
 		storageMb: 10_240,
-		hasSegmentation: true,
+		hasPageSegmentation: true,
+		hasAdvancedSegmentation: true,
 		hasCsvExport: true,
 	},
 } as const satisfies Record<Tier, TierLimits>;
@@ -81,10 +85,11 @@ export const TIER_DISPLAY = {
 			"Up to 5,000 fans / month",
 			"3-step email sequences",
 			"4 broadcasts / month",
+			"Segment broadcasts by show",
 			"Per-show drill-down analytics",
 			"Email support",
 		],
-		excluded: ["Broadcast segmentation", "CSV export + API"],
+		excluded: ["Advanced segmentation (method, date)", "CSV export + API"],
 	},
 	superstar: {
 		name: "Superstar",
@@ -94,7 +99,8 @@ export const TIER_DISPLAY = {
 			"Everything in Tour",
 			"Unlimited fans",
 			"5-step email sequences",
-			"Unlimited broadcasts + segmentation",
+			"Unlimited broadcasts",
+			"Advanced segmentation (method, date)",
 			"Period trends + venue reports",
 			"CSV export + API",
 			"Priority support",
@@ -109,6 +115,6 @@ export const COPY = {
 	compliance:
 		"Prices in USD. No refunds on partial months. Fan caps reset at the start of each calendar month.",
 	upgradeContact:
-		"Reach out to Matt at matt@afterset.net to upgrade. Stripe self-serve is coming soon.",
-	upgradeContactShort: "Reach out to Matt to upgrade.",
+		"Reach out to Matthew at hello@afterset.net to upgrade. Stripe self-serve is coming soon.",
+	upgradeContactShort: "Reach out to Matthew at hello@afterset.net to upgrade.",
 } as const;

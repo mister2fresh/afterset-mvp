@@ -268,7 +268,9 @@ function FansPage() {
 
 	async function exportCsv() {
 		if (!canExport) {
-			toast.error("CSV export is a Superstar feature. Reach out to Matt to upgrade.");
+			toast.error(
+				"CSV export is a Superstar feature. Reach out to Matthew at hello@afterset.net to upgrade.",
+			);
 			return;
 		}
 		try {
