@@ -15,6 +15,7 @@ import download from "./routes/download.js";
 import email from "./routes/email.js";
 import emailTemplates from "./routes/email-templates.js";
 import incentive from "./routes/incentive.js";
+import pausedEmails from "./routes/paused-emails.js";
 import sendBatch from "./routes/send-batch.js";
 import settings from "./routes/settings.js";
 import smsKeywords from "./routes/sms-keywords.js";
@@ -76,6 +77,7 @@ const authedPaths = [
 	"/api/captures",
 	"/api/device-tokens",
 	"/api/usage",
+	"/api/paused-emails",
 ];
 const isDev = process.env.NODE_ENV !== "production";
 if (isDev) authedPaths.push("/api/dev");
@@ -104,6 +106,7 @@ app.route("/api/broadcasts", broadcasts);
 app.route("/api/captures", captures);
 app.route("/api/device-tokens", deviceTokens);
 app.route("/api/usage", usage);
+app.route("/api/paused-emails", pausedEmails);
 
 const port = Number(process.env.PORT) || 3000;
 console.log(`API server running on port ${port}`);

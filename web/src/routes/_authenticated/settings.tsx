@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { PausedEmailsCard } from "@/components/paused-emails-card";
 import { PlanCard } from "@/components/plan-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +60,7 @@ function SettingsPage() {
 	return (
 		<div className="max-w-2xl space-y-6">
 			<PlanCard />
+			<PausedEmailsCard />
 
 			<Card>
 				<CardHeader>

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
 	Download,
 	ExternalLink,
@@ -14,7 +14,7 @@ import {
 	Trash2,
 	Users,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmailTemplateBadge } from "@/components/email-template-badge";
 import { KeywordDialog } from "@/components/keyword-dialog";
@@ -41,7 +41,12 @@ import {
 import { useTier } from "@/hooks/use-tier";
 import { api } from "@/lib/api";
 
+type PagesSearch = { open?: string };
+
 export const Route = createFileRoute("/_authenticated/pages")({
+	validateSearch: (s: Record<string, unknown>): PagesSearch => ({
+		open: typeof s.open === "string" ? s.open : undefined,
+	}),
 	component: PagesPage,
 });
 
@@ -78,6 +83,19 @@ function PagesPage() {
 	const [editingPage, setEditingPage] = useState<CapturePage | null>(null);
 	const [justCreated, setJustCreated] = useState(false);
 	const [autoExpandEmail, setAutoExpandEmail] = useState(false);
+
+	const { open: openId } = Route.useSearch();
+	const navigate = useNavigate();
+	const consumedOpenRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (!openId || !pages || consumedOpenRef.current === openId) return;
+		const match = pages.find((p) => p.id === openId);
+		if (!match) return;
+		consumedOpenRef.current = openId;
+		setAutoExpandEmail(true);
+		setEditingPage(match);
+		navigate({ to: "/pages", search: {}, replace: true });
+	}, [openId, pages, navigate]);
 
 	if (isLoading) {
 		return (

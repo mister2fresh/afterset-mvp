@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Archive, Loader2, Lock, Plus, Send } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BroadcastCard, BroadcastComposeDialog } from "@/components/broadcast-compose-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -14,7 +14,12 @@ import { useUsage } from "@/hooks/use-usage";
 import { api } from "@/lib/api";
 import type { Broadcast } from "@/lib/types";
 
+type EmailsSearch = { broadcast?: string };
+
 export const Route = createFileRoute("/_authenticated/emails")({
+	validateSearch: (s: Record<string, unknown>): EmailsSearch => ({
+		broadcast: typeof s.broadcast === "string" ? s.broadcast : undefined,
+	}),
 	component: EmailsPage,
 });
 
@@ -51,6 +56,20 @@ function EmailsPage() {
 	const [composeInPreview, setComposeInPreview] = useState(false);
 	const [creating, setCreating] = useState(false);
 	const [deletingBroadcast, setDeletingBroadcast] = useState<Broadcast | null>(null);
+
+	const { broadcast: broadcastId } = Route.useSearch();
+	const navigate = useNavigate();
+	const consumedBroadcastRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (!broadcastId || !broadcasts || consumedBroadcastRef.current === broadcastId) return;
+		const match = broadcasts.find((b) => b.id === broadcastId);
+		if (!match) return;
+		consumedBroadcastRef.current = broadcastId;
+		setEditingBroadcast(match);
+		setComposeInPreview(true);
+		setComposeOpen(true);
+		navigate({ to: "/emails", search: {}, replace: true });
+	}, [broadcastId, broadcasts, navigate]);
 
 	async function handleNewBroadcast() {
 		setCreating(true);
