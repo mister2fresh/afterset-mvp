@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { UpgradePrompt } from "@/components/upgrade-prompt";
 import { useTier } from "@/hooks/use-tier";
 import { api } from "@/lib/api";
+import type { PurchasableTier } from "@/lib/pricing";
 import type { Tier } from "@/lib/types";
 import {
 	type EmailTemplate,
@@ -16,10 +17,11 @@ import {
 	stepDelayLabel,
 } from "./sequence-step-editor";
 
-const NEXT_TIER: Record<Tier, Tier> = {
+const NEXT_TIER: Record<Tier, PurchasableTier> = {
 	solo: "tour",
 	tour: "superstar",
 	superstar: "superstar",
+	inactive: "tour",
 };
 
 export type SequenceEditorHandle = {

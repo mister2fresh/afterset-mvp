@@ -1,13 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { TIER_DISPLAY } from "@/lib/pricing";
-import type { Tier } from "@/lib/types";
+import { type PurchasableTier, TIER_DISPLAY } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
 type UpgradePromptProps = {
 	feature: string;
-	requiredTier: Tier;
+	requiredTier: PurchasableTier;
 	compact?: boolean;
 	className?: string;
 };

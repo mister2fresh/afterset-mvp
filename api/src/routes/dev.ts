@@ -9,11 +9,13 @@ const app = new Hono<AuthEnv>();
 
 const setTierSchema = z.object({
 	tier: z.enum(["solo", "tour", "superstar"]),
-	trialDays: z.number().int().min(0).max(365).optional(),
+	trialDays: z.number().int().min(-365).max(365).optional(),
 });
 
 // POST /dev/set-tier — dev-only instant tier switch for local testing.
 // Mounted from index.ts only when NODE_ENV !== 'production'.
+// Negative trialDays sets trial_ends_at in the past — used to simulate trial
+// expiry and exercise the "inactive" effective tier.
 app.post("/set-tier", async (c) => {
 	const artist = c.get("artist");
 	const body = await c.req.json();
@@ -21,10 +23,9 @@ app.post("/set-tier", async (c) => {
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
 
 	const { tier, trialDays } = parsed.data;
-	const trial_ends_at =
-		trialDays && trialDays > 0
-			? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
-			: null;
+	const trial_ends_at = trialDays
+		? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
+		: null;
 
 	const { data, error } = await supabase
 		.from("artists")

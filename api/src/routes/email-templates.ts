@@ -5,6 +5,7 @@ import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import { getEffectiveTier, getTierLimits } from "../lib/tier.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { requireActive } from "../middleware/require-active.js";
 
 const app = new Hono<AuthEnv>();
 
@@ -43,7 +44,7 @@ app.get("/:id/email-template", async (c) => {
 });
 
 // PUT /capture-pages/:id/email-template (upsert)
-app.put("/:id/email-template", async (c) => {
+app.put("/:id/email-template", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 
@@ -83,7 +84,7 @@ app.put("/:id/email-template", async (c) => {
 });
 
 // DELETE /capture-pages/:id/email-template (legacy — deletes entire sequence)
-app.delete("/:id/email-template", async (c) => {
+app.delete("/:id/email-template", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 
@@ -147,7 +148,7 @@ app.get("/:id/email-sequence", async (c) => {
 });
 
 // PUT /capture-pages/:id/email-sequence/:order
-app.put("/:id/email-sequence/:order", async (c) => {
+app.put("/:id/email-sequence/:order", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 	const order = Number(c.req.param("order"));
@@ -211,7 +212,7 @@ app.put("/:id/email-sequence/:order", async (c) => {
 });
 
 // DELETE /capture-pages/:id/email-sequence/:order
-app.delete("/:id/email-sequence/:order", async (c) => {
+app.delete("/:id/email-sequence/:order", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 	const order = Number(c.req.param("order"));

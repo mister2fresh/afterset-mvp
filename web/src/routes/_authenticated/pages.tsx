@@ -72,6 +72,8 @@ function PagesPage() {
 	const { data: pages, isLoading, isError, refetch } = useCapturePages();
 	const { data: counts } = useCaptureCounts();
 	const { data: keywords } = useKeywords();
+	const { effectiveTier } = useTier();
+	const isInactive = effectiveTier === "inactive";
 	const [createOpen, setCreateOpen] = useState(false);
 	const [editingPage, setEditingPage] = useState<CapturePage | null>(null);
 	const [justCreated, setJustCreated] = useState(false);
@@ -95,15 +97,22 @@ function PagesPage() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<p className="text-muted-foreground">Create and manage your fan capture pages.</p>
-				<PageFormDialog
-					mode="create"
-					open={createOpen}
-					onOpenChange={setCreateOpen}
-					onCreated={(p) => {
-						setJustCreated(true);
-						setEditingPage(p);
-					}}
-				/>
+				{isInactive ? (
+					<Button variant="outline" disabled>
+						<Plus />
+						New Page
+					</Button>
+				) : (
+					<PageFormDialog
+						mode="create"
+						open={createOpen}
+						onOpenChange={setCreateOpen}
+						onCreated={(p) => {
+							setJustCreated(true);
+							setEditingPage(p);
+						}}
+					/>
+				)}
 			</div>
 
 			{hasPages ? (
@@ -114,6 +123,7 @@ function PagesPage() {
 							page={page}
 							captureCount={counts?.[page.id] ?? 0}
 							keyword={keywords?.[page.id] ?? null}
+							isInactive={isInactive}
 							onEdit={() => setEditingPage(page)}
 							onEditEmail={() => {
 								setAutoExpandEmail(true);
@@ -210,6 +220,7 @@ function InlineTitleEdit({
 	setTitleDraft,
 	saveTitle,
 	isPending,
+	disabled,
 }: {
 	title: string;
 	editingTitle: boolean;
@@ -218,7 +229,16 @@ function InlineTitleEdit({
 	setTitleDraft: (v: string) => void;
 	saveTitle: () => void;
 	isPending: boolean;
+	disabled?: boolean;
 }) {
+	if (disabled) {
+		return (
+			<div className="flex max-w-full items-center">
+				<CardTitle className="truncate font-display text-base">{title}</CardTitle>
+			</div>
+		);
+	}
+
 	if (editingTitle) {
 		return (
 			<div className="flex items-center gap-1">
@@ -324,12 +344,14 @@ function PageCard({
 	page,
 	captureCount,
 	keyword,
+	isInactive,
 	onEdit,
 	onEditEmail,
 }: {
 	page: CapturePage;
 	captureCount: number;
 	keyword: KeywordEntry | null;
+	isInactive: boolean;
 	onEdit: () => void;
 	onEditEmail: () => void;
 }) {
@@ -378,6 +400,7 @@ function PageCard({
 						setTitleDraft={setTitleDraft}
 						saveTitle={saveTitle}
 						isPending={titleMutation.isPending}
+						disabled={isInactive}
 					/>
 					<a
 						href={`https://afterset.net/c/${page.slug}`}
@@ -398,7 +421,7 @@ function PageCard({
 					<DropdownMenuContent align="end">
 						<DropdownMenuItem
 							className="text-destructive"
-							disabled={deleteMutation.isPending}
+							disabled={deleteMutation.isPending || isInactive}
 							onClick={() => setDeleteOpen(true)}
 						>
 							<Trash2 />
@@ -465,9 +488,13 @@ function PageCard({
 				</Link>
 				<div className="flex flex-wrap items-center justify-between gap-y-1">
 					<div className="flex items-center gap-1.5">
-						<Badge variant={page.is_active ? "default" : "secondary"}>
-							{page.is_active ? "Active" : "Inactive"}
-						</Badge>
+						{isInactive ? (
+							<Badge variant="destructive">Paused</Badge>
+						) : (
+							<Badge variant={page.is_active ? "default" : "secondary"}>
+								{page.is_active ? "Active" : "Inactive"}
+							</Badge>
+						)}
 						<EmailTemplateBadge pageId={page.id} onClick={onEditEmail} />
 					</div>
 					<div className="flex shrink-0 items-center gap-2">

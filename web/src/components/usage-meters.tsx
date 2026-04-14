@@ -6,6 +6,7 @@ const REASON_LABEL: Record<keyof PausedByReason, string> = {
 	email_cap: "monthly email cap hit",
 	tier_locked: "sequence step locked by tier",
 	stale: "older than 7 days",
+	no_plan: "no active subscription",
 };
 
 export function UsageMeters(): React.ReactElement {

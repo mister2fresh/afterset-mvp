@@ -10,6 +10,8 @@
 
 import type { Tier } from "./types";
 
+export type PurchasableTier = Exclude<Tier, "inactive">;
+
 export type TierLimits = {
 	fanCap: number | null;
 	emailCap: number;
@@ -51,6 +53,16 @@ export const TIER_LIMITS = {
 		hasPageSegmentation: true,
 		hasAdvancedSegmentation: true,
 		hasCsvExport: true,
+	},
+	inactive: {
+		fanCap: 0,
+		emailCap: 0,
+		sequenceDepth: 0,
+		broadcastsPerMonth: 0,
+		storageMb: 0,
+		hasPageSegmentation: false,
+		hasAdvancedSegmentation: false,
+		hasCsvExport: false,
 	},
 } as const satisfies Record<Tier, TierLimits>;
 
@@ -107,7 +119,7 @@ export const TIER_DISPLAY = {
 		],
 		excluded: [],
 	},
-} as const satisfies Record<Tier, TierDisplay>;
+} as const satisfies Record<PurchasableTier, TierDisplay>;
 
 export const COPY = {
 	trialBanner: (daysLeft: number) =>

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { requireActive } from "../middleware/require-active.js";
 
 const app = new Hono<AuthEnv>();
 
@@ -106,7 +107,7 @@ app.post("/:id/keyword/check", async (c) => {
 });
 
 // Claim or update keyword
-app.put("/:id/keyword", async (c) => {
+app.put("/:id/keyword", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 	const body = await c.req.json();
@@ -157,7 +158,7 @@ app.put("/:id/keyword", async (c) => {
 });
 
 // Release keyword
-app.delete("/:id/keyword", async (c) => {
+app.delete("/:id/keyword", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const { error } = await supabase
 		.from("sms_keywords")

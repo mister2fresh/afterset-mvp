@@ -18,7 +18,7 @@ export type Broadcast = {
 	updated_at: string;
 };
 
-export type Tier = "solo" | "tour" | "superstar";
+export type Tier = "solo" | "tour" | "superstar" | "inactive";
 
 export type ArtistSettings = {
 	id: string;

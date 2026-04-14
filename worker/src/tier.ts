@@ -2,7 +2,7 @@
 // for capture-time gating live here (fanCap, captureMethods, sequenceDepth).
 // api/tests/tier-parity.test.ts asserts this file stays in sync.
 
-export type Tier = "solo" | "tour" | "superstar";
+export type Tier = "solo" | "tour" | "superstar" | "inactive";
 
 export type CaptureMethod = "qr" | "sms" | "nfc" | "direct";
 
@@ -28,12 +28,19 @@ export const WORKER_TIER_LIMITS = {
 		sequenceDepth: 5,
 		captureMethods: ["qr", "sms", "nfc", "direct"],
 	},
+	inactive: {
+		fanCap: 0,
+		sequenceDepth: 0,
+		captureMethods: [],
+	},
 } as const satisfies Record<Tier, WorkerTierLimits>;
 
 type TierArtist = { tier: Tier; trial_ends_at: string | null };
 
 export function getEffectiveTier(artist: TierArtist): Tier {
 	if (artist.tier !== "solo") return artist.tier;
-	if (artist.trial_ends_at && new Date(artist.trial_ends_at) > new Date()) return "tour";
+	if (artist.trial_ends_at) {
+		return new Date(artist.trial_ends_at) > new Date() ? "tour" : "inactive";
+	}
 	return "solo";
 }

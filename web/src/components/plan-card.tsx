@@ -14,7 +14,8 @@ import type { Tier } from "@/lib/types";
 
 export function PlanCard(): React.ReactElement {
 	const { tier, effectiveTier, isTrial, trialEndsAt } = useTier();
-	const display = TIER_DISPLAY[effectiveTier];
+	const isInactive = effectiveTier === "inactive";
+	const display = isInactive ? null : TIER_DISPLAY[effectiveTier];
 
 	return (
 		<Card>
@@ -22,34 +23,57 @@ export function PlanCard(): React.ReactElement {
 				<div className="flex items-center justify-between gap-3">
 					<CardTitle className="flex items-center gap-2">
 						Plan
-						<Badge variant="default">{display.name}</Badge>
-						{isTrial && (
+						{isInactive ? (
+							<Badge variant="destructive">No active plan</Badge>
+						) : (
+							<Badge variant="default">{display?.name}</Badge>
+						)}
+						{isTrial && !isInactive && (
 							<Badge variant="secondary" className="text-xs">
 								Trial
 							</Badge>
 						)}
 					</CardTitle>
-					<p className="font-display text-lg tabular-nums">
-						${display.priceMonthly}
-						<span className="ml-1 text-xs font-normal text-muted-foreground">/mo</span>
-					</p>
+					{display && (
+						<p className="font-display text-lg tabular-nums">
+							${display.priceMonthly}
+							<span className="ml-1 text-xs font-normal text-muted-foreground">/mo</span>
+						</p>
+					)}
 				</div>
-				{isTrial && trialEndsAt && <TrialCountdown endsAt={trialEndsAt} />}
+				{isTrial && trialEndsAt && !isInactive && <TrialCountdown endsAt={trialEndsAt} />}
+				{isInactive && (
+					<p className="mt-2 text-sm text-red-300">
+						Your trial has ended. Start a subscription to resume fan captures and emails.
+					</p>
+				)}
 			</CardHeader>
 			<CardContent className="space-y-6">
-				<section className="space-y-3">
-					<h3 className="text-sm font-medium">Usage this month</h3>
-					<UsageMeters />
-				</section>
+				{!isInactive && (
+					<section className="space-y-3">
+						<h3 className="text-sm font-medium">Usage this month</h3>
+						<UsageMeters />
+					</section>
+				)}
 
 				<section className="space-y-3">
-					<h3 className="text-sm font-medium">Compare plans</h3>
+					<h3 className="text-sm font-medium">{isInactive ? "Pick a plan" : "Compare plans"}</h3>
 					<TierComparison currentTier={effectiveTier} isTrial={isTrial} />
 				</section>
 
-				<div className="rounded-md border border-border bg-muted/20 p-3 text-sm">
-					<p>{COPY.upgradeContact}</p>
-					<p className="mt-2 text-xs text-muted-foreground">{COPY.compliance}</p>
+				<div
+					className={
+						isInactive
+							? "rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-100"
+							: "rounded-md border border-border bg-muted/20 p-3 text-sm"
+					}
+				>
+					<p className={isInactive ? "font-medium" : undefined}>
+						{isInactive
+							? `Start a subscription — ${COPY.upgradeContactShort}`
+							: COPY.upgradeContact}
+					</p>
+					{!isInactive && <p className="mt-2 text-xs text-muted-foreground">{COPY.compliance}</p>}
 				</div>
 
 				{import.meta.env.DEV && <DevTierSwitcher currentTier={tier} />}
@@ -107,6 +131,15 @@ function DevTierSwitcher({ currentTier }: { currentTier: Tier }): React.ReactEle
 				>
 					{pending === "trial" && <Loader2 className="mr-1 size-3 animate-spin" />}
 					Start 30d Tour trial
+				</Button>
+				<Button
+					size="sm"
+					variant="outline"
+					disabled={!!pending}
+					onClick={() => setTier("solo", -1, "expire")}
+				>
+					{pending === "expire" && <Loader2 className="mr-1 size-3 animate-spin" />}
+					Expire trial
 				</Button>
 			</div>
 		</div>

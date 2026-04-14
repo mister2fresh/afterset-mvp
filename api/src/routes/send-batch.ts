@@ -45,10 +45,14 @@ type PartitionResult = {
 	sendable: PendingRow[];
 	emailCapIds: string[];
 	tierLockedIds: string[];
+	noPlanIds: string[];
 };
 
 // Release skipped rows back to 'pending' with a skip_reason so the next eligible run retries.
-async function releaseSkipped(ids: string[], reason: "email_cap" | "tier_locked"): Promise<void> {
+async function releaseSkipped(
+	ids: string[],
+	reason: "email_cap" | "tier_locked" | "no_plan",
+): Promise<void> {
 	if (ids.length === 0) return;
 	await supabase
 		.from("pending_emails")
@@ -104,6 +108,7 @@ async function partitionByTier(rows: PendingRow[]): Promise<PartitionResult> {
 	const sendable: PendingRow[] = [];
 	const emailCapIds: string[] = [];
 	const tierLockedIds: string[] = [];
+	const noPlanIds: string[] = [];
 	const perArtistAdded = new Map<string, number>();
 
 	for (const row of rows) {
@@ -115,6 +120,15 @@ async function partitionByTier(rows: PendingRow[]): Promise<PartitionResult> {
 			continue;
 		}
 		const tier = getEffectiveTier(artist);
+
+		// Inactive / no plan: hold all rows — sequence and broadcast — until the artist
+		// reactivates. Rows release back to 'pending' with skip_reason='no_plan' so the
+		// next send-batch retries them once the tier flips back.
+		if (tier === "inactive") {
+			noPlanIds.push(row.id);
+			continue;
+		}
+
 		const limits = getTierLimits(tier);
 
 		// Tier-locked: sequence email whose step is beyond the tier's depth.
@@ -140,7 +154,7 @@ async function partitionByTier(rows: PendingRow[]): Promise<PartitionResult> {
 		sendable.push(row);
 	}
 
-	return { sendable, emailCapIds, tierLockedIds };
+	return { sendable, emailCapIds, tierLockedIds, noPlanIds };
 }
 
 async function claimPendingRows(ids?: string[]): Promise<PendingRow[] | { error: string }> {
@@ -482,12 +496,18 @@ app.post("/send-batch", async (c) => {
 	if (claimed.length === 0) return c.json({ sent: 0, failed: 0, skipped: 0 });
 
 	// Tier-aware partition: release rows that shouldn't send this run.
-	const { sendable: eligible, emailCapIds, tierLockedIds } = await partitionByTier(claimed);
+	const {
+		sendable: eligible,
+		emailCapIds,
+		tierLockedIds,
+		noPlanIds,
+	} = await partitionByTier(claimed);
 	await Promise.all([
 		releaseSkipped(emailCapIds, "email_cap"),
 		releaseSkipped(tierLockedIds, "tier_locked"),
+		releaseSkipped(noPlanIds, "no_plan"),
 	]);
-	const tierSkipCount = emailCapIds.length + tierLockedIds.length;
+	const tierSkipCount = emailCapIds.length + tierLockedIds.length + noPlanIds.length;
 
 	if (eligible.length === 0) {
 		const elapsed = Math.round(performance.now() - start);

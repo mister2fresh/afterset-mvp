@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect, useMatchRoute } from "@tanstack/react-router";
 import { HelpCircle, LayoutDashboard, LogOut, Mail, QrCode, Settings, Users } from "lucide-react";
+import { InactiveBanner } from "@/components/inactive-banner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
@@ -201,6 +202,7 @@ function AuthenticatedLayout(): React.ReactElement {
 						<h1 className="font-display text-sm font-semibold">{currentLabel}</h1>
 					</header>
 					<div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
+						<InactiveBanner />
 						<Outlet />
 					</div>
 					{/* Mobile bottom nav */}

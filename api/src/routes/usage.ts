@@ -32,6 +32,7 @@ app.get("/", async (c) => {
 		pausedEmailCap,
 		pausedTierLocked,
 		pausedStale,
+		pausedNoPlan,
 		broadcastsUsed,
 		storageRows,
 	] = await Promise.all([
@@ -74,6 +75,12 @@ app.get("/", async (c) => {
 			.eq("skip_reason", "stale")
 			.then(headCount),
 		supabase
+			.from("pending_emails")
+			.select("id", { count: "exact", head: true })
+			.eq("artist_id", artist.id)
+			.eq("skip_reason", "no_plan")
+			.then(headCount),
+		supabase
 			.from("broadcasts")
 			.select("id", { count: "exact", head: true })
 			.eq("artist_id", artist.id)
@@ -100,11 +107,12 @@ app.get("/", async (c) => {
 		emails: {
 			used: emailsSent,
 			limit: limits.emailCap,
-			paused_count: pausedEmailCap + pausedTierLocked + pausedStale,
+			paused_count: pausedEmailCap + pausedTierLocked + pausedStale + pausedNoPlan,
 			paused_by_reason: {
 				email_cap: pausedEmailCap,
 				tier_locked: pausedTierLocked,
 				stale: pausedStale,
+				no_plan: pausedNoPlan,
 			},
 		},
 		broadcasts: {

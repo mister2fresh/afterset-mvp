@@ -6,6 +6,7 @@ export type PausedByReason = {
 	email_cap: number;
 	tier_locked: number;
 	stale: number;
+	no_plan: number;
 };
 
 export type UsageResponse = {

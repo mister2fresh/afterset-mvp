@@ -3,11 +3,12 @@ import { buildPage } from "../lib/build-page.js";
 import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { requireActive } from "../middleware/require-active.js";
 
 const app = new Hono<AuthEnv>();
 
 // Build single page
-app.post("/:id/build", async (c) => {
+app.post("/:id/build", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 
@@ -20,7 +21,7 @@ app.post("/:id/build", async (c) => {
 });
 
 // Rebuild all pages for artist
-app.post("/rebuild-all", async (c) => {
+app.post("/rebuild-all", requireActive, async (c) => {
 	const artist = c.get("artist");
 
 	const { data: pages, error } = await supabase

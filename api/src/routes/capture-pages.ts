@@ -9,6 +9,7 @@ import { R2_BUCKET, r2 } from "../lib/r2.js";
 import { supabase } from "../lib/supabase.js";
 import { deleteQr, uploadQr } from "../lib/upload-qr.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { requireActive } from "../middleware/require-active.js";
 
 const app = new Hono<AuthEnv>();
 
@@ -86,7 +87,7 @@ app.get("/", async (c) => {
 });
 
 // Create
-app.post("/", async (c) => {
+app.post("/", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const body = await c.req.json();
 	const parsed = createSchema.safeParse(body);
@@ -200,7 +201,7 @@ app.get("/:id/qr.png", async (c) => {
 });
 
 // Update
-app.patch("/:id", async (c) => {
+app.patch("/:id", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const body = await c.req.json();
 	const parsed = updateSchema.safeParse(body);
@@ -267,7 +268,7 @@ app.get("/:id/download-preview", async (c) => {
 });
 
 // Delete
-app.delete("/:id", async (c) => {
+app.delete("/:id", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 

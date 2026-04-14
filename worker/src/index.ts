@@ -257,6 +257,87 @@ async function lookupArtistContext(env: Env, artistId: string): Promise<ArtistCo
 	);
 }
 
+type PagePausedContext = {
+	name: string;
+	tier: Tier;
+	trial_ends_at: string | null;
+	social_links: Record<string, string>;
+};
+
+async function lookupPagePausedContext(env: Env, slug: string): Promise<PagePausedContext | null> {
+	const res = await supabaseRpc(
+		env,
+		`capture_pages?slug=eq.${encodeURIComponent(slug)}&is_active=eq.true&select=social_links,artists(name,tier,trial_ends_at)`,
+		{},
+	);
+	if (!res.ok) return null;
+	const rows = (await res.json()) as Array<{
+		social_links: Record<string, string> | null;
+		artists: { name: string; tier: Tier; trial_ends_at: string | null } | null;
+	}>;
+	const row = rows[0];
+	if (!row?.artists) return null;
+	return {
+		name: row.artists.name,
+		tier: row.artists.tier,
+		trial_ends_at: row.artists.trial_ends_at,
+		social_links: row.social_links ?? {},
+	};
+}
+
+const SOCIAL_LABELS: Record<string, string> = {
+	instagram: "Instagram",
+	twitter: "Twitter",
+	x: "X",
+	tiktok: "TikTok",
+	youtube: "YouTube",
+	spotify: "Spotify",
+	apple_music: "Apple Music",
+	soundcloud: "SoundCloud",
+	bandcamp: "Bandcamp",
+	facebook: "Facebook",
+	threads: "Threads",
+	website: "Website",
+};
+
+const HTML_ESCAPES: Record<string, string> = {
+	"&": "&amp;",
+	"<": "&lt;",
+	">": "&gt;",
+	'"': "&quot;",
+	"'": "&#39;",
+};
+
+function escapeHtml(s: string): string {
+	return s.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c] ?? c);
+}
+
+function renderPausedLinks(links: Record<string, string>): string {
+	return Object.entries(links)
+		.filter(([, url]) => typeof url === "string" && url.length > 0)
+		.map(([key, url]) => {
+			const label = SOCIAL_LABELS[key] ?? key.replace(/_/g, " ");
+			return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+		})
+		.join("");
+}
+
+function pausedPageResponse(ctx: PagePausedContext): Response {
+	const name = escapeHtml(ctx.name);
+	const linksHtml = renderPausedLinks(ctx.social_links);
+	const body = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${name}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#0a0e1a;color:#9ca3af;padding:24px;text-align:center;-webkit-font-smoothing:antialiased}.wrap{max-width:420px;width:100%}h1{font-size:1.75rem;font-weight:700;color:#f9fafb;margin-bottom:12px;letter-spacing:-.02em}p{font-size:.95rem;line-height:1.5;margin-bottom:24px}.links{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.links a{color:#E8C547;text-decoration:none;padding:8px 14px;border:1px solid rgba(232,197,71,.4);border-radius:6px;font-size:.875rem;transition:background .15s,color .15s}.links a:hover,.links a:focus{background:#E8C547;color:#0a0e1a;outline:none}</style></head><body><div class="wrap"><h1>${name}</h1><p>Sign-ups are paused right now. Check back soon${linksHtml ? " — or follow along below." : "."}</p>${linksHtml ? `<div class="links">${linksHtml}</div>` : ""}</div></body></html>`;
+	return new Response(body, {
+		status: 200,
+		headers: {
+			"Content-Type": "text/html; charset=utf-8",
+			"Cache-Control": "no-store",
+			"X-Content-Type-Options": "nosniff",
+			"X-Frame-Options": "DENY",
+			"Referrer-Policy": "strict-origin-when-cross-origin",
+		},
+	});
+}
+
 type PersistResult = {
 	fanCaptureId: string;
 	captureEventId: string;
@@ -373,6 +454,19 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 	const allTemplates = templateRes.ok ? ((await templateRes.json()) as SequenceTemplate[]) : [];
 
 	const effectiveTier = getEffectiveTier(artist);
+
+	if (effectiveTier === "inactive") {
+		return withCors(
+			json(
+				{
+					error: "Sign-ups are paused while this artist's account is inactive.",
+					inactive: true,
+				},
+				403,
+			),
+		);
+	}
+
 	const tierLimits = WORKER_TIER_LIMITS[effectiveTier];
 
 	// Capture method gate. Solo rejects SMS (403) and soft-accepts NFC as direct
@@ -423,9 +517,23 @@ async function handleCapture(request: Request, env: Env): Promise<Response> {
 }
 
 async function servePage(request: Request, slug: string, env: Env): Promise<Response> {
-	const object = await env.PAGES.get(`c/${slug}/index.html`);
-	if (!object) {
+	const [ctx, object] = await Promise.all([
+		lookupPagePausedContext(env, slug),
+		env.PAGES.get(`c/${slug}/index.html`),
+	]);
+
+	if (!ctx || !object) {
 		return notFound();
+	}
+
+	if (getEffectiveTier(ctx) === "inactive") {
+		if (request.method === "HEAD") {
+			return new Response(null, {
+				status: 200,
+				headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+			});
+		}
+		return pausedPageResponse(ctx);
 	}
 
 	const headers = new Headers();
@@ -433,7 +541,7 @@ async function servePage(request: Request, slug: string, env: Env): Promise<Resp
 	headers.set("ETag", object.httpEtag);
 	headers.delete("Content-Encoding");
 	headers.set("Content-Type", "text/html; charset=utf-8");
-	headers.set("Cache-Control", "public, max-age=3600, s-maxage=86400");
+	headers.set("Cache-Control", "public, max-age=60, s-maxage=60");
 	headers.set("X-Content-Type-Options", "nosniff");
 	headers.set("X-Frame-Options", "DENY");
 	headers.set("Referrer-Policy", "strict-origin-when-cross-origin");

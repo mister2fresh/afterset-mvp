@@ -24,6 +24,10 @@ const REASON_EXPLANATIONS: Record<keyof PausedByReason, { title: string; body: s
 		title: "Older than 7 days",
 		body: "These emails were queued more than 7 days ago and are skipped to avoid sending outdated messages. No action needed — new captures will queue fresh emails.",
 	},
+	no_plan: {
+		title: "No active subscription",
+		body: "Your trial has ended. Queued fan emails are held until you start a subscription — they'll resume sending automatically once your plan is active.",
+	},
 };
 
 export function PausedEmailsBanner(): React.ReactElement | null {

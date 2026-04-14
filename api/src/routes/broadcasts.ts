@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase.js";
 import { getEffectiveTier, getTierLimits, type Tier } from "../lib/tier.js";
 import { getMonthRange } from "../lib/timezone.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { requireActive } from "../middleware/require-active.js";
 
 const app = new Hono<AuthEnv>();
 
@@ -55,7 +56,7 @@ app.get("/", async (c) => {
 });
 
 // POST /broadcasts — create draft
-app.post("/", async (c) => {
+app.post("/", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const effectiveTier = getEffectiveTier(artist);
 	const limits = getTierLimits(effectiveTier);
@@ -108,7 +109,7 @@ app.get("/:id", async (c) => {
 });
 
 // PUT /broadcasts/:id — update draft
-app.put("/:id", async (c) => {
+app.put("/:id", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const id = c.req.param("id");
 	const body = await c.req.json();
@@ -142,7 +143,7 @@ app.put("/:id", async (c) => {
 });
 
 // DELETE /broadcasts/:id — delete draft only
-app.delete("/:id", async (c) => {
+app.delete("/:id", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const id = c.req.param("id");
 
@@ -164,7 +165,7 @@ app.delete("/:id", async (c) => {
 });
 
 // POST /broadcasts/:id/archive — archive a sent/failed broadcast
-app.post("/:id/archive", async (c) => {
+app.post("/:id/archive", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const id = c.req.param("id");
 
@@ -192,7 +193,7 @@ app.post("/:id/archive", async (c) => {
 });
 
 // POST /broadcasts/:id/unarchive — restore an archived broadcast
-app.post("/:id/unarchive", async (c) => {
+app.post("/:id/unarchive", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const id = c.req.param("id");
 
@@ -261,7 +262,7 @@ app.post("/:id/recipients", async (c) => {
 });
 
 // POST /broadcasts/:id/send — enqueue broadcast
-app.post("/:id/send", async (c) => {
+app.post("/:id/send", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const id = c.req.param("id");
 

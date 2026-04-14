@@ -5,6 +5,7 @@ import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import { getEffectiveTier, getTierLimits } from "../lib/tier.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { requireActive } from "../middleware/require-active.js";
 
 const app = new Hono<AuthEnv>();
 
@@ -62,7 +63,7 @@ async function deleteStorageFile(filePath: string) {
 }
 
 // Generate signed upload URL
-app.post("/:id/incentive/upload-url", async (c) => {
+app.post("/:id/incentive/upload-url", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 
@@ -145,7 +146,7 @@ app.post("/:id/incentive/upload-url", async (c) => {
 });
 
 // Remove incentive file
-app.delete("/:id/incentive", async (c) => {
+app.delete("/:id/incentive", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const pageId = c.req.param("id");
 

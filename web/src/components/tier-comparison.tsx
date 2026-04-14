@@ -1,10 +1,10 @@
 import { Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { TIER_DISPLAY } from "@/lib/pricing";
+import { type PurchasableTier, TIER_DISPLAY } from "@/lib/pricing";
 import type { Tier } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const TIERS: Tier[] = ["solo", "tour", "superstar"];
+const TIERS: readonly PurchasableTier[] = ["solo", "tour", "superstar"];
 
 type TierComparisonProps = {
 	currentTier: Tier;
@@ -31,7 +31,7 @@ function TierCard({
 	isCurrent,
 	isTrial,
 }: {
-	tier: Tier;
+	tier: PurchasableTier;
 	isCurrent: boolean;
 	isTrial?: boolean;
 }): React.ReactElement {

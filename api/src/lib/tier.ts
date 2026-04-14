@@ -2,8 +2,13 @@
 // Landing page copy lives in web/src/lib/pricing.ts; numeric gates live here.
 // worker/src/tier.ts duplicates a slim subset (fanCap, captureMethods, sequenceDepth)
 // and tier-parity.test.ts blocks drift.
+//
+// "inactive" is the post-trial / no-plan state. It is never stored on artists.tier
+// (the DB ENUM stays solo/tour/superstar) — it's derived by getEffectiveTier() when
+// a solo artist's trial_ends_at is in the past. Limits are all-zero so any gate
+// that forgets an explicit inactive check still fails closed.
 
-export type Tier = "solo" | "tour" | "superstar";
+export type Tier = "solo" | "tour" | "superstar" | "inactive";
 
 export type CaptureMethod = "qr" | "sms" | "nfc" | "direct";
 
@@ -53,13 +58,26 @@ export const TIER_LIMITS = {
 		hasAdvancedSegmentation: true,
 		hasCsvExport: true,
 	},
+	inactive: {
+		fanCap: 0,
+		emailCap: 0,
+		sequenceDepth: 0,
+		broadcastsPerMonth: 0,
+		storageMb: 0,
+		captureMethods: [],
+		hasPageSegmentation: false,
+		hasAdvancedSegmentation: false,
+		hasCsvExport: false,
+	},
 } as const satisfies Record<Tier, TierLimits>;
 
 type TierArtist = { tier: Tier; trial_ends_at: string | null };
 
 export function getEffectiveTier(artist: TierArtist): Tier {
 	if (artist.tier !== "solo") return artist.tier;
-	if (artist.trial_ends_at && new Date(artist.trial_ends_at) > new Date()) return "tour";
+	if (artist.trial_ends_at) {
+		return new Date(artist.trial_ends_at) > new Date() ? "tour" : "inactive";
+	}
 	return "solo";
 }
 
@@ -73,4 +91,8 @@ export function isTrialActive(artist: TierArtist): boolean {
 		artist.trial_ends_at !== null &&
 		new Date(artist.trial_ends_at) > new Date()
 	);
+}
+
+export function isInactive(artist: TierArtist): boolean {
+	return getEffectiveTier(artist) === "inactive";
 }

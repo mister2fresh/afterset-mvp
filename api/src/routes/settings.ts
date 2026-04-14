@@ -4,6 +4,7 @@ import { internalError } from "../lib/errors.js";
 import { supabase } from "../lib/supabase.js";
 import { getEffectiveTier, isTrialActive } from "../lib/tier.js";
 import type { AuthEnv } from "../middleware/auth.js";
+import { requireActive } from "../middleware/require-active.js";
 
 const app = new Hono<AuthEnv>();
 
@@ -40,7 +41,7 @@ const updateSchema = z.object({
 });
 
 // PATCH /settings — update artist profile (tier + trial_ends_at are not writable)
-app.patch("/", async (c) => {
+app.patch("/", requireActive, async (c) => {
 	const artist = c.get("artist");
 	const body = await c.req.json();
 	const parsed = updateSchema.safeParse(body);

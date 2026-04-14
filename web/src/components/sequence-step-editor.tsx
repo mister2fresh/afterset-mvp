@@ -18,8 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { TIER_DISPLAY } from "@/lib/pricing";
-import type { Tier } from "@/lib/types";
+import { type PurchasableTier, TIER_DISPLAY } from "@/lib/pricing";
 
 export type EmailTemplate = {
 	id: string;
@@ -148,7 +147,7 @@ export function SequenceStepEditor({
 	onSaved: () => void;
 	onDeleted: () => void;
 	readOnly?: boolean;
-	lockedUpgradeTarget?: Tier;
+	lockedUpgradeTarget?: PurchasableTier;
 	ref?: Ref<StepEditorHandle>;
 }) {
 	const [form, setForm] = useState<StepForm>(existing ? formFromTemplate(existing) : EMPTY_STEP);
