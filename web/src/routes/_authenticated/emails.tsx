@@ -43,6 +43,7 @@ function EmailsPage() {
 
 	const [editingBroadcast, setEditingBroadcast] = useState<Broadcast | null>(null);
 	const [composeOpen, setComposeOpen] = useState(false);
+	const [composeInPreview, setComposeInPreview] = useState(false);
 	const [creating, setCreating] = useState(false);
 	const [deletingBroadcast, setDeletingBroadcast] = useState<Broadcast | null>(null);
 
@@ -51,6 +52,7 @@ function EmailsPage() {
 		try {
 			const draft = await api.post<Broadcast>("/broadcasts", {});
 			setEditingBroadcast(draft);
+			setComposeInPreview(false);
 			setComposeOpen(true);
 		} finally {
 			setCreating(false);
@@ -59,12 +61,13 @@ function EmailsPage() {
 
 	function handleEditBroadcast(broadcast: Broadcast) {
 		setEditingBroadcast(broadcast);
+		setComposeInPreview(false);
 		setComposeOpen(true);
 	}
 
-	async function handlePreviewBroadcast(broadcast: Broadcast) {
-		if (!broadcast.subject || !broadcast.body) return;
+	function handlePreviewBroadcast(broadcast: Broadcast) {
 		setEditingBroadcast(broadcast);
+		setComposeInPreview(true);
 		setComposeOpen(true);
 	}
 
@@ -198,10 +201,12 @@ function EmailsPage() {
 			<BroadcastComposeDialog
 				broadcast={editingBroadcast}
 				open={composeOpen}
+				initialPreview={composeInPreview}
 				onOpenChange={(open) => {
 					if (!open) {
 						setComposeOpen(false);
 						setEditingBroadcast(null);
+						setComposeInPreview(false);
 						queryClient.invalidateQueries({ queryKey: ["broadcasts"] });
 					}
 				}}

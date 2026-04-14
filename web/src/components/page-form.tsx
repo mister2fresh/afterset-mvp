@@ -933,12 +933,7 @@ export function PageForm({
 				<EditorSection
 					icon={Zap}
 					title="Capture Methods"
-					summary={(() => {
-						const parts: string[] = [];
-						if (keyword.length >= 2) parts.push(keyword.toUpperCase());
-						if (!isCreate && page?.slug && !autoExpandEmail) parts.push("NFC");
-						return parts.length > 0 ? parts.join(" · ") : "Not set";
-					})()}
+					summary={keyword.length >= 2 ? keyword.toUpperCase() : "Not set"}
 				>
 					<KeywordSection
 						keyword={keyword}

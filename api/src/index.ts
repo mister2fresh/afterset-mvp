@@ -89,12 +89,14 @@ for (const path of authedPaths) {
 app.route("/api/settings", settings);
 if (isDev) app.route("/api/dev", dev);
 
-// /api/capture-pages — 6 route modules share this base path:
+// /api/capture-pages — 6 route modules share this base path.
+// Mount smsKeywords before capturePages so its literal /keywords route
+// resolves before capturePages' catch-all /:id handler.
+app.route("/api/capture-pages", smsKeywords); // /keywords, /:id/keyword (sms-keywords.ts)
 app.route("/api/capture-pages", capturePages); // CRUD + QR (capture-pages.ts)
 app.route("/api/capture-pages", incentive); // /:id/incentive (incentive.ts)
 app.route("/api/capture-pages", build); // /:id/build (build.ts)
 app.route("/api/capture-pages", emailTemplates); // /:id/email-template, /:id/email-sequence (email-templates.ts)
-app.route("/api/capture-pages", smsKeywords); // /:id/keyword (sms-keywords.ts)
 app.route("/api/capture-pages", analytics); // /:id/analytics (analytics.ts)
 
 app.route("/api/analytics", analytics); // /tonight, / (overview)

@@ -138,12 +138,18 @@ type BroadcastComposeDialogProps = {
 	broadcast: Broadcast | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	initialPreview?: boolean;
 };
+
+const PLACEHOLDER_SUBJECT = "Your subject goes here";
+const PLACEHOLDER_BODY =
+	"Your message goes here — this is what your email will look like. Same colors, same footer, same links as your capture page.";
 
 export function BroadcastComposeDialog({
 	broadcast,
 	open,
 	onOpenChange,
+	initialPreview = false,
 }: BroadcastComposeDialogProps) {
 	const queryClient = useQueryClient();
 	const { limits } = useTier();
@@ -151,6 +157,11 @@ export function BroadcastComposeDialog({
 	const canSegmentAdvanced = limits.hasAdvancedSegmentation;
 	const userEmail = getUser()?.email ?? "";
 	const [form, setForm] = useState<FormState>(EMPTY_FORM);
+	const hasActiveFilter =
+		form.filterPageIds.length > 0 ||
+		form.filterDateFrom !== "" ||
+		form.filterDateTo !== "" ||
+		form.filterMethod !== "";
 	const set = useCallback(
 		(updates: Partial<FormState>) => setForm((f) => ({ ...f, ...updates })),
 		[],
@@ -174,8 +185,31 @@ export function BroadcastComposeDialog({
 		setSendError("");
 		setShowConfirm(false);
 		setShowDeleteConfirm(false);
-		setShowPreview(false);
-	}, [broadcast]);
+		setPreviewHtml("");
+		setShowPreview(initialPreview);
+	}, [broadcast, initialPreview]);
+
+	// Auto-trigger preview fetch when opened with initialPreview flag (from card Preview button).
+	const autoPreviewFired = useRef(false);
+	useEffect(() => {
+		if (!open) {
+			autoPreviewFired.current = false;
+			return;
+		}
+		if (!initialPreview || autoPreviewFired.current || !broadcastId || !broadcast) return;
+		autoPreviewFired.current = true;
+		(async () => {
+			try {
+				const html = await api.postText(`/broadcasts/${broadcastId}/preview`, {
+					subject: broadcast.subject || PLACEHOLDER_SUBJECT,
+					body: broadcast.body || PLACEHOLDER_BODY,
+				});
+				setPreviewHtml(html);
+			} catch {
+				// Preview is non-critical
+			}
+		})();
+	}, [open, initialPreview, broadcastId, broadcast]);
 
 	const { data: pages } = useQuery({
 		queryKey: ["capture-pages"],
@@ -219,11 +253,11 @@ export function BroadcastComposeDialog({
 	}
 
 	async function handlePreview() {
-		if (!broadcastId || !form.subject || !form.body) return;
+		if (!broadcastId) return;
 		try {
 			const html = await api.postText(`/broadcasts/${broadcastId}/preview`, {
-				subject: form.subject,
-				body: form.body,
+				subject: form.subject || PLACEHOLDER_SUBJECT,
+				body: form.body || PLACEHOLDER_BODY,
 			});
 			setPreviewHtml(html);
 			setShowPreview(true);
@@ -335,12 +369,18 @@ export function BroadcastComposeDialog({
 								Back to editor
 							</Button>
 						</div>
-						<iframe
-							srcDoc={previewHtml}
-							className="h-[500px] w-full rounded-lg border"
-							title="Email preview"
-							sandbox=""
-						/>
+						{previewHtml ? (
+							<iframe
+								srcDoc={previewHtml}
+								className="h-[500px] w-full rounded-lg border"
+								title="Email preview"
+								sandbox=""
+							/>
+						) : (
+							<div className="flex h-[500px] w-full items-center justify-center rounded-lg border">
+								<Loader2 className="size-5 animate-spin text-muted-foreground" />
+							</div>
+						)}
 					</div>
 				) : (
 					<div className="space-y-5">
@@ -443,7 +483,7 @@ export function BroadcastComposeDialog({
 									) : (
 										<ChevronDown className="size-4" />
 									))}
-								Filter recipients
+								{hasActiveFilter ? "Filtered recipients" : "All fans"}
 								{recipientCount && (
 									<Badge variant="secondary" className="ml-1">
 										{countLoading ? "..." : `${recipientCount.reachable} fans`}
@@ -491,7 +531,7 @@ export function BroadcastComposeDialog({
 											</div>
 										)}
 
-										{canSegmentAdvanced ? (
+										{canSegmentAdvanced && (
 											<>
 												{/* Date range */}
 												<div className="grid grid-cols-2 gap-2">
@@ -532,12 +572,6 @@ export function BroadcastComposeDialog({
 													</select>
 												</div>
 											</>
-										) : (
-											<UpgradePrompt
-												feature="Filter by signup date or entry method for advanced targeting."
-												requiredTier="superstar"
-												compact
-											/>
 										)}
 
 										{countLoading && (
@@ -716,6 +750,10 @@ export function BroadcastCard({
 			? ("secondary" as const)
 			: ("default" as const);
 
+	const isDraft = broadcast.status === "draft";
+	const isArchived = !!broadcast.archived_at;
+	const showDropdown = (isDraft && !isArchived) || !isDraft;
+
 	return (
 		<Card className="transition-colors hover:border-honey-gold/50">
 			<CardContent className="space-y-2 p-4">
@@ -730,37 +768,29 @@ export function BroadcastCard({
 					</div>
 					<div className="flex shrink-0 items-center gap-1">
 						<Badge variant={statusVariant}>{broadcast.status}</Badge>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="ghost" size="icon" className="size-7">
-									<MoreVertical className="size-4" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								{broadcast.status === "draft" && (
-									<DropdownMenuItem onClick={onEdit}>
-										<Pencil />
-										Edit
-									</DropdownMenuItem>
-								)}
-								<DropdownMenuItem onClick={onPreview}>
-									<Eye />
-									Preview
-								</DropdownMenuItem>
-								{broadcast.status === "draft" && (
-									<DropdownMenuItem className="text-destructive" onClick={onDelete}>
-										<Trash2 />
-										Delete
-									</DropdownMenuItem>
-								)}
-								{broadcast.status !== "draft" && (
-									<DropdownMenuItem onClick={onArchive}>
-										<Archive />
-										{broadcast.archived_at ? "Unarchive" : "Archive"}
-									</DropdownMenuItem>
-								)}
-							</DropdownMenuContent>
-						</DropdownMenu>
+						{showDropdown && (
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="ghost" size="icon" className="size-7">
+										<MoreVertical className="size-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									{isDraft && !isArchived && (
+										<DropdownMenuItem className="text-destructive" onClick={onDelete}>
+											<Trash2 />
+											Delete
+										</DropdownMenuItem>
+									)}
+									{!isDraft && (
+										<DropdownMenuItem onClick={onArchive}>
+											<Archive />
+											{isArchived ? "Unarchive" : "Archive"}
+										</DropdownMenuItem>
+									)}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						)}
 					</div>
 				</div>
 
@@ -794,6 +824,21 @@ export function BroadcastCard({
 					<div className="flex items-center gap-1 text-xs text-muted-foreground">
 						<CalendarDays className="size-3" />
 						Scheduled for {new Date(broadcast.scheduled_at).toLocaleString()}
+					</div>
+				)}
+
+				{!isArchived && (
+					<div className={`grid gap-2 pt-1 ${isDraft ? "grid-cols-2" : "grid-cols-1"}`}>
+						{isDraft && (
+							<Button variant="outline" className="h-8 gap-1.5 text-xs" onClick={onEdit}>
+								<Pencil className="size-3.5" />
+								Edit
+							</Button>
+						)}
+						<Button variant="outline" className="h-8 gap-1.5 text-xs" onClick={onPreview}>
+							<Eye className="size-3.5" />
+							Preview
+						</Button>
 					</div>
 				)}
 			</CardContent>
