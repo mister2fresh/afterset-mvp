@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Archive, Loader2, Plus, Send } from "lucide-react";
+import { Archive, Loader2, Lock, Plus, Send } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { BroadcastCard, BroadcastComposeDialog } from "@/components/broadcast-compose-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { QueryError } from "@/components/query-error";
@@ -22,6 +23,10 @@ function EmailsPage() {
 	const { effectiveTier } = useTier();
 	const { data: usage } = useUsage();
 	const broadcastsAllowed = effectiveTier !== "solo";
+	const atBroadcastCap =
+		usage?.broadcasts.limit !== null &&
+		usage !== undefined &&
+		usage.broadcasts.used >= usage.broadcasts.limit;
 
 	const {
 		data: broadcasts,
@@ -54,6 +59,9 @@ function EmailsPage() {
 			setEditingBroadcast(draft);
 			setComposeInPreview(false);
 			setComposeOpen(true);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Could not create broadcast";
+			toast.error(message);
 		} finally {
 			setCreating(false);
 		}
@@ -118,22 +126,35 @@ function EmailsPage() {
 						</p>
 					)}
 				</div>
-				{broadcastsAllowed && (
-					<Button onClick={handleNewBroadcast} disabled={creating}>
-						{creating ? (
-							<Loader2 className="mr-1.5 size-4 animate-spin" />
-						) : (
-							<Plus className="mr-1.5 size-4" />
-						)}
-						New Broadcast
-					</Button>
-				)}
+				{broadcastsAllowed &&
+					(atBroadcastCap ? (
+						<Button disabled variant="outline" title="Monthly broadcast limit reached">
+							<Lock className="mr-1.5 size-4" />
+							Limit reached
+						</Button>
+					) : (
+						<Button onClick={handleNewBroadcast} disabled={creating}>
+							{creating ? (
+								<Loader2 className="mr-1.5 size-4 animate-spin" />
+							) : (
+								<Plus className="mr-1.5 size-4" />
+							)}
+							New Broadcast
+						</Button>
+					))}
 			</div>
 
 			{!broadcastsAllowed && (
 				<UpgradePrompt
 					feature="Broadcasts let you email your fan list between shows — new releases, merch drops, tour dates. Tour includes 4 broadcasts/month; Superstar is unlimited."
 					requiredTier="tour"
+				/>
+			)}
+
+			{broadcastsAllowed && atBroadcastCap && (
+				<UpgradePrompt
+					feature={`You've used all ${usage?.broadcasts.limit} broadcasts this month. Upgrade to Superstar for unlimited broadcasts, or wait until next month.`}
+					requiredTier="superstar"
 				/>
 			)}
 

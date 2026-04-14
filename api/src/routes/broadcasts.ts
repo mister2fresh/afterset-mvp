@@ -70,6 +70,11 @@ app.post("/", async (c) => {
 		);
 	}
 
+	const monthErr = await checkMonthlyBroadcastLimit(artist, limits.broadcastsPerMonth);
+	if (monthErr) {
+		return c.json({ error: monthErr, upgrade: true, required_tier: "superstar" }, 429);
+	}
+
 	const body = await c.req.json().catch(() => ({}));
 	const parsed = broadcastSchema.safeParse(body);
 	if (!parsed.success) return c.json({ error: parsed.error.flatten() }, 400);
