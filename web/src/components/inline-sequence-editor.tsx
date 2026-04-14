@@ -132,13 +132,11 @@ export function InlineSequenceEditor({
 								>
 									<button
 										type="button"
-										disabled={isLocked}
 										onClick={() => {
-											if (isLocked) return;
 											expandedStepRef.current?.saveIfDirty();
 											setExpandedOrder(isExpanded ? null : step.sequence_order);
 										}}
-										className="flex w-full items-center gap-3 p-3 text-left disabled:cursor-not-allowed"
+										className="flex w-full items-center gap-3 p-3 text-left"
 									>
 										<div
 											className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${step.sequence_order === 0 ? "bg-honey-gold/20 text-honey-gold" : "bg-muted"} ${isLocked ? "opacity-50" : ""}`}
@@ -169,17 +167,16 @@ export function InlineSequenceEditor({
 												{step.is_active ? "Active" : "Draft"}
 											</Badge>
 										)}
-										{!isLocked &&
-											(isExpanded ? (
-												<ChevronUp className="size-4 text-muted-foreground" />
-											) : (
-												<ChevronDown className="size-4 text-muted-foreground" />
-											))}
+										{isExpanded ? (
+											<ChevronUp className="size-4 text-muted-foreground" />
+										) : (
+											<ChevronDown className="size-4 text-muted-foreground" />
+										)}
 									</button>
-									{isExpanded && !isLocked && (
+									{isExpanded && (
 										<div className="border-t border-border p-3">
 											<SequenceStepEditor
-												ref={expandedStepRef}
+												ref={isLocked ? undefined : expandedStepRef}
 												pageId={pageId}
 												order={step.sequence_order}
 												existing={step}
@@ -189,6 +186,8 @@ export function InlineSequenceEditor({
 													invalidateAll();
 													setExpandedOrder(null);
 												}}
+												readOnly={isLocked}
+												lockedUpgradeTarget={isLocked ? upgradeTarget : undefined}
 											/>
 										</div>
 									)}

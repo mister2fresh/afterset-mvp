@@ -5,6 +5,7 @@ import {
 	ExternalLink,
 	Eye,
 	Loader2,
+	Lock,
 	Plus,
 	Sunrise,
 	Trash2,
@@ -17,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { TIER_DISPLAY } from "@/lib/pricing";
+import type { Tier } from "@/lib/types";
 
 export type EmailTemplate = {
 	id: string;
@@ -85,14 +88,23 @@ export function StepDelayIcon({ step }: { step: EmailTemplate }) {
 	return <CalendarDays className="size-3" />;
 }
 
-function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+function ToggleSwitch({
+	checked,
+	onChange,
+	disabled,
+}: {
+	checked: boolean;
+	onChange: () => void;
+	disabled?: boolean;
+}) {
 	return (
 		<button
 			type="button"
 			role="switch"
 			aria-checked={checked}
 			onClick={onChange}
-			className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${checked ? "bg-honey-gold" : "bg-muted"}`}
+			disabled={disabled}
+			className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${checked ? "bg-honey-gold" : "bg-muted"} ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
 		>
 			<span
 				className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`}
@@ -125,6 +137,8 @@ export function SequenceStepEditor({
 	hasIncentive,
 	onSaved,
 	onDeleted,
+	readOnly,
+	lockedUpgradeTarget,
 	ref,
 }: {
 	pageId: string;
@@ -133,6 +147,8 @@ export function SequenceStepEditor({
 	hasIncentive: boolean;
 	onSaved: () => void;
 	onDeleted: () => void;
+	readOnly?: boolean;
+	lockedUpgradeTarget?: Tier;
 	ref?: Ref<StepEditorHandle>;
 }) {
 	const [form, setForm] = useState<StepForm>(existing ? formFromTemplate(existing) : EMPTY_STEP);
@@ -157,6 +173,7 @@ export function SequenceStepEditor({
 
 	useImperativeHandle(ref, () => ({
 		saveIfDirty() {
+			if (readOnly) return;
 			const f = formRef.current;
 			if (!f.subject.trim() || !f.body.trim()) return;
 			if (!formIsDirty(f, existingRef.current)) return;
@@ -217,13 +234,26 @@ export function SequenceStepEditor({
 		);
 	}
 
+	const upgradeName = lockedUpgradeTarget ? TIER_DISPLAY[lockedUpgradeTarget].name : null;
+
 	return (
 		<div className="space-y-4">
+			{readOnly && (
+				<div className="flex items-start gap-2 rounded-lg border border-dashed border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
+					<Lock className="mt-0.5 size-3.5 shrink-0" />
+					<p>
+						This email is above your current plan's limit and won't be sent. You can still view,
+						copy, or preview the content.
+						{upgradeName && ` Upgrade to ${upgradeName} to reactivate.`}
+					</p>
+				</div>
+			)}
 			<div className="flex items-center justify-between">
 				<Label>Active</Label>
 				<ToggleSwitch
 					checked={form.is_active}
 					onChange={() => setForm((f) => ({ ...f, is_active: !f.is_active }))}
+					disabled={readOnly}
 				/>
 			</div>
 
@@ -238,6 +268,7 @@ export function SequenceStepEditor({
 					onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
 					required
 					maxLength={200}
+					readOnly={readOnly}
 				/>
 			</div>
 
@@ -251,6 +282,7 @@ export function SequenceStepEditor({
 					maxLength={5000}
 					rows={5}
 					className="resize-y"
+					readOnly={readOnly}
 				/>
 				<p className="text-xs text-muted-foreground">{form.body.length}/5000</p>
 			</div>
@@ -267,7 +299,8 @@ export function SequenceStepEditor({
 									key={opt.value}
 									type="button"
 									onClick={() => setForm((f) => ({ ...f, delay_mode: opt.value }))}
-									className={`flex items-center gap-2 rounded-lg border p-3 transition-colors sm:flex-col sm:items-center sm:gap-1.5 ${active ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground hover:border-honey-gold/50"}`}
+									disabled={readOnly}
+									className={`flex items-center gap-2 rounded-lg border p-3 transition-colors sm:flex-col sm:items-center sm:gap-1.5 ${active ? "border-honey-gold bg-honey-gold/10 text-honey-gold" : "border-border text-muted-foreground"} ${readOnly ? "cursor-not-allowed opacity-60" : "hover:border-honey-gold/50"}`}
 								>
 									<Icon className="size-4" />
 									<span className="text-xs font-medium">{opt.label}</span>
@@ -287,6 +320,7 @@ export function SequenceStepEditor({
 							value={form.delay_days}
 							onChange={(e) => setForm((f) => ({ ...f, delay_days: Number(e.target.value) }))}
 							className="w-20"
+							readOnly={readOnly}
 						/>
 						<span className="text-sm text-muted-foreground">days (sent at 9am)</span>
 					</div>
@@ -307,12 +341,13 @@ export function SequenceStepEditor({
 								include_incentive_link: !f.include_incentive_link,
 							}))
 						}
+						disabled={readOnly}
 					/>
 				</div>
 			)}
 
 			<div className="flex flex-wrap items-center gap-2">
-				{existing && (
+				{existing && !readOnly && (
 					<>
 						<Button
 							type="button"
@@ -345,7 +380,7 @@ export function SequenceStepEditor({
 					{previewMutation.isPending ? <Loader2 className="animate-spin" /> : <Eye />}
 					Preview
 				</Button>
-				{!existing && (
+				{!existing && !readOnly && (
 					<Button
 						type="button"
 						size="sm"
@@ -358,7 +393,7 @@ export function SequenceStepEditor({
 				)}
 			</div>
 
-			{saveMutation.isError && (
+			{saveMutation.isError && !readOnly && (
 				<p className="text-sm text-destructive">{saveMutation.error.message}</p>
 			)}
 		</div>
