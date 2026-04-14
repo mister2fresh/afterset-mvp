@@ -87,6 +87,13 @@ function TrialCountdown({ endsAt }: { endsAt: string }): React.ReactElement {
 	return <p className="mt-2 text-sm text-muted-foreground">{COPY.trialBanner(daysLeft)}</p>;
 }
 
+const TRIAL_PRESETS = [
+	{ days: 30, label: "trial30", button: "Trial 30d" },
+	{ days: 7, label: "trial7", button: "Trial 7d" },
+	{ days: 3, label: "trial3", button: "Trial 3d" },
+	{ days: 1, label: "trial1", button: "Trial 1d" },
+] as const;
+
 function DevTierSwitcher({ currentTier }: { currentTier: Tier }): React.ReactElement {
 	const queryClient = useQueryClient();
 	const [pending, setPending] = useState<string | null>(null);
@@ -123,15 +130,18 @@ function DevTierSwitcher({ currentTier }: { currentTier: Tier }): React.ReactEle
 						{TIER_DISPLAY[t].name}
 					</Button>
 				))}
-				<Button
-					size="sm"
-					variant="outline"
-					disabled={!!pending}
-					onClick={() => setTier("solo", 30, "trial")}
-				>
-					{pending === "trial" && <Loader2 className="mr-1 size-3 animate-spin" />}
-					Start 30d Tour trial
-				</Button>
+				{TRIAL_PRESETS.map(({ days, label, button }) => (
+					<Button
+						key={label}
+						size="sm"
+						variant="outline"
+						disabled={!!pending}
+						onClick={() => setTier("solo", days, label)}
+					>
+						{pending === label && <Loader2 className="mr-1 size-3 animate-spin" />}
+						{button}
+					</Button>
+				))}
 				<Button
 					size="sm"
 					variant="outline"
