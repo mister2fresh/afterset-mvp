@@ -776,7 +776,12 @@ export function BroadcastCard({
 								<span className="font-medium text-foreground">{openRate}%</span> open rate
 							</span>
 						</div>
-						{broadcast.sent_count < broadcast.recipient_count && (
+						{broadcast.status === "sending" && broadcast.sent_count < broadcast.recipient_count && (
+							<p className="text-xs text-muted-foreground/70">
+								{broadcast.recipient_count - broadcast.sent_count} pending
+							</p>
+						)}
+						{broadcast.status === "sent" && broadcast.sent_count < broadcast.recipient_count && (
 							<p className="text-xs text-muted-foreground/70">
 								{broadcast.recipient_count - broadcast.sent_count} suppressed (bounced or
 								unsubscribed)
