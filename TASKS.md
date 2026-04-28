@@ -1,10 +1,10 @@
 # AFTERSET — Tasks & Sprint Tracker
 ## Interim project management until MCP task server is online
 
-**Last updated:** April 14, 2026 (v86 — Paused emails redesign: drill-down Card on Settings, batch dismiss by reason, pg_cron auto-purge)
-**Current phase:** Sprint 5 — Pricing Tier Enforcement
-**Sprint:** Sprint 5 Phase 3 (frontend gates) complete on `sprint-5-pricing-tiers` branch. New primitives: `UpgradePrompt`, `TierComparison`, `UsageMeters`, `PausedEmailsBanner`, `PlanCard` + `useUsage` hook. Gates: Capture Methods section in page-form hidden entirely on Solo (cleaner editor; QR-only is exposed via page-card "Download QR"), sequence steps beyond tier depth render locked (now expandable read-only post-downgrade for view/copy/preview), broadcasts gated (Solo) + page segmentation on Tour+ + advanced segmentation (date/method) Superstar-only, CSV export Superstar-only. Broadcast creation (not just send) now blocked at the monthly cap so artists don't build a broadcast they can't send — POST `/broadcasts` returns 429 with upgrade flag; emails page swaps the New Broadcast button for a disabled "Limit reached" state + Superstar upgrade prompt. Paused-email visibility wired across dashboard banner, Tonight tile, and per-page show drill-down. Upgrade contact copy: "Reach out to Matthew at hello@afterset.net". Typecheck/tests/lint green (55/55 passing).
-**Next up:** Finish Sprint 5 Phase 3 QA (trial countdown, paused-email seeded data, Superstar broadcast filter panel end-to-end). Phase 4 "inactive tier" shipped 2026-04-14 (read-only dashboard + paused capture pages + held emails on trial expiry) — trial warning emails still deferred behind Stripe. Revisit broadcast limits (Solo 0/mo may be worthless, Tour 4/mo may be too tight) once usage signal exists. First-crossing over-cap artist notification email dispatch still deferred (detection wired via `cap_exceeded_at`, delivery path TBD).
+**Last updated:** April 27, 2026 (v87 — Project paused: shutdown/startup guide added)
+**Current phase:** Sprint 5 — Pricing Tier Enforcement (PAUSED)
+**Sprint:** Sprint 5 Phases 1–4 code-complete on `sprint-5-pricing-tiers` branch (not merged to main). Project paused 2026-04-27 — see `SHUTDOWN.md` for service downgrade/resume procedures.
+**Next up (on resume):** Finish Sprint 5 QA (trial countdown, paused-email seeded data, Superstar broadcast filter panel end-to-end). Merge `sprint-5-pricing-tiers` → `main`. Stripe integration. Business setup (LLC, EIN, etc.). Deferred: trial warning emails, over-cap notification email, broadcast limit revisit.
 
 ---
 
